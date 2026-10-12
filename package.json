@@ -1,0 +1,13 @@
+{
+  "name": "mundo-pigu",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bake": "node tools/bake.mjs",
+    "start": "node tools/serve.mjs"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^24.0.0",
+    "three": "0.160.0"
+  }
+}
