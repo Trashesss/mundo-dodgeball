@@ -1,0 +1,33 @@
+{
+  "frameW": 276,
+  "frameH": 252,
+  "anchor": 0.74,
+  "scale": 0.6666666666666666,
+  "anims": {
+    "idle": {
+      "frames": 10,
+      "loop": true,
+      "fps": 5.17
+    },
+    "run": {
+      "frames": 12,
+      "loop": true,
+      "fps": 11.25
+    },
+    "throw": {
+      "frames": 8,
+      "loop": false,
+      "fps": 24
+    },
+    "death": {
+      "frames": 14,
+      "loop": false,
+      "fps": 3.26
+    },
+    "dance": {
+      "frames": 12,
+      "loop": true,
+      "fps": 6.55
+    }
+  }
+}
