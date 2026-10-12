@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "bake:cartoon": "node tools/bake-cartoon.mjs",
     "bake": "node tools/bake.mjs",
     "start": "node tools/serve.mjs"
   },
