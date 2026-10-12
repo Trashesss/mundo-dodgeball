@@ -10,7 +10,7 @@ const { PPU, SIN, COS } = PROJ;
 const sx = (x) => x * PPU;
 const sy = (z, y = 0) => (z * SIN - y * COS) * PPU;
 const DEPTH = { water: -1000, arena: -900, line: -850, decal: -800, ring: -700, fx: 5000, ui: 10000 };
-const BAR_OFF = 2.75 * COS * PPU + 22;
+const BAR_OFF = 136; // Keep health bars above the taller cartoon silhouette.
 const rand = (a, b) => a + Math.random() * (b - a);
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -221,8 +221,8 @@ class GameScene extends Phaser.Scene {
       document.getElementById('load-fill').style.width = `${v * 100}%`;
       document.getElementById('load-text').textContent = `문도 불러오는 중… ${Math.round(v * 100)}%`;
     });
-    this.load.multiatlas('mundo', 'assets/sprites/mundo.json', 'assets/sprites/');
-    this.load.json('meta', 'assets/sprites/meta.json');
+    this.load.multiatlas('mundo', 'assets/cartoon/atlas.json', 'assets/cartoon/');
+    this.load.json('meta', 'assets/cartoon/meta.json');
     this.load.json('arenaMeta', 'assets/arena.json');
     this.load.image('arena', 'assets/arena.png');
   }
