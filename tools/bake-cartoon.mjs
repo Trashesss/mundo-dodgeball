@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import puppeteer from 'puppeteer-core';
 import { serve } from './serve.mjs';
 
-// Slice the generated poses and add lightweight squash/bounce animation.
+// Bake a consistent joint rig for every state into the game's trimmed atlas.
 const server = await serve(0);
 const browser = await puppeteer.launch({
   executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -20,7 +20,7 @@ try {
     const ctx = source.getContext('2d');
     ctx.drawImage(image, 0, 0);
     const pixels = ctx.getImageData(0, 0, image.width, image.height).data;
-    const rows = [0, 325, 612, 956, 1280].map(y => Math.round(y * image.height / 1280));
+    const rows = [0, 325, 624, 956, 1280].map(y => Math.round(y * image.height / 1280));
     const poses = Array.from({ length: 4 }, (_, row) => Array.from({ length: 4 }, (_, col) => {
       const left = Math.round(col * image.width / 4), right = Math.round((col + 1) * image.width / 4);
       let x0 = right, x1 = left, y0 = rows[row + 1], y1 = rows[row];
@@ -32,51 +32,88 @@ try {
       }
       return { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
     }));
-    const frameW = 276, frameH = 252, anchor = 0.84;
+    const { loadCartoonMotion } = await import('/tools/cartoon-motion.js');
+    const motion = await loadCartoonMotion();
+    const { THROW } = await import('/src/throw-motion.js');
+    const bakeScale = 1.25;
+    const frameW = 320, frameH = 280, anchor = 0.76;
     const anims = {
-      idle: { frames: 4, loop: true, fps: 4 },
-      run: { frames: 6, loop: true, fps: 12 },
-      throw: { frames: 4, loop: false, fps: 12 },
-      death: { frames: 4, loop: false, fps: 2 },
-      dance: { frames: 6, loop: true, fps: 8 },
+      idle: { frames: 48, loop: true, fps: 24 },
+      run: { frames: 30, loop: true, fps: 60 },
+      throw: { frames: THROW.frames, loop: false, fps: THROW.fps },
+      death: { frames: 46, loop: false, fps: 60 },
+      dance: { frames: 60, loop: true, fps: 60 },
     };
     // World +z points down. Mirror the right-hand views for leftward facings.
     const directions = [0, 1, 1, 1, 0, 2, 3, 2];
     const images = [], textures = [];
-    for (const [key, anim] of Object.entries(anims)) {
-      const sheet = canvas(frameW * 8, frameH * anim.frames);
-      const g = sheet.getContext('2d'), frames = [];
-      for (let d = 0; d < 8; d++) for (let f = 0; f < anim.frames; f++) {
-        const phase = f / anim.frames * Math.PI * 2;
-        const row = key === 'death' ? (f === 0 ? 0 : 3) : key === 'throw' ? (f < 3 ? 2 : 0) : key === 'run' ? (f % 3 === 0 ? 0 : 1) : 0;
-        const p = poses[row][directions[d]];
-        const scale = 176 / poses[0][directions[d]].h;
-        const w = p.w * scale, h = p.h * scale;
-        const bounce = key === 'run' ? Math.abs(Math.sin(phase)) * 9 : key === 'dance' ? Math.abs(Math.sin(phase)) * 15 : key === 'idle' ? Math.sin(phase) * 2 : 0;
-        g.save();
-        g.translate(d * frameW + frameW / 2, f * frameH + frameH * anchor - bounce);
-        g.scale(d >= 3 && d <= 5 ? -1 : 1, 1);
-        if (key === 'dance') g.rotate(Math.sin(phase) * 0.12);
-        if (key === 'throw') g.rotate([-0.12, -0.2, 0.12, 0][f]);
-        g.drawImage(image, p.x, p.y, p.w, p.h, -w / 2, -h, w, h);
-        g.restore();
-        frames.push({ filename: `${key}_${d}_${f}`, rotated: false, trimmed: false,
-          sourceSize: { w: frameW, h: frameH }, spriteSourceSize: { x: 0, y: 0, w: frameW, h: frameH },
-          frame: { x: d * frameW, y: f * frameH, w: frameW, h: frameH } });
+    // Trim transparent space before packing. Full untrimmed 60fps sheets
+    // would waste hundreds of MB of GPU memory on empty pixels.
+    const frameCanvas = canvas(frameW, frameH), frameContext = frameCanvas.getContext('2d');
+    function trimFrame() {
+      const pixels = frameContext.getImageData(0, 0, frameW, frameH).data;
+      let left = frameW, top = frameH, right = 0, bottom = 0;
+      for (let y = 0; y < frameH; y++) for (let x = 0; x < frameW; x++) {
+        if (pixels[(y * frameW + x) * 4 + 3] < 24) continue;
+        left = Math.min(left, x); top = Math.min(top, y);
+        right = Math.max(right, x); bottom = Math.max(bottom, y);
       }
-      const name = `${key}.png`;
-      images.push({ name, data: sheet.toDataURL() });
-      textures.push({ image: name, format: 'RGBA8888', size: { w: sheet.width, h: sheet.height }, scale: 1, frames });
+      // Keep a transparent border so filtering does not bleed adjacent frames.
+      left = Math.max(0, left - 1); top = Math.max(0, top - 1);
+      right = Math.min(frameW - 1, right + 1); bottom = Math.min(frameH - 1, bottom + 1);
+      const bitmap = canvas(right - left + 1, bottom - top + 1);
+      bitmap.getContext('2d').drawImage(frameCanvas, left, top, bitmap.width, bitmap.height, 0, 0, bitmap.width, bitmap.height);
+      return { bitmap, left, top };
+    }
+    function pack(key, items) {
+      items.sort((a, b) => b.bitmap.height - a.bitmap.height);
+      const pages = [[]]; let x = 0, y = 0, shelfHeight = 0;
+      for (const item of items) {
+        const { width: w, height: h } = item.bitmap;
+        if (x + w > 2048) { x = 0; y += shelfHeight + 2; shelfHeight = 0; }
+        if (y + h > 2048) { pages.push([]); x = 0; y = 0; shelfHeight = 0; }
+        item.x = x; item.y = y; pages.at(-1).push(item);
+        x += w + 2; shelfHeight = Math.max(shelfHeight, h);
+      }
+      pages.forEach((items, index) => {
+        const sheet = canvas(Math.max(...items.map(it => it.x + it.bitmap.width)), Math.max(...items.map(it => it.y + it.bitmap.height)));
+        const g = sheet.getContext('2d');
+        const frames = items.map(it => {
+          const { width: w, height: h } = it.bitmap;
+          g.drawImage(it.bitmap, it.x, it.y);
+          return { filename: it.name, rotated: false, trimmed: true,
+            sourceSize: { w: frameW, h: frameH },
+            spriteSourceSize: { x: it.left, y: it.top, w, h },
+            frame: { x: it.x, y: it.y, w, h } };
+        });
+        const name = `${key}${index ? `-${index}` : ''}.png`;
+        images.push({ name, data: sheet.toDataURL() });
+        textures.push({ image: name, format: 'RGBA8888', size: { w: sheet.width, h: sheet.height }, scale: 1, frames });
+      });
+    }
+    for (const [key, anim] of Object.entries(anims)) {
+      const items = [];
+      for (let d = 0; d < 8; d++) for (let f = 0; f < anim.frames; f++) {
+        frameContext.clearRect(0, 0, frameW, frameH);
+        frameContext.save();
+        frameContext.translate(frameW / 2, frameH * anchor);
+        frameContext.scale((d >= 3 && d <= 5 ? -1 : 1) * bakeScale, bakeScale);
+        motion.draw(frameContext, key, directions[d], f, anim.frames);
+        frameContext.restore();
+        items.push({ name: `${key}_${d}_${f}`, ...trimFrame() });
+      }
+      pack(key, items);
     }
     const portrait = canvas(256, 256), p = poses[0][1];
     portrait.getContext('2d').drawImage(image, p.x, p.y, p.w, p.h * 0.7, 12, 4, 232, 252);
     images.push({ name: 'portrait.png', data: portrait.toDataURL() });
-    return { images, atlas: { textures }, meta: { frameW, frameH, anchor, scale: 2 / 3, anims } };
+    return { images, atlas: { textures }, meta: { frameW, frameH, anchor, scale: 1 / bakeScale, anims } };
   });
   const out = new URL('../assets/cartoon/', import.meta.url);
   for (const image of result.images) fs.writeFileSync(new URL(image.name, out), Buffer.from(image.data.split(',')[1], 'base64'));
   fs.writeFileSync(new URL('atlas.json', out), JSON.stringify(result.atlas));
   fs.writeFileSync(new URL('meta.json', out), JSON.stringify(result.meta, null, 2));
+  fs.mkdirSync(new URL('../output/animation/', import.meta.url), { recursive: true });
   console.log('Cartoon atlas and portrait saved.');
 } finally {
   await browser.close();

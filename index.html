@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" href="data:," />
   <title>문도 피구</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet" />
+  <link rel="preload" href="assets/fonts/Jua-Regular.ttf" as="font" type="font/ttf" crossorigin />
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
 </head>
@@ -21,40 +19,28 @@
     <div class="team red"><span class="pips" id="pips-1"></span><span class="tname">RED</span></div>
     <div class="round" id="round-label">ROUND 1</div>
   </div>
-  <div id="corner" class="hidden"><span id="kda">0 / 0</span><span id="fps">FPS 0</span><span id="clock">00:00</span></div>
 
-  <div id="killfeed"></div>
   <div id="announce"></div>
   <div id="countdown"></div>
   <div id="chat"></div>
 
   <!-- 하단 HUD -->
   <div id="hud" class="hidden">
-    <div class="portrait-wrap">
-      <div class="portrait"></div>
-      <div class="lvl">18</div>
-    </div>
-    <div class="hud-main">
-      <div class="skills">
-        <div class="skill" id="sk-q"><div class="icon q-icon"></div><div class="cd"></div><span class="cdtext"></span><span class="key">Q</span></div>
-        <div class="skill locked"><div class="icon w-icon"></div><span class="key">W</span></div>
-        <div class="skill locked"><div class="icon e-icon"></div><span class="key">E</span></div>
-        <div class="skill locked"><div class="icon r-icon"></div><span class="key">R</span></div>
-        <div class="spacer"></div>
-        <div class="skill small" id="sk-d"><div class="icon d-icon"></div><div class="cd"></div><span class="cdtext"></span><span class="key">D</span></div>
-        <div class="skill small" id="sk-f"><div class="icon f-icon"></div><div class="cd"></div><span class="cdtext"></span><span class="key">F</span></div>
+    <div class="skills" aria-label="스킬 및 소환사 주문">
+      <div class="spell">
+        <div class="skill" id="sk-q" role="img" aria-label="Q 식칼 투척"><div class="icon q-icon"></div><div class="cd"></div><span class="cdtext"></span><span class="key">Q</span></div>
+        <span class="spell-name">식칼 투척</span>
       </div>
-      <div class="hpbar"><div class="fill" id="hp-fill"></div><div class="ticks"></div><span id="hp-text">628 / 628</span><span class="regen">+1.8</span></div>
-      <div class="mpbar">문도는 마나 같은 거 안 쓴다</div>
-    </div>
-    <div class="hud-side">
-      <div class="stat"><b id="st-hit">0</b><small>적중</small></div>
-      <div class="stat"><b id="st-throw">0</b><small>투척</small></div>
-      <div class="stat"><b id="st-acc">-</b><small>명중률</small></div>
+      <div class="spell">
+        <div class="skill" id="sk-d" role="img" aria-label="D 점멸"><div class="icon d-icon"></div><div class="cd"></div><span class="cdtext"></span><span class="key">D</span></div>
+        <span class="spell-name">점멸</span>
+      </div>
+      <div class="spell">
+        <div class="skill" id="sk-f" role="img" aria-label="F 유체화"><div class="icon f-icon"></div><div class="cd"></div><span class="cdtext"></span><span class="key">F</span></div>
+        <span class="spell-name">유체화</span>
+      </div>
     </div>
   </div>
-  <div id="minimap-wrap" class="hidden"><canvas id="minimap" width="200" height="200"></canvas></div>
-  <div id="help" class="hidden">우클릭 이동 · <b>Q</b> 식칼 · <b>D</b> 점멸 · <b>F</b> 유체화 · <b>S</b> 정지 · 휠 줌 · <b>M</b> 음소거</div>
 
   <div id="loading" class="screen">
     <div class="panel">
@@ -65,26 +51,24 @@
   </div>
 
   <div id="menu" class="screen hidden">
-    <div class="panel">
-      <div class="sub">DR. MUNDO DODGEBALL</div>
-      <h1>문도 피구</h1>
-      <p class="desc">가운데 선은 넘을 수 없다. 오직 식칼(Q)로만 싸운다.<br />상대 팀을 전멸시키면 라운드 승리, <b>3라운드</b>를 먼저 따면 끝.</p>
-      <div class="opt">
-        <label>인원</label>
-        <div class="seg" id="opt-mode">
-          <button data-v="1">1 vs 1</button><button data-v="2">2 vs 2</button><button data-v="3" class="on">3 vs 3</button><button data-v="5">5 vs 5</button>
+    <div class="champion-select" role="dialog" aria-modal="true" aria-labelledby="select-title">
+      <header class="select-heading">
+        <h1 id="select-title">챔피언을 선택하세요!</h1>
+      </header>
+      <div class="champion-choice" aria-label="선택된 챔피언">
+        <div class="champion-portrait">
+          <img src="assets/cartoon/portrait.png" alt="문도 박사" width="256" height="256" />
+          <span class="selected-mark" aria-hidden="true">✓</span>
         </div>
-      </div>
-      <div class="opt">
-        <label>봇 난이도</label>
-        <div class="seg" id="opt-diff">
-          <button data-v="easy">쉬움</button><button data-v="normal" class="on">보통</button><button data-v="hard">어려움</button>
+        <h2>문도 박사</h2>
+        <div class="difficulty">
+          <p id="difficulty-label">봇 난이도</p>
+          <div class="seg" id="opt-diff" role="group" aria-labelledby="difficulty-label">
+            <button type="button" data-v="easy" aria-pressed="false">쉬움</button><button type="button" data-v="normal" class="on" aria-pressed="true">보통</button><button type="button" data-v="hard" aria-pressed="false">어려움</button>
+          </div>
         </div>
       </div>
       <button id="start-btn" class="lol-btn">게임 시작</button>
-      <div class="keys">
-        <span><kbd>우클릭</kbd> 이동</span><span><kbd>Q</kbd> 식칼 투척</span><span><kbd>D</kbd> 점멸</span><span><kbd>F</kbd> 유체화</span><span><kbd>S</kbd> 정지</span>
-      </div>
     </div>
   </div>
 

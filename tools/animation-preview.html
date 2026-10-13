@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko"><meta charset="utf-8"><title>문도 애니메이션 미리보기</title>
+<style>body{margin:24px;background:#202830;color:#eee;font:16px system-ui}button{padding:10px 18px;margin:4px;border:0;border-radius:8px;cursor:pointer}canvas{display:block;max-width:100%;margin-top:16px;border-radius:12px}p{color:#bcc8d0}</style>
+<h2>문도 움직임</h2><p>게임에서 사용하는 최종 프레임 · 대기 / 달리기 / 투척 / 춤 / 쓰러짐</p>
+<div id="buttons"></div><canvas id="preview" width="880" height="240"></canvas>
+<script type="module">
+const meta = await (await fetch('/assets/cartoon/meta.json')).json();
+const atlas = await (await fetch('/assets/cartoon/atlas.json')).json();
+const frames = new Map();
+for (const texture of atlas.textures) {
+  const image = new Image(); image.src = '/assets/cartoon/' + texture.image; await image.decode();
+  for (const frame of texture.frames) frames.set(frame.filename, { image, ...frame });
+}
+const canvas = document.querySelector('canvas'), g = canvas.getContext('2d');
+const labels = { idle:'대기', run:'달리기', throw:'투척', dance:'춤', death:'쓰러짐' };
+let selected = 'run', started = performance.now();
+function pose(ctx, key, direction, f, x, y, scale = .8) {
+  const entry = frames.get(`${key}_${direction}_${f}`), a = entry.frame, s = entry.spriteSourceSize;
+  ctx.drawImage(entry.image, a.x, a.y, a.w, a.h,
+    x + (s.x - meta.frameW / 2) * scale, y + (s.y - meta.frameH * meta.anchor) * scale, s.w * scale, s.h * scale);
+}
+function render(key, seconds) {
+  const anim = meta.anims[key];
+  const f = anim.loop ? Math.floor(seconds * anim.fps) % anim.frames : Math.min(anim.frames - 1, Math.floor(seconds * anim.fps));
+  g.fillStyle = '#303943'; g.fillRect(0, 0, canvas.width, canvas.height);
+  g.fillStyle = '#e3eaf0'; g.font = '16px system-ui'; g.fillText(`${labels[key]}  ·  ${f + 1}/${anim.frames}`, 20, 28);
+  [0, 1, 7, 6].forEach((direction, i) => {
+    g.strokeStyle = '#56626b'; g.beginPath(); g.moveTo(i*220+30, 190); g.lineTo(i*220+190, 190); g.stroke();
+    pose(g, key, direction, f, i * 220 + 110, 190);
+  });
+}
+for (const key of Object.keys(labels)) {
+  const button = document.createElement('button'); button.textContent = labels[key];
+  button.onclick = () => { selected = key; started = performance.now(); }; document.querySelector('#buttons').append(button);
+}
+let paused = false;
+function tick(now) { if (!paused) render(selected, (now - started) / 1000); requestAnimationFrame(tick); }
+window.motionPreview = { meta, render, pose, pause: () => { paused = true; } };
+requestAnimationFrame(tick);
+</script></html>

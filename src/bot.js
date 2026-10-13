@@ -86,16 +86,10 @@ function dodge(c, game, threat) {
 
 function aim(c, game) {
   const d = c.ai.diff;
-  let target = null, bestScore = Infinity;
-  for (const e of game.champs) {
-    if (!e.alive || e.team === c.team) continue;
-    const dist = Math.hypot(e.x - c.x, e.z - c.z);
-    if (dist > RULES.q.range + 1) continue;
-    const score = dist + (e.hp / RULES.maxHp) * 4 + Math.random() * 3; // 가깝고 체력 낮은 적 우선
-    if (score < bestScore) { bestScore = score; target = e; }
-  }
-  if (!target) return false;
+  const target = game.player;
+  if (!target.alive) return false;
   const dist = Math.hypot(target.x - c.x, target.z - c.z);
+  if (dist > RULES.q.range + 1) return false;
   const t = dist / RULES.q.speed + RULES.q.windup;
   let ax = target.x + target.vx * t * d.lead;
   let az = target.z + target.vz * t * d.lead;

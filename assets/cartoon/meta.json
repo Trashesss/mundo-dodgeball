@@ -1,33 +1,33 @@
 {
-  "frameW": 276,
-  "frameH": 252,
-  "anchor": 0.84,
-  "scale": 0.6666666666666666,
+  "frameW": 320,
+  "frameH": 280,
+  "anchor": 0.76,
+  "scale": 0.8,
   "anims": {
     "idle": {
-      "frames": 4,
+      "frames": 48,
       "loop": true,
-      "fps": 4
+      "fps": 24
     },
     "run": {
-      "frames": 6,
+      "frames": 30,
       "loop": true,
-      "fps": 12
+      "fps": 60
     },
     "throw": {
-      "frames": 4,
+      "frames": 30,
       "loop": false,
-      "fps": 12
+      "fps": 60
     },
     "death": {
-      "frames": 4,
+      "frames": 46,
       "loop": false,
-      "fps": 2
+      "fps": 60
     },
     "dance": {
-      "frames": 6,
+      "frames": 60,
       "loop": true,
-      "fps": 8
+      "fps": 60
     }
   }
 }

@@ -10,8 +10,10 @@ const TYPES = {
   '.js': 'text/javascript; charset=utf-8',
   '.mjs': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
+  '.ttf': 'font/ttf',
   '.json': 'application/json',
   '.png': 'image/png',
+  '.svg': 'image/svg+xml',
   '.glb': 'model/gltf-binary',
   '.wasm': 'application/wasm',
 };

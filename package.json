@@ -3,7 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "bake:arena": "node tools/bake-cartoon-arena.mjs",
     "bake:cartoon": "node tools/bake-cartoon.mjs",
+    "check:cartoon": "node tools/check-cartoon.mjs",
+    "preview:cartoon": "node tools/preview-cartoon.mjs",
     "bake": "node tools/bake.mjs",
     "start": "node tools/serve.mjs"
   },
