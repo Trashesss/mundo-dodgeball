@@ -65,18 +65,12 @@ export const HUD = {
     $('chat').innerHTML = '';
   },
 
-  result(win, champs, score) {
-    $('result-title').textContent = win ? '승리' : '패배';
-    $('result-title').className = win ? 'win' : 'lose';
-    $('result-sub').textContent = `라운드 ${score[0]} : ${score[1]}`;
-    const rows = [...champs].sort((a, b) => a.team - b.team);
-    $('result-table').innerHTML =
-      '<tr><th>문도</th><th>처치</th><th>데스</th><th>적중/투척</th><th>명중률</th></tr>' +
-      rows.map((c) => {
-        const s = c.stats;
-        const acc = s.throws ? Math.round((s.hits / s.throws) * 100) + '%' : '-';
-        return `<tr class="${c.team === 0 ? 'b' : 'r'} ${c.isPlayer ? 'me' : ''}"><td>${c.name}</td><td>${s.kills}</td><td>${s.deaths}</td><td>${s.hits}/${s.throws}</td><td>${acc}</td></tr>`;
-      }).join('');
+  result(win, difficulty) {
+    const names = { easy: '쉬움', normal: '보통', hard: '어려움', faker: '페이커', twins: '쌍둥이' };
+    this.show(false);
+    this.clearFeeds();
+    $('result').dataset.outcome = win ? 'win' : 'lose';
+    $('result-title').textContent = `${names[difficulty]} 난이도 ${win ? '클리어!' : '실패'}`;
     $('result').classList.remove('hidden');
   },
 };

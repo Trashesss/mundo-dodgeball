@@ -17,18 +17,13 @@ export function bakeCartoonArena() {
   // Leave the bank transparent so the repeating world texture shows through.
   // Preserve the prop seed so removing the patches doesn't rearrange the rocks.
   for (let i = 0; i < 400; i++) random();
-  const rx = ARENA.ROCK_R * PROJ.PPU, ry = rx * PROJ.SIN;
-  ellipse(ox, oy + 14, rx + 83, ry + 65, '#1d2837', ink, 9);
-  ellipse(ox, oy, rx + 28, ry + 23, '#67878b', ink, 8);
-  // The transparent opening reveals the animated water in the game.
-  g.save(); g.globalCompositeOperation = 'destination-out';
-  ellipse(ox, oy, rx, ry, '#000'); g.restore();
+  // Draw rocks directly on transparency without a colored strip beneath them.
   const props = [];
   for (let i = 0; i < 56; i++) {
     const a = i * Math.PI * 2 / 56;
     const r = ARENA.ROCK_R + 1.15 + random() * .5;
     const [x, y] = project(Math.cos(a) * r, Math.sin(a) * r);
-    props.push({ x, y, w: 41 + random() * 29, h: 54 + random() * 62, shade: i % 3, crystal: i % 9 === 2 });
+    props.push({ x, y, w: 41 + random() * 29, h: 54 + random() * 62, shade: i % 3 });
   }
   props.sort((a, b) => a.y - b.y);
   for (const p of props) {
@@ -44,22 +39,12 @@ export function bakeCartoonArena() {
     g.fillStyle = ['#788398', '#8991a4', '#737c95'][p.shade]; g.fill();
     g.strokeStyle = ink; g.lineWidth = 7; g.stroke();
     g.save(); g.clip();
-    g.fillStyle = '#535d78'; g.beginPath();
-    g.moveTo(x + w * .35, y - h); g.quadraticCurveTo(x + w * .05, y - 15, x - w * .5, y + 16);
-    g.lineTo(x + w + 15, y + 25); g.lineTo(x + w + 15, y - h); g.fill();
     g.strokeStyle = '#aab5c7'; g.lineWidth = 5; g.lineCap = 'round';
     g.beginPath(); g.moveTo(x - w * .63, y - h * .53);
     g.quadraticCurveTo(x - w * .52, y - h * .83, x - w * .15, y - h * .83); g.stroke();
     g.restore();
     g.strokeStyle = '#3c465e'; g.lineWidth = 4;
     g.beginPath(); g.moveTo(x - 7, y - 21); g.lineTo(x + 2, y - 36); g.lineTo(x + 16, y - 40); g.stroke();
-    if (p.crystal) {
-      g.beginPath(); g.moveTo(x - 14, y - 20); g.lineTo(x - 22, y - 63);
-      g.lineTo(x - 4, y - 85); g.lineTo(x + 15, y - 63); g.lineTo(x + 12, y - 20); g.closePath();
-      g.fillStyle = '#b48be4'; g.fill(); g.strokeStyle = ink; g.lineWidth = 5; g.stroke();
-      g.beginPath(); g.moveTo(x - 4, y - 75); g.lineTo(x - 4, y - 32);
-      g.strokeStyle = '#ead5ff'; g.lineWidth = 5; g.stroke();
-    }
     if (p.shade === 0) {
       g.beginPath(); g.moveTo(x - w - 10, y + 10); g.lineTo(x - w - 18, y - 12);
       g.lineTo(x - w - 6, y - 5); g.lineTo(x - w + 1, y - 23);

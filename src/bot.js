@@ -30,7 +30,7 @@ function pickWanderPoint(c, game) {
   const s = c.side;
   const near = 1.8 + c.ai.style * 3;
   const x = s * rand(near, near + 7);
-  const zMax = RULES.arenaR * 0.75;
+  const zMax = game.arenaR * 0.75;
   const z = c.ai.lane ? c.ai.lane * rand(0.5, zMax) : rand(-zMax, zMax);
   return game.constrain({ x, z }, c.team);
 }

@@ -4,6 +4,7 @@ import { THROW } from './throw-motion.js';
 
 export const RULES = {
   arenaR: ARENA.R,
+  shrink: { delay: 0, duration: 60, minScale: 0.7 },
   midGap: ARENA.MID_GAP,
   champR: 0.75,
   moveSpeed: 4.4,

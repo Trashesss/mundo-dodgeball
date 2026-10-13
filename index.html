@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="icon" href="data:," />
+  <link rel="icon" type="image/png" sizes="128x128" href="assets/cartoon/favicon.png" />
   <title>문도 피구</title>
   <link rel="preload" href="assets/fonts/Jua-Regular.ttf" as="font" type="font/ttf" crossorigin />
   <link rel="stylesheet" href="style.css" />
@@ -69,7 +69,20 @@
   <div id="menu" class="screen hidden">
     <main class="match-setup" aria-labelledby="select-title">
       <header class="setup-heading">
-        <p class="setup-brand">문도 <span>피구</span></p>
+        <div class="setup-intro">
+          <img class="setup-portrait" src="assets/cartoon/portrait-hud-v3.png" alt="식칼을 든 문도 박사" width="144" height="144" />
+          <div class="setup-intro-copy">
+            <p class="setup-brand">문도 <span>피구</span></p>
+            <p class="setup-description">날아오는 식칼을 피하고, 상대 문도를 쓰러뜨리세요!</p>
+            <p class="setup-arena-tip">시간이 지날수록 경기장이 좁아집니다.</p>
+          </div>
+        </div>
+        <ul class="setup-controls" aria-label="기본 조작법">
+          <li><span class="setup-mouse">마우스 좌/우클릭</span> 이동</li>
+          <li><kbd>Q</kbd> 커서 방향으로 식칼 투척</li>
+          <li><kbd>D</kbd> 점멸</li>
+          <li><kbd>F</kbd> 유체화</li>
+        </ul>
         <h1 id="select-title">봇 난이도 선택</h1>
         <p class="setup-subtitle" id="difficulty-label">상대 봇의 난이도를 골라주세요.</p>
       </header>
@@ -109,14 +122,13 @@
     </main>
   </div>
 
-  <div id="result" class="screen hidden">
-    <div class="panel">
-      <h1 id="result-title">승리</h1>
-      <p id="result-sub"></p>
-      <table id="result-table"></table>
-      <div class="btns">
-        <button id="again-btn" class="lol-btn">다시 하기</button>
-        <button id="menu-btn" class="lol-btn ghost">메뉴로</button>
+  <div id="result" class="screen hidden" role="dialog" aria-modal="true" aria-labelledby="result-title">
+    <div class="match-result">
+      <img class="result-portrait" src="assets/cartoon/portrait-hud-v3.png" alt="" width="160" height="160" />
+      <h1 id="result-title">난이도 클리어!</h1>
+      <div class="result-actions">
+        <button id="again-btn" type="button">다시 하기</button>
+        <button id="menu-btn" type="button">난이도 선택</button>
       </div>
     </div>
   </div>

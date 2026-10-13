@@ -18,8 +18,6 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 // Render at the display's physical pixel density so Retina screens are not upscaled.
 const DPR = Math.min(window.devicePixelRatio || 1, 3);
 
-const ENEMY_NAMES = ['피구왕 문도', '식칼 장인', '문도 박사', '미치광이 문도', '자운의 망나니'];
-
 const WATER_FRAG = `
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -32,6 +30,7 @@ uniform vec2 uOrigin;
 uniform float uPPU;
 uniform float uSin;
 uniform float uR;
+uniform float uInitialR;
 uniform float uBankR;
 varying vec2 outTexCoord;
 
@@ -41,7 +40,6 @@ void main() {
   float r = length(g);
   if (r > uBankR) discard;
   vec3 col = g.x < 0.0 ? vec3(0.19, 0.39, 0.49) : vec3(0.23, 0.40, 0.48);
-  col *= mix(1.0, 0.78, smoothstep(uR * 0.65, uR + 1.2, r));
   // Sparse, graphic ripples instead of realistic caustics.
   vec2 cell = vec2(g.x + sin(g.y * 1.8) * 0.23 + uTime * 0.12, g.y);
   vec2 tile = mod(cell + vec2(floor(g.y / 2.1) * 1.3, 0.0), vec2(3.8, 2.1));
@@ -50,18 +48,23 @@ void main() {
   col = mix(col, vec3(0.48, 0.69, 0.73), (1.0 - smoothstep(0.025, 0.06, wave)) * dash * 0.38);
   float edge = 1.0 - smoothstep(0.035, 0.085, abs(r - uR));
   col = mix(col, vec3(0.65, 0.77, 0.77), edge * 0.65);
+  // Fade in the outside tint as shrinking starts, continuing it beneath the rocks.
+  float outside = smoothstep(uR, uR + 0.2, r)
+    * smoothstep(0.0, 0.2, uInitialR - uR);
+  col = mix(col, vec3(0.12, 0.26, 0.62), outside * 0.65);
+  float ring = 1.0 - smoothstep(0.025, 0.12, abs(r - uR));
+  col = mix(col, vec3(0.38, 0.85, 1.0), ring * (0.8 + 0.2 * sin(uTime * 3.0)));
   gl_FragColor = vec4(col, 1.0);
 }
 `;
 
 // ---------------------------------------------------------------------------
 class Champ {
-  constructor(scene, { team, isPlayer, name }) {
+  constructor(scene, { team, isPlayer }) {
     this.scene = scene;
     this.team = team;
     this.side = team === 0 ? -1 : 1;
     this.isPlayer = isPlayer;
-    this.name = name;
     this.hudSlot = team; // 상단 체력바 번호 (쌍둥이 모드의 두 번째 적은 2)
     this.stats = { kills: 0, deaths: 0, throws: 0, hits: 0 };
     this.color = isPlayer ? 0x5ee05e : 0xff4040;
@@ -76,10 +79,6 @@ class Champ {
     this.ring.lineStyle(isPlayer ? 3 : 2, this.color, 0.95).strokeEllipse(0, 0, rw, rh);
     this.sprite = scene.add.sprite(0, 0, 'mundo', 'idle_2_0').setOrigin(0.5, meta.anchor).setScale(meta.scale);
     this.bar = scene.add.graphics().setDepth(DEPTH.ui);
-    this.label = scene.add.text(0, 0, name, {
-      fontFamily: 'Jua', fontSize: '12px', fontStyle: 'bold', color: isPlayer ? '#d8ffcf' : '#ffffff',
-      stroke: '#000', strokeThickness: 3,
-    }).setOrigin(0.5, 1).setDepth(DEPTH.ui).setResolution(DPR * 2);
   }
 
   reset(x, z) {
@@ -93,7 +92,6 @@ class Champ {
     this.sprite.setAlpha(1).clearTint();
     this.ring.setVisible(true);
     this.bar.setVisible(true);
-    this.label.setVisible(true);
     this.shadow.setAlpha(0.6);
     this.setAnim('idle', true);
     this.sync();
@@ -160,7 +158,6 @@ class Champ {
     this.shadow.setPosition(X, Y);
     this.ring.setPosition(X, Y);
     this.bar.setPosition(X, Y - BAR_OFF);
-    this.label.setPosition(X, Y - BAR_OFF - 3);
     const tint = this.hitFlash > 0 ? 'hit' : this.slowT > 0 ? 'slow' : '';
     if (tint !== this.tintState) {
       this.tintState = tint;
@@ -172,7 +169,7 @@ class Champ {
   }
 
   destroy() {
-    for (const o of [this.sprite, this.shadow, this.ring, this.bar, this.label]) o.destroy();
+    for (const o of [this.sprite, this.shadow, this.ring, this.bar]) o.destroy();
   }
 }
 
@@ -366,6 +363,7 @@ class GameScene extends Phaser.Scene {
   }
 
   buildArena() {
+    this.arenaR = RULES.arenaR;
     this.bank = this.add.tileSprite(0, 0, 1, 1, 'bank').setOrigin(0, 0).setDepth(DEPTH.water - 1);
     const am = this.cache.json.get('arenaMeta');
     this.add.image(0, 0, 'arena').setOrigin(am.originX / am.width, am.originY / am.height).setDepth(DEPTH.arena);
@@ -377,7 +375,9 @@ class GameScene extends Phaser.Scene {
       uPPU: { type: '1f', value: PPU },
       uSin: { type: '1f', value: SIN },
       uR: { type: '1f', value: ARENA.R },
-      uBankR: { type: '1f', value: ARENA.ROCK_R },
+      uInitialR: { type: '1f', value: RULES.arenaR },
+      // Continue the two water colors beneath the rocks where the strip was removed.
+      uBankR: { type: '1f', value: ARENA.ROCK_R + 0.75 },
     });
     this.water = this.add.shader(base, -wx, -wy, wx * 2, wy * 2).setOrigin(0, 0).setDepth(DEPTH.water);
     this.baron = createBaron(this, sx(-11), sy(-9.8), DEPTH.arena + 1);
@@ -385,9 +385,10 @@ class GameScene extends Phaser.Scene {
     this.boundaryWards = Array.from({ length: 4 }, (_, i) => {
       const z = ARENA.R * 0.82 * (i * 2 / 3 - 1);
       const y = sy(z);
-      this.add.image(0, y, 'shadow').setScale(0.85, 0.3).setAlpha(0.6).setDepth(DEPTH.decal);
-      return this.add.image(0, y, 'ward').setOrigin(0.5, 100 / 108)
+      const shadow = this.add.image(0, y, 'shadow').setScale(0.85, 0.3).setAlpha(0.6).setDepth(DEPTH.decal);
+      const ward = this.add.image(0, y, 'ward').setOrigin(0.5, 100 / 108)
         .setScale(0.42).setDepth(y + 1);
+      return { ward, shadow };
     });
     this.cameras.main.setBackgroundColor('#293b43');
   }
@@ -461,10 +462,22 @@ class GameScene extends Phaser.Scene {
   }
 
   // ---------- 규칙 ----------
+  updateArena() {
+    const { delay, duration, minScale } = RULES.shrink;
+    const progress = clamp((this.roundTime - delay) / duration, 0, 1);
+    this.arenaR = RULES.arenaR * (1 - (1 - minScale) * progress);
+    this.water.setUniform('uR.value', this.arenaR);
+    this.boundaryWards.forEach(({ ward, shadow }, i) => {
+      const y = sy(this.arenaR * 0.82 * (i * 2 / 3 - 1));
+      ward.setY(y).setDepth(y + 1);
+      shadow.setY(y);
+    });
+  }
+
   constrain(p, team) {
     const s = team === 0 ? -1 : 1;
     const minX = RULES.midGap + RULES.champR;
-    const maxR = RULES.arenaR - RULES.champR * 0.5;
+    const maxR = this.arenaR - RULES.champR * 0.5;
     if (p.x * s < minX) p.x = s * minX;
     const r = Math.hypot(p.x, p.z);
     if (r > maxR) { p.x *= maxR / r; p.z *= maxR / r; }
@@ -556,7 +569,6 @@ class GameScene extends Phaser.Scene {
     v.setAnim('death', true);
     v.ring.setVisible(false);
     v.bar.setVisible(false);
-    v.label.setVisible(false);
     v.shadow.setAlpha(0.35);
     this.fx.puff.explode(16, sx(v.x), sy(v.z, 0.8));
     k.stats.kills++;
@@ -583,9 +595,8 @@ class GameScene extends Phaser.Scene {
     this.cleavers = [];
     this.twins = diff === 'twins';
     this.diff = this.twins ? 'normal' : diff;
-    this.player = new Champ(this, { team: 0, isPlayer: true, name: '나' });
-    const names = Phaser.Utils.Array.Shuffle([...ENEMY_NAMES]);
-    this.enemies = Array.from({ length: this.twins ? 2 : 1 }, (_, i) => new Champ(this, { team: 1, isPlayer: false, name: names[i] }));
+    this.player = new Champ(this, { team: 0, isPlayer: true });
+    this.enemies = Array.from({ length: this.twins ? 2 : 1 }, () => new Champ(this, { team: 1, isPlayer: false }));
     this.enemies.forEach((e, i) => { e.hudSlot = i + 1; });
     this.enemy = this.enemies[0];
     this.champs = [this.player, ...this.enemies];
@@ -598,6 +609,8 @@ class GameScene extends Phaser.Scene {
   }
 
   startRound() {
+    this.roundTime = 0;
+    this.updateArena();
     for (const p of this.cleavers) p.destroy();
     this.cleavers = [];
     this.player.reset(-6.5, 0);
@@ -607,7 +620,6 @@ class GameScene extends Phaser.Scene {
       initBot(e, this.diff, lane);
     });
     this.moveHeld = false;
-    this.roundTime = 0;
     this.state = 'play';
     HUD.updateFight(this.champs, true);
   }
@@ -633,7 +645,7 @@ class GameScene extends Phaser.Scene {
   endMatch() {
     this.state = 'over';
     const win = this.score[this.player.team] > this.score[this.enemy.team];
-    HUD.result(win, this.champs, this.score);
+    HUD.result(win, this.twins ? 'twins' : this.diff);
   }
 
   backToMenu() {
@@ -642,6 +654,8 @@ class GameScene extends Phaser.Scene {
     this.champs = []; this.cleavers = []; this.player = null; this.enemy = null; this.enemies = [];
     HUD.show(false);
     HUD.clearFeeds();
+    this.roundTime = 0;
+    this.updateArena();
     this.spawnMenuMundos();
     this.state = 'menu';
   }
@@ -656,7 +670,11 @@ class GameScene extends Phaser.Scene {
 
     if (this.champs.length) {
       const playing = this.state === 'play';
-      if (playing) { this.matchTime += dt; this.roundTime += dt; }
+      if (playing) {
+        this.matchTime += dt;
+        this.roundTime += dt;
+        this.updateArena();
+      }
 
       const p = this.player;
       if (this.moveHeld && p.alive && this.state === 'play') {
@@ -712,6 +730,7 @@ class GameScene extends Phaser.Scene {
     }
 
     const px = c.x, pz = c.z;
+    if (c.moveTarget) this.constrain(c.moveTarget, c.team);
     if (c.alive && this.state === 'play' && c.castT <= 0 && c.moveTarget) {
       const dx = c.moveTarget.x - c.x, dz = c.moveTarget.z - c.z;
       const l = Math.hypot(dx, dz);
