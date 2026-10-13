@@ -214,6 +214,7 @@ class GameScene extends Phaser.Scene {
     this.load.json('meta', 'assets/cartoon/meta.json');
     this.load.json('arenaMeta', 'assets/cartoon/arena.json');
     this.load.image('arena', 'assets/cartoon/arena.png');
+    this.load.image('baron-cute', 'assets/cartoon/baron-cute.png');
   }
 
   create() {
@@ -374,7 +375,7 @@ class GameScene extends Phaser.Scene {
       uBankR: { type: '1f', value: ARENA.ROCK_R },
     });
     this.water = this.add.shader(base, -wx, -wy, wx * 2, wy * 2).setOrigin(0, 0).setDepth(DEPTH.water);
-    this.baron = createBaron(this, sx(-13.3), sy(-8.4), DEPTH.arena - 1);
+    this.baron = createBaron(this, sx(-11), sy(-9.8), DEPTH.arena + 1);
     // Four separated wards mark the same x=0 boundary used by movement rules.
     this.boundaryWards = Array.from({ length: 4 }, (_, i) => {
       const z = ARENA.R * 0.82 * (i * 2 / 3 - 1);
@@ -605,17 +606,20 @@ class GameScene extends Phaser.Scene {
     this.state = 'countdown';
     this.countT = 3;
     this.lastCount = 4;
-    HUD.setScore(this.score, this.round);
-    HUD.announce(RULES.roundsToWin === 1 ? (this.round === 1 ? '단판 승부' : '재경기') : `라운드 ${this.round}`, this.round === 1 ? '가운데 선을 넘을 수 없습니다' : `${this.score[0]} : ${this.score[1]}`, 'neutral');
+    HUD.updateFight(this.champs, true);
+    HUD.announce(RULES.roundsToWin === 1 ? (this.round === 1 ? '단판 승부' : '재경기') : `라운드 ${this.round}`, '상대 문도를 쓰러뜨리면 승리!', 'neutral');
   }
 
   endRound(winner) {
     this.state = 'roundEnd';
+    // 판정 이후 날아가던 식칼이나 준비 중인 투척이 결과를 바꾸지 않도록 한다.
+    for (const cleaver of this.cleavers) cleaver.destroy();
+    this.cleavers = [];
+    for (const champ of this.champs) champ.pending = null;
     this.endT = 3.4;
     const pt = this.player.team;
     const winnerChamp = this.champs[winner];
     if (winner >= 0) this.score[winner]++;
-    HUD.setScore(this.score, this.round);
     if (winner < 0) HUD.announce('무승부', '라운드를 다시 진행합니다', 'neutral');
     else HUD.announce(winner === pt ? '라운드 승리' : '라운드 패배', `${winnerChamp.name} 승리`, winner === pt ? 'ally' : 'enemy');
     if (winner >= 0) {
@@ -693,6 +697,7 @@ class GameScene extends Phaser.Scene {
         }
       }
       HUD.update(p);
+      HUD.updateFight(this.champs);
     }
     this.updateCamera();
   }
@@ -705,7 +710,7 @@ class GameScene extends Phaser.Scene {
     c.slowT = Math.max(0, c.slowT - dt);
     c.hitFlash = Math.max(0, c.hitFlash - dt);
     c.actionT = Math.max(0, c.actionT - dt);
-    if (c.alive) c.hp = Math.min(RULES.maxHp, c.hp + RULES.regen * dt);
+    if (c.alive && this.state === 'play') c.hp = Math.min(RULES.maxHp, c.hp + RULES.regen * dt);
 
     if (c.castT > 0) {
       c.castT -= dt;
@@ -795,7 +800,7 @@ class GameScene extends Phaser.Scene {
   updateCamera() {
     // 경기장 전체(암벽 + 캐릭터 머리 높이)가 상단바·하단 HUD를 피해 한 화면에 들어오도록 고정
     const cam = this.cameras.main;
-    const padTop = 70 * DPR, padBot = 120 * DPR;
+    const padTop = 110 * DPR, padBot = 120 * DPR;
     const halfW = (ARENA.ROCK_R + 1) * PPU;
     const top = sy(-ARENA.ROCK_R, 3.2), bot = sy(ARENA.ROCK_R) + 0.5 * PPU;
     const zoom = Math.min(cam.width / (halfW * 2), (cam.height - padTop - padBot) / (bot - top));

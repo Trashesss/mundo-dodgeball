@@ -105,7 +105,12 @@ try {
       pack(key, items);
     }
     const portrait = canvas(256, 256), p = poses[0][1];
-    portrait.getContext('2d').drawImage(image, p.x, p.y, p.w, p.h * 0.7, 12, 4, 232, 252);
+    // Crop the bust to a square instead of stretching it vertically.
+    const portraitSize = Math.min(p.w, p.h * 0.7);
+    portrait.getContext('2d').drawImage(
+      image, p.x + (p.w - portraitSize) / 2, p.y, portraitSize, portraitSize,
+      4, 4, 248, 248,
+    );
     images.push({ name: 'portrait.png', data: portrait.toDataURL() });
     return { images, atlas: { textures }, meta: { frameW, frameH, anchor, scale: 1 / bakeScale, anims } };
   });

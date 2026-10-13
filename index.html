@@ -12,12 +12,22 @@
 <body>
   <div id="game"></div>
 
-  <!-- 상단 스코어 -->
-  <div id="topbar" class="hidden">
-    <div class="team blue"><span class="tname">BLUE</span><span class="pips" id="pips-0"></span></div>
-    <div class="score"><span id="score-0">0</span><span class="sep"></span><span id="score-1">0</span></div>
-    <div class="team red"><span class="pips" id="pips-1"></span><span class="tname">RED</span></div>
-    <div class="round" id="round-label">ROUND 1</div>
+  <!-- 양쪽 초상화 · 체력 -->
+  <div id="topbar" class="hidden" aria-label="대전 현황">
+    <div class="fighter blue" id="fighter-0">
+      <div class="fight-portrait"><img src="assets/cartoon/portrait.png" alt="내 문도 초상화" /><span>나</span></div>
+      <div class="fighter-info">
+        <div class="fighter-name"><span>문도 박사</span><small>PLAYER 1</small></div>
+        <div class="health-track" id="health-0" role="progressbar" aria-label="내 문도 체력" aria-valuemin="0" aria-valuemax="640"><div class="health-fill"></div><span class="health-value" id="hp-0">640 / 640</span></div>
+      </div>
+    </div>
+    <div class="fighter red" id="fighter-1">
+      <div class="fight-portrait"><img src="assets/cartoon/portrait.png" alt="상대 문도 초상화" /><span>상대</span></div>
+      <div class="fighter-info">
+        <div class="fighter-name"><span>문도 박사</span><small>CPU</small></div>
+        <div class="health-track" id="health-1" role="progressbar" aria-label="상대 문도 체력" aria-valuemin="0" aria-valuemax="640"><div class="health-fill"></div><span class="health-value" id="hp-1">640 / 640</span></div>
+      </div>
+    </div>
   </div>
 
   <div id="announce"></div>

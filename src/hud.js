@@ -1,4 +1,4 @@
-// DOM 기반 HUD (하단 스킬바, 상단 스코어, 알림, 채팅, 미니맵, 결과 화면)
+// DOM 기반 HUD (하단 스킬바, 상단 체력, 알림, 채팅, 결과 화면)
 import { RULES } from './rules.js';
 
 const $ = (id) => document.getElementById(id);
@@ -8,12 +8,17 @@ export const HUD = {
     for (const id of ['topbar', 'hud']) $(id).classList.toggle('hidden', !on);
   },
 
-  setScore(score, round) {
-    $('score-0').textContent = score[0];
-    $('score-1').textContent = score[1];
-    $('round-label').textContent = RULES.roundsToWin === 1 ? '단판 승부' : `ROUND ${round} · ${RULES.roundsToWin}승 선취`;
-    for (const t of [0, 1]) {
-      $(`pips-${t}`).innerHTML = Array.from({ length: RULES.roundsToWin }, (_, i) => `<i class="${i < score[t] ? 'on' : ''}"></i>`).join('');
+  updateFight(champs, reset = false) {
+    for (const c of champs) {
+      const hp = Math.max(0, Math.min(RULES.maxHp, c.hp));
+      const track = $(`health-${c.team}`);
+      track.classList.toggle('reset', reset);
+      track.style.setProperty('--health', hp / RULES.maxHp);
+      track.setAttribute('aria-valuemax', RULES.maxHp);
+      track.setAttribute('aria-valuenow', Math.ceil(hp));
+      $(`hp-${c.team}`).textContent = `${Math.ceil(hp)} / ${RULES.maxHp}`;
+      $(`fighter-${c.team}`).classList.toggle('low-health', hp > 0 && hp <= RULES.maxHp * 0.25);
+      $(`fighter-${c.team}`).classList.toggle('knocked-out', !c.alive);
     }
   },
 
