@@ -2,6 +2,43 @@
 import { RULES } from './rules.js';
 
 const $ = (id) => document.getElementById(id);
+let shareData;
+let resultVersion = 0;
+
+$('share-btn').addEventListener('click', async () => {
+  if (!shareData) return;
+  const version = resultVersion;
+  const data = shareData;
+  const isCurrent = () => version === resultVersion && !$('result').classList.contains('hidden');
+  $('share-btn').disabled = true;
+  $('share-status').textContent = '';
+  $('share-copy').classList.add('hidden');
+  try {
+    if (navigator.share) {
+      try {
+        await navigator.share(data);
+        if (isCurrent()) $('share-status').textContent = '문도, 친구 기다린다!';
+        return;
+      } catch (error) {
+        if (error.name === 'AbortError' || !isCurrent()) return;
+      }
+    }
+    const invitation = `${data.text}\n${data.url}`;
+    try {
+      await navigator.clipboard.writeText(invitation);
+      if (isCurrent()) $('share-status').textContent = '초대장 복사 완료! 친구 채팅방에 던져줘. 🪓';
+    } catch {
+      if (!isCurrent()) return;
+      $('share-status').textContent = '아래 초대장을 복사해서 친구에게 보내줘!';
+      $('share-copy').value = invitation;
+      $('share-copy').classList.remove('hidden');
+      $('share-copy').focus();
+      $('share-copy').select();
+    }
+  } finally {
+    if (version === resultVersion) $('share-btn').disabled = false;
+  }
+});
 
 export const HUD = {
   show(on, twins = false) {
@@ -67,6 +104,18 @@ export const HUD = {
 
   result(win, difficulty) {
     const names = { easy: '쉬움', normal: '보통', hard: '어려움', faker: '페이커', twins: '쌍둥이' };
+    resultVersion += 1;
+    shareData = {
+      title: '문도에게 와! 🪓 | 문도 피구',
+      text: win
+        ? `문도 피구 ${names[difficulty]} 난이도 클리어! 🪓 너도 피할 수 있겠냐? 문도에게 와!`
+        : `문도 피구 ${names[difficulty]} 난이도에서 문도한테 혼났다… 🪓 친구야, 내 복수 좀 해줘! 문도에게 와!`,
+      url: new URL(location.pathname, location.origin).href,
+    };
+    $('share-btn').disabled = false;
+    $('share-status').textContent = '';
+    $('share-copy').value = '';
+    $('share-copy').classList.add('hidden');
     this.show(false);
     this.clearFeeds();
     $('result').dataset.outcome = win ? 'win' : 'lose';

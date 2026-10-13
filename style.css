@@ -198,7 +198,17 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 }
 #again-btn { background: var(--entry-green); color: #26362c; box-shadow: inset 0 3px #e2ffd780; }
 #menu-btn { background: #35434b; color: var(--entry-muted); box-shadow: inset 0 2px #ffffff10; }
+#share-btn { background: #c5a4ed; color: #30223e; box-shadow: inset 0 3px #eee0ff80; }
+#share-btn:disabled { cursor: wait; opacity: .7; }
+.share-hint { margin: 14px 0 0; color: var(--entry-muted); font-size: 17px; }
+.share-status { min-height: 1.5em; margin: 8px 0 0; color: var(--entry-green); font-size: 16px; }
+.share-copy {
+  display: block; width: min(380px, 100%); min-height: 110px; margin: 10px auto 0;
+  padding: 12px; border: 2px solid #c5a4ed; border-radius: 12px;
+  background: #14252d; color: var(--entry-text); font: 16px/1.5 sans-serif; user-select: text;
+}
 @media (hover: hover) {
+  #share-btn:hover { background: #dbc0fb; transform: translateY(-2px); }
   #again-btn:hover { background: #c9efb4; transform: translateY(-2px); }
   #menu-btn:hover { background: #43555c; color: var(--entry-text); }
 }
@@ -208,6 +218,7 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
   .result-portrait { width: 96px; height: 96px; margin-bottom: 4px; }
   #result-title { margin: 4px 0 24px; font-size: 40px; }
   .result-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  #share-btn { grid-column: 1 / -1; }
   .result-actions button { padding: 14px 8px; font-size: 19px; }
 }
 @media (prefers-reduced-motion: reduce) {

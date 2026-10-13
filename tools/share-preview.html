@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>문도 피구 · 공유 이미지 원본</title>
+  <style>
+    @font-face { font-family: Jua; src: url('../assets/fonts/Jua-Regular.ttf'); }
+    * { box-sizing: border-box; }
+    body { margin: 0; width: 1200px; height: 630px; overflow: hidden; background: #11262e; color: #f5f0dc; font-family: Jua, sans-serif; }
+    .portrait { position: absolute; right: -28px; top: -34px; width: 700px; height: 700px; object-fit: cover; }
+    .shade { position: absolute; inset: 0; background: linear-gradient(90deg, #11262e 0%, #11262e 37%, #11262ed9 44%, #11262e00 65%); }
+    .frame { position: absolute; inset: 22px; border: 2px solid #c5a4ed40; border-radius: 26px; }
+    main { position: absolute; inset: 64px auto 56px 64px; width: 560px; }
+    .brand { margin: 0 0 58px; font-size: 32px; color: #c5a4ed; letter-spacing: 2px; }
+    h1 { margin: 0; font-weight: 400; font-size: 90px; line-height: 1.1; letter-spacing: -3px; text-shadow: 0 6px #07171f; }
+    h1 span { color: #bde59f; }
+    .challenge { margin: 28px 0 0; font-size: 30px; line-height: 1.4; color: #efe5ff; }
+    .tag { display: inline-block; margin-top: 38px; padding: 13px 20px 11px; border: 1px solid #c5a4ed70; border-radius: 12px; background: #c5a4ed18; color: #d7bff5; font-size: 23px; }
+  </style>
+</head>
+<body>
+  <img class="portrait" src="../assets/cartoon/portrait-hud-v3.png" alt="식칼을 든 문도" />
+  <div class="shade"></div>
+  <div class="frame"></div>
+  <main>
+    <p class="brand">문도 피구</p>
+    <h1>문도에게<br /><span>와!</span></h1>
+    <p class="challenge">친구야, 식칼 피할 자신 있냐?</p>
+    <div class="tag">피하고 · 던지고 · 살아남아라</div>
+  </main>
+</body>
+</html>
