@@ -5,6 +5,22 @@ const localHost = ['localhost', '127.0.0.1', '[::1]', '::1'].includes(window.loc
 const enabled = !localHost && /^https?:$/.test(window.location.protocol)
   && !window.location.pathname.startsWith('/tools/');
 
+// Keep attribution for this page visit, including rematches. Direct visits start fresh.
+const incomingShareId = new URLSearchParams(window.location.search).get('share_id');
+const referralShareId = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  .test(incomingShareId ?? '') ? incomingShareId : null;
+export const referralContext = referralShareId
+  ? { entry_source: 'share', referral_share_id: referralShareId }
+  : { entry_source: 'direct' };
+
+export function createTrackingId() {
+  return globalThis.crypto?.randomUUID?.()
+    ?? 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, char => {
+      const value = Math.floor(Math.random() * 16);
+      return (char === 'x' ? value : (value & 3) | 8).toString(16);
+    });
+}
+
 if (enabled) {
   try {
     // Queue initialization and captures while the async SDK loads.
@@ -42,3 +58,5 @@ export function track(event, properties = {}) {
     // Tracking failures must not interrupt gameplay.
   }
 }
+
+if (referralShareId) track('invite_opened', { share_id: referralShareId, ...referralContext });

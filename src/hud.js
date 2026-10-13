@@ -1,14 +1,23 @@
 // DOM 기반 HUD (하단 스킬바, 상단 체력, 채팅, 결과 화면)
 import { RULES } from './rules.js';
+import { track, createTrackingId } from './analytics.js';
 
 const $ = (id) => document.getElementById(id);
 let shareData;
+let shareProperties;
 let resultVersion = 0;
 
 $('share-btn').addEventListener('click', async () => {
   if (!shareData) return;
   const version = resultVersion;
-  const data = shareData;
+  const shareId = createTrackingId();
+  const url = new URL(shareData.url);
+  url.searchParams.set('share_id', shareId);
+  url.searchParams.set('utm_source', 'friend');
+  url.searchParams.set('utm_medium', 'share');
+  const data = { ...shareData, url: url.href };
+  const properties = { ...shareProperties, share_id: shareId };
+  track('share_clicked', properties);
   const isCurrent = () => version === resultVersion && !$('result').classList.contains('hidden');
   $('share-btn').disabled = true;
   $('share-status').textContent = '';
@@ -17,15 +26,21 @@ $('share-btn').addEventListener('click', async () => {
     if (navigator.share) {
       try {
         await navigator.share(data);
+        track('share_completed', { ...properties, method: 'native' });
         if (isCurrent()) $('share-status').textContent = '문도, 친구 기다린다!';
         return;
       } catch (error) {
-        if (error.name === 'AbortError' || !isCurrent()) return;
+        if (error.name === 'AbortError') {
+          track('share_cancelled', { ...properties, method: 'native' });
+          return;
+        }
+        if (!isCurrent()) return;
       }
     }
     const invitation = `${data.text}\n${data.url}`;
     try {
       await navigator.clipboard.writeText(invitation);
+      track('share_completed', { ...properties, method: 'clipboard' });
       if (isCurrent()) $('share-status').textContent = '초대장 복사 완료! 친구 채팅방에 던져줘. 🪓';
     } catch {
       if (!isCurrent()) return;
@@ -34,6 +49,7 @@ $('share-btn').addEventListener('click', async () => {
       $('share-copy').classList.remove('hidden');
       $('share-copy').focus();
       $('share-copy').select();
+      track('share_manual_copy_shown', { ...properties, method: 'manual' });
     }
   } finally {
     if (version === resultVersion) $('share-btn').disabled = false;
@@ -102,9 +118,10 @@ export const HUD = {
     $('chat').innerHTML = '';
   },
 
-  result(win, difficulty) {
+  result(win, difficulty, matchProperties = {}) {
     const names = { easy: '쉬움', normal: '보통', hard: '어려움', faker: '페이커', twins: '쌍둥이' };
     resultVersion += 1;
+    shareProperties = { ...matchProperties, difficulty, result: win ? 'win' : 'loss' };
     shareData = {
       title: '문도에게 와! 🪓 | 문도 피구',
       text: win

@@ -7,7 +7,7 @@ import { HUD } from './hud.js';
 import { Sound } from './sound.js';
 import { THROW } from './throw-motion.js';
 import { createBaron } from './baron.js';
-import { track } from './analytics.js';
+import { track, createTrackingId, referralContext } from './analytics.js';
 
 const { PPU, SIN, COS } = PROJ;
 const sx = (x) => x * PPU;
@@ -607,9 +607,10 @@ class GameScene extends Phaser.Scene {
     HUD.show(true, this.twins);
     this.startRound();
     this.analyticsMatch = {
-      match_id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      match_id: createTrackingId(),
       difficulty: diff,
       source,
+      ...referralContext,
     };
     track('game_started', this.analyticsMatch);
   }
@@ -652,7 +653,7 @@ class GameScene extends Phaser.Scene {
     if (this.state === 'over') return;
     this.state = 'over';
     const win = this.score[this.player.team] > this.score[this.enemy.team];
-    HUD.result(win, this.twins ? 'twins' : this.diff);
+    HUD.result(win, this.twins ? 'twins' : this.diff, this.analyticsMatch);
     const enemyThrows = this.enemies.reduce((total, enemy) => total + enemy.stats.throws, 0);
     const enemyHits = this.enemies.reduce((total, enemy) => total + enemy.stats.hits, 0);
     track('game_finished', {

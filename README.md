@@ -23,6 +23,18 @@ npm start        # http://localhost:5173
   - 적도 같은 기준으로 `enemy_throws`, `enemy_hits`, `enemy_accuracy`를 기록한다. 쌍둥이 모드는 두 봇의 횟수를 합산하고, 명중률은 합산 명중 수 / 합산 투척 수로 계산한다.
 - `replay_clicked`, `menu_returned`: 결과 화면에서 재도전 또는 난이도 선택. 직전 판 속성 포함
 
+공유 성장 지표:
+
+- `share_clicked`: 공유 버튼 클릭마다 새 무작위 UUID `share_id` 생성. `match_id`, `difficulty`, `result` 포함
+- `share_completed`: 네이티브 공유 API 성공 (`method: native`) 또는 클립보드 복사 성공 (`method: clipboard`). 실제 친구에게 전달·열람되었다는 뜻은 아니다.
+- `share_cancelled`: 네이티브 공유창 취소
+- `share_manual_copy_shown`: 자동 복사 실패로 수동 복사 영역 표시. 복사 완료로 집계하지 않는다.
+- 공유 URL에 `share_id`, `utm_source=friend`, `utm_medium=share`를 붙인다. 기존 쿼리·해시는 전달하지 않는다. 사용자 ID나 이메일을 링크에 넣지 않는다.
+- `invite_opened`: 유효한 UUID v4 `share_id`가 있는 페이지 방문. 새로고침도 이벤트가 발생하므로 유입 성과는 고유 사용자로 집계한다. 자기 링크 방문이나 전달된 링크의 재공유도 포함될 수 있어 실제 친구 수와 같지는 않다.
+- `game_started`, `game_finished`에는 `entry_source` (`share` / `direct`)를 추가하고 공유 유입이면 `referral_share_id`도 붙인다. 이 귀속은 현재 페이지와 그 안의 재도전 동안 유지되며, 추적 파라미터 없는 새 방문에는 이어지지 않는다. `source` (`menu` / `replay`)는 게임 시작 방식으로 별도 유지한다.
+
+공유 의향은 게임 완료 고유 사용자 중 공유 클릭 고유 사용자 비율로 본다. 친구 쪽 퍼널은 `invite_opened` → `game_started` → `game_finished`로 구성하고, 유입의 `share_id`와 게임의 `referral_share_id`가 같도록 연결한다. 공유자는 다른 사용자이므로 `share_clicked`를 같은 사용자 퍼널의 첫 단계에 넣지 않는다. 공유별 유입 성과는 `share_id`로 별도 집계한다. 링크를 받은 전체 인원은 알 수 없으므로 완료율 분모는 공유 링크 방문 고유 사용자로 둔다.
+
 배포 후 PostHog의 Activity에서 방문 → 시작 → 종료 → 재도전 이벤트를 확인한다. 방문 → `game_started` 퍼널, 난이도별 승률, 플레이 시간, 재도전율을 초기 지표로 사용한다. 페이지를 닫아 중단한 판에는 `game_finished`가 없으므로 종료율 해석 시 구분한다.
 
 ## 승부 규칙

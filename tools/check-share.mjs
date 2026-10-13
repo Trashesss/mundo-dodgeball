@@ -25,7 +25,13 @@ try {
   await page.waitForFunction(() => !document.getElementById('share-btn').disabled);
   const shared = await page.evaluate(() => window.shared);
   assert.match(shared.text, /어려움 난이도 클리어/);
-  assert.equal(shared.url, `http://localhost:${server.address().port}/`);
+  const sharedUrl = new URL(shared.url);
+  assert.equal(sharedUrl.origin + sharedUrl.pathname, `http://localhost:${server.address().port}/`);
+  assert.match(sharedUrl.searchParams.get('share_id'), /^[0-9a-f-]{36}$/);
+  assert.equal(sharedUrl.searchParams.get('utm_source'), 'friend');
+  assert.equal(sharedUrl.searchParams.get('utm_medium'), 'share');
+  assert.equal(sharedUrl.searchParams.has('test'), false);
+  assert.equal(sharedUrl.hash, '');
   await page.evaluate(() => {
     window.showResult(false, 'twins');
     Object.defineProperty(navigator, 'share', { configurable: true, value: undefined });
