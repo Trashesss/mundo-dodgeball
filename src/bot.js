@@ -2,19 +2,16 @@
 import { RULES } from './rules.js';
 
 export const DIFFICULTY = {
-  easy:   { react: 0.42, dodgeChance: 0.45, aimErr: 2.0, lead: 0.35, hesitate: [0.8, 2.2], flashChance: 0.0,  ghostChance: 0.1 },
-  normal: { react: 0.26, dodgeChance: 0.75, aimErr: 1.4, lead: 0.75, hesitate: [0.25, 1.1], flashChance: 0.35, ghostChance: 0.3 },
-  hard:   { react: 0.14, dodgeChance: 0.93, aimErr: 0.55, lead: 1.0, hesitate: [0.05, 0.5], flashChance: 0.75, ghostChance: 0.6 },
-  // 페이커: 거의 다 보고 피하고, 무빙을 섞어 읽고, 빈틈(시전 경직·둔화·점멸 쿨)을 놓치지 않는다.
-  // 그래도 4% 정도는 반응을 놓치고, 점멸이 빠진 근거리 식칼은 걸어서 못 피한다.
-  faker:  { react: 0.08, dodgeChance: 0.96, aimErr: 0.3, lead: 1.0, hesitate: [0.02, 0.22], flashChance: 0.95, ghostChance: 1,
-            leadMix: [1, 1, 0.55, 1.3], punish: true, smartGhost: true },
+  normal: { react: 0.42, dodgeChance: 0.45, aimErr: 2.0, lead: 0.35, hesitate: [0.8, 2.2], flashChance: 0.0,  ghostChance: 0.1 },
+  hard:   { react: 0.26, dodgeChance: 0.75, aimErr: 1.4, lead: 0.75, hesitate: [0.25, 1.1], flashChance: 0.35, ghostChance: 0.3 },
+  faker:  { react: 0.14, dodgeChance: 0.93, aimErr: 0.55, lead: 1.0, hesitate: [0.05, 0.5], flashChance: 0.75, ghostChance: 0.6 },
 };
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
 
-export function initBot(c, diffKey) {
+// lane: 쌍둥이 모드에서 위(-1)/아래(1)로 나눠 서서 겹치지 않게 한다. 0이면 진영 전체.
+export function initBot(c, diffKey, lane = 0) {
   c.ai = {
     diff: DIFFICULTY[diffKey],
     wanderT: 0,
@@ -24,6 +21,7 @@ export function initBot(c, diffKey) {
     ghostUsed: false,
     ghostAt: rand(3, 25),
     style: rand(0, 1),     // 0: 뒤에서 버티는 타입, 1: 선 가까이 붙는 타입
+    lane,
   };
 }
 
@@ -31,7 +29,8 @@ function pickWanderPoint(c, game) {
   const s = c.side;
   const near = 1.8 + c.ai.style * 3;
   const x = s * rand(near, near + 7);
-  const z = rand(-RULES.arenaR * 0.75, RULES.arenaR * 0.75);
+  const zMax = RULES.arenaR * 0.75;
+  const z = c.ai.lane ? c.ai.lane * rand(0.5, zMax) : rand(-zMax, zMax);
   return game.constrain({ x, z }, c.team);
 }
 
@@ -88,17 +87,15 @@ function dodge(c, game, threat) {
   }
 }
 
-function aim(c, game, leadOverride) {
+function aim(c, game) {
   const d = c.ai.diff;
   const target = game.player;
   if (!target.alive) return false;
   const dist = Math.hypot(target.x - c.x, target.z - c.z);
   if (dist > RULES.q.range + 1) return false;
   const t = dist / RULES.q.speed + RULES.q.windup;
-  // leadMix: 예측량을 섞어서 같은 방향 무빙/역무빙 어느 쪽도 안전하지 않게
-  const lead = leadOverride ?? (d.leadMix ? d.leadMix[(Math.random() * d.leadMix.length) | 0] : d.lead);
-  let ax = target.x + target.vx * t * lead;
-  let az = target.z + target.vz * t * lead;
+  let ax = target.x + target.vx * t * d.lead;
+  let az = target.z + target.vz * t * d.lead;
   const err = d.aimErr * (0.4 + dist / RULES.q.range);
   ax += gauss() * err; az += gauss() * err;
   game.castQ(c, ax, az);
@@ -113,30 +110,20 @@ export function updateBot(c, game, dt) {
   const threat = findThreat(c, game);
   if (threat && ai.dodgeT <= 0) dodge(c, game, threat);
 
-  // 유체화를 아껴뒀다가 둔화됐거나 점멸 없이 위험할 때 켠다
-  if (ai.diff.smartGhost && c.ghostCd <= 0 && c.ghostT <= 0 && (c.slowT > 0 || (threat && c.flashCd > 0))) {
-    game.castGhost(c);
-  }
-
   if (ai.dodgeT <= 0 && (ai.wanderT <= 0 || !c.moveTarget)) {
     c.moveTarget = pickWanderPoint(c, game);
     ai.wanderT = rand(0.6, 2.2);
   }
 
   // 유체화: 라운드 중 랜덤 타이밍
-  if (!ai.diff.smartGhost && !ai.ghostUsed && game.roundTime > ai.ghostAt && c.ghostCd <= 0) {
+  if (!ai.ghostUsed && game.roundTime > ai.ghostAt && c.ghostCd <= 0) {
     ai.ghostUsed = true;
     if (Math.random() < ai.diff.ghostChance) game.castGhost(c);
   }
 
   if (c.qCd <= 0 && c.castT <= 0) {
     ai.aimT -= dt;
-    // 빈틈 응징: 상대가 던지는 경직(반응 시간 이후)이거나 둔화 중이면 바로 던진다
-    const p = game.player;
-    const casting = p.castT > 0 && p.castT < RULES.q.windup - ai.diff.react;
-    if (ai.diff.punish && p.alive && (casting || p.slowT > 0) && aim(c, game, casting ? 0 : 1)) {
-      ai.aimT = rand(...ai.diff.hesitate);
-    } else if (ai.aimT <= 0) {
+    if (ai.aimT <= 0) {
       aim(c, game);
       ai.aimT = rand(...ai.diff.hesitate);
     }

@@ -4,21 +4,29 @@ import { RULES } from './rules.js';
 const $ = (id) => document.getElementById(id);
 
 export const HUD = {
-  show(on) {
+  show(on, twins = false) {
     for (const id of ['topbar', 'hud']) $(id).classList.toggle('hidden', !on);
+    $('topbar').classList.toggle('twins', twins);
+    $('enemy-name').textContent = twins ? '쌍둥이 문도' : '문도 박사';
   },
 
   updateFight(champs, reset = false) {
     for (const c of champs) {
       const hp = Math.max(0, Math.min(RULES.maxHp, c.hp));
-      const track = $(`health-${c.team}`);
+      const track = $(`health-${c.hudSlot}`);
       track.classList.toggle('reset', reset);
       track.style.setProperty('--health', hp / RULES.maxHp);
       track.setAttribute('aria-valuemax', RULES.maxHp);
       track.setAttribute('aria-valuenow', Math.ceil(hp));
-      $(`hp-${c.team}`).textContent = `${Math.ceil(hp)} / ${RULES.maxHp}`;
-      $(`fighter-${c.team}`).classList.toggle('low-health', hp > 0 && hp <= RULES.maxHp * 0.25);
-      $(`fighter-${c.team}`).classList.toggle('knocked-out', !c.alive);
+      $(`hp-${c.hudSlot}`).textContent = `${Math.ceil(hp)} / ${RULES.maxHp}`;
+      track.classList.toggle('knocked-out', !c.alive);
+    }
+    for (const team of [0, 1]) {
+      const side = champs.filter(c => c.team === team);
+      if (!side.length) continue;
+      const hp = Math.max(...side.map(c => (c.alive ? c.hp : 0)));
+      $(`fighter-${team}`).classList.toggle('low-health', hp > 0 && hp <= RULES.maxHp * 0.25);
+      $(`fighter-${team}`).classList.toggle('knocked-out', side.every(c => !c.alive));
     }
   },
 

@@ -75,7 +75,8 @@ try {
       window.__game.scene.getScene('game').updateCamera();
     });
     const fits = await page.evaluate(() => {
-      const elements = [...document.querySelectorAll('#topbar .fighter, .fight-portrait, .health-track')];
+      const elements = [...document.querySelectorAll('#topbar .fighter, .fight-portrait, .health-track')]
+        .filter(el => el.getClientRects().length); // 쌍둥이 모드 전용 체력바처럼 숨겨진 요소 제외
       return elements.every(el => {
         const box = el.getBoundingClientRect();
         return box.left >= 0 && box.right <= innerWidth && box.width > 0;

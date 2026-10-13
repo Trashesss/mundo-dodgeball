@@ -62,6 +62,7 @@ class Champ {
     this.side = team === 0 ? -1 : 1;
     this.isPlayer = isPlayer;
     this.name = name;
+    this.hudSlot = team; // 상단 체력바 번호 (쌍둥이 모드의 두 번째 적은 2)
     this.stats = { kills: 0, deaths: 0, throws: 0, hits: 0 };
     this.color = isPlayer ? 0x5ee05e : 0xff4040;
     this.barColor = isPlayer ? 0x48c848 : 0xd83838;
@@ -200,6 +201,7 @@ class GameScene extends Phaser.Scene {
   constructor() {
     super('game');
     this.champs = [];
+    this.enemies = [];
     this.cleavers = [];
     this.state = 'loading';
     this.time0 = 0;
@@ -571,6 +573,7 @@ class GameScene extends Phaser.Scene {
     this.menuMundos.forEach((s) => s.setDepth(s.y));
   }
 
+  // diff: normal | hard | faker | twins(보통 봇 둘)
   startMatch({ diff }) {
     Sound.unlock();
     this.menuMundos?.forEach((s) => s.destroy());
@@ -578,15 +581,19 @@ class GameScene extends Phaser.Scene {
     for (const c of this.champs) c.destroy();
     for (const p of this.cleavers) p.destroy();
     this.cleavers = [];
-    this.diff = diff;
+    this.twins = diff === 'twins';
+    this.diff = this.twins ? 'normal' : diff;
     this.player = new Champ(this, { team: 0, isPlayer: true, name: '나' });
-    this.enemy = new Champ(this, { team: 1, isPlayer: false, name: Phaser.Utils.Array.GetRandom(ENEMY_NAMES) });
-    this.champs = [this.player, this.enemy];
+    const names = Phaser.Utils.Array.Shuffle([...ENEMY_NAMES]);
+    this.enemies = Array.from({ length: this.twins ? 2 : 1 }, (_, i) => new Champ(this, { team: 1, isPlayer: false, name: names[i] }));
+    this.enemies.forEach((e, i) => { e.hudSlot = i + 1; });
+    this.enemy = this.enemies[0];
+    this.champs = [this.player, ...this.enemies];
     this.score = [0, 0];
     this.round = 1;
     this.matchTime = 0;
     HUD.clearFeeds();
-    HUD.show(true);
+    HUD.show(true, this.twins);
     this.startRound();
   }
 
@@ -594,8 +601,11 @@ class GameScene extends Phaser.Scene {
     for (const p of this.cleavers) p.destroy();
     this.cleavers = [];
     this.player.reset(-6.5, 0);
-    this.enemy.reset(6.5, 0);
-    initBot(this.enemy, this.diff);
+    this.enemies.forEach((e, i) => {
+      const lane = this.twins ? (i ? 1 : -1) : 0;
+      e.reset(6.5, lane * 4);
+      initBot(e, this.diff, lane);
+    });
     this.moveHeld = false;
     this.roundTime = 0;
     this.state = 'play';
@@ -610,12 +620,12 @@ class GameScene extends Phaser.Scene {
     for (const champ of this.champs) champ.pending = null;
     this.endT = 3.4;
     const pt = this.player.team;
-    const winnerChamp = this.champs[winner];
+    const winnerChamp = winner === pt ? this.player : this.enemies.find(e => e.alive);
     if (winner >= 0) this.score[winner]++;
     if (winner >= 0) {
       (winner === pt ? Sound.win : Sound.lose)();
       this.time.delayedCall(700, () => {
-        if (winnerChamp.alive) { winnerChamp.celebrate = true; winnerChamp.moveTarget = null; }
+        if (winnerChamp?.alive) { winnerChamp.celebrate = true; winnerChamp.moveTarget = null; }
       });
     }
   }
@@ -629,7 +639,7 @@ class GameScene extends Phaser.Scene {
   backToMenu() {
     for (const c of this.champs) c.destroy();
     for (const p of this.cleavers) p.destroy();
-    this.champs = []; this.cleavers = []; this.player = null; this.enemy = null;
+    this.champs = []; this.cleavers = []; this.player = null; this.enemy = null; this.enemies = [];
     HUD.show(false);
     HUD.clearFeeds();
     this.spawnMenuMundos();
@@ -656,7 +666,7 @@ class GameScene extends Phaser.Scene {
           p.moveTarget = this.constrain({ ...this.pointerGround() }, p.team);
         }
       }
-      if (playing && this.enemy.alive) updateBot(this.enemy, this, dt);
+      if (playing) for (const e of this.enemies) if (e.alive) updateBot(e, this, dt);
 
       for (const c of this.champs) this.updateChamp(c, dt);
       for (const c of this.champs) c.sync();
@@ -664,7 +674,7 @@ class GameScene extends Phaser.Scene {
       this.cleavers = this.cleavers.filter((cl) => cl.alive);
 
       if (playing) {
-        const [a, b] = [p.alive, this.enemy.alive];
+        const [a, b] = [p.alive, this.enemies.some(e => e.alive)];
         if (!a || !b) this.endRound(a ? 0 : b ? 1 : -1);
       }
       if (this.state === 'roundEnd') {
@@ -754,7 +764,7 @@ class GameScene extends Phaser.Scene {
     if (this.state === 'play') {
       const hitR = RULES.q.width + RULES.champR;
       for (const e of this.champs) {
-        if (e === p.owner || !e.alive) continue;
+        if (e.team === p.owner.team || !e.alive) continue;
         if (Math.hypot(e.x - p.x, e.z - p.z) < hitR) {
           this.hit(e, p);
           p.destroy();
