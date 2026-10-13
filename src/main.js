@@ -472,16 +472,16 @@ class GameScene extends Phaser.Scene {
 
   castQ(c, tx, tz) {
     if (this.state !== 'play' || !c.alive || c.qCd > 0 || c.castT > 0) return false;
-    if (c.hp <= RULES.q.cost) return false; // 체력 비용으로 스스로 죽지 않음
     let dx = tx - c.x, dz = tz - c.z;
     let l = Math.hypot(dx, dz);
     if (l < 0.01) { dx = Math.cos(c.facing); dz = Math.sin(c.facing); l = 1; }
     dx /= l; dz /= l;
     c.facing = Math.atan2(dz, dx);
     c.qCd = RULES.q.cd;
-    c.hp -= RULES.q.cost;
+    const paid = Math.min(RULES.q.cost, Math.max(0, c.hp - 1)); // 체력 비용으로 스스로 죽지 않음(최소 1)
+    c.hp -= paid;
     c.castT = RULES.q.windup;
-    c.pending = { dx, dz };
+    c.pending = { dx, dz, paid };
     c.actionT = THROW.duration;
     c.stats.throws++;
     c.setAnim('throw', true);
@@ -524,7 +524,7 @@ class GameScene extends Phaser.Scene {
     const k = cleaver.owner;
     const dmg = Math.round(Math.max(RULES.q.dmgMin, victim.hp * RULES.q.dmgPct));
     victim.hp -= dmg;
-    if (k.alive) k.hp = Math.min(RULES.maxHp, k.hp + RULES.q.cost);
+    if (k.alive) k.hp = Math.min(RULES.maxHp, k.hp + cleaver.paid);
     victim.slowT = RULES.q.slowDur;
     victim.hitFlash = 0.14;
     k.stats.hits++;
@@ -711,6 +711,7 @@ class GameScene extends Phaser.Scene {
       c.castT -= dt;
       if (c.castT <= 0 && c.pending && c.alive) {
         const cl = new Cleaver(this, c, c.pending.dx, c.pending.dz);
+        cl.paid = c.pending.paid;
         this.cleavers.push(cl);
         Sound.throw(this.vol(c));
         c.pending = null;
