@@ -7,7 +7,7 @@
   <title>문도 피구</title>
   <link rel="preload" href="assets/fonts/Jua-Regular.ttf" as="font" type="font/ttf" crossorigin />
   <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
 </head>
 <body>
   <div id="game"></div>
@@ -30,8 +30,6 @@
     </div>
   </div>
 
-  <div id="announce"></div>
-  <div id="countdown"></div>
   <div id="chat"></div>
 
   <!-- 하단 HUD -->
@@ -52,34 +50,50 @@
     </div>
   </div>
 
-  <div id="loading" class="screen">
-    <div class="panel">
-      <h1>문도 피구</h1>
-      <div class="loadbar"><div id="load-fill"></div></div>
-      <p id="load-text">문도 불러오는 중… 0%</p>
+  <div id="loading" class="screen" aria-labelledby="loading-title">
+    <div class="loading-content">
+      <div class="loading-art" aria-hidden="true">
+        <img src="assets/cartoon/portrait-hud-v3.png" alt="" width="256" height="256" fetchpriority="high" />
+      </div>
+      <h1 id="loading-title">문도 <span>피구</span></h1>
+      <p class="loading-tagline"><strong><em>문도</em></strong>, 가고 <strong><em>싶은 대로</em></strong> 간다! (츄릅)</p>
+      <div class="loading-progress">
+        <div class="loading-status"><span id="load-text" role="status">문도 깨우는 중…</span><span id="load-percent" aria-hidden="true">0%</span></div>
+        <div class="loadbar" id="load-progress" role="progressbar" aria-label="게임 로딩" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="load-fill"></div></div>
+      </div>
+      <p class="loading-tip"><kbd>Q</kbd> 식칼을 던지고, <kbd>D</kbd> 점멸로 피하세요.</p>
     </div>
   </div>
 
   <div id="menu" class="screen hidden">
-    <div class="champion-select" role="dialog" aria-modal="true" aria-labelledby="select-title">
-      <header class="select-heading">
-        <h1 id="select-title">챔피언을 선택하세요!</h1>
+    <main class="match-setup" aria-labelledby="select-title">
+      <header class="setup-heading">
+        <p class="setup-brand">문도 <span>피구</span></p>
+        <h1 id="select-title">봇 난이도 선택</h1>
+        <p class="setup-subtitle" id="difficulty-label">상대 봇의 난이도를 골라주세요.</p>
       </header>
-      <div class="champion-choice" aria-label="선택된 챔피언">
-        <div class="champion-portrait">
-          <img src="assets/cartoon/portrait-hud-v3.png" alt="문도 박사" width="256" height="256" />
-          <span class="selected-mark" aria-hidden="true">✓</span>
-        </div>
-        <h2>문도 박사</h2>
-        <div class="difficulty">
-          <p id="difficulty-label">봇 난이도</p>
-          <div class="seg" id="opt-diff" role="group" aria-labelledby="difficulty-label">
-            <button type="button" data-v="easy" aria-pressed="false">쉬움</button><button type="button" data-v="normal" class="on" aria-pressed="true">보통</button><button type="button" data-v="hard" aria-pressed="false">어려움</button>
-          </div>
-        </div>
+      <div id="opt-diff" role="group" aria-labelledby="difficulty-label">
+        <button type="button" data-v="easy" aria-pressed="false">
+          <span class="difficulty-top"><span class="difficulty-level">LEVEL 01</span><span class="difficulty-check" aria-hidden="true"></span></span>
+          <span class="difficulty-meter" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="difficulty-name">쉬움</span>
+          <span class="difficulty-description">천천히, 감 잡기</span>
+        </button>
+        <button type="button" data-v="normal" class="on" aria-pressed="true">
+          <span class="difficulty-top"><span class="difficulty-level">LEVEL 02</span><span class="difficulty-check" aria-hidden="true"></span></span>
+          <span class="difficulty-meter" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="difficulty-name">보통</span>
+          <span class="difficulty-description">제대로 한 판</span>
+        </button>
+        <button type="button" data-v="hard" aria-pressed="false">
+          <span class="difficulty-top"><span class="difficulty-level">LEVEL 03</span><span class="difficulty-check" aria-hidden="true"></span></span>
+          <span class="difficulty-meter" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="difficulty-name">어려움</span>
+          <span class="difficulty-description">빈틈없이, 전력 승부</span>
+        </button>
       </div>
-      <button id="start-btn" class="lol-btn">게임 시작</button>
-    </div>
+      <button id="start-btn" type="button">게임 시작</button>
+    </main>
   </div>
 
   <div id="result" class="screen hidden">

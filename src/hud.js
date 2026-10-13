@@ -1,4 +1,4 @@
-// DOM 기반 HUD (하단 스킬바, 상단 체력, 알림, 채팅, 결과 화면)
+// DOM 기반 HUD (하단 스킬바, 상단 체력, 채팅, 결과 화면)
 import { RULES } from './rules.js';
 
 const $ = (id) => document.getElementById(id);
@@ -42,15 +42,6 @@ export const HUD = {
     $('hud').classList.toggle('unavailable', !p.alive);
   },
 
-  announce(text, sub = '', cls = 'neutral') {
-    const box = $('announce');
-    box.innerHTML = `<div class="msg ${cls}">${text}${sub ? `<small>${sub}</small>` : ''}</div>`;
-  },
-
-  countdown(text) {
-    $('countdown').innerHTML = text ? `<span class="n">${text}</span>` : '';
-  },
-
   chat(text) {
     const el = document.createElement('div');
     el.className = 'line';
@@ -64,8 +55,6 @@ export const HUD = {
 
   clearFeeds() {
     $('chat').innerHTML = '';
-    $('announce').innerHTML = '';
-    $('countdown').innerHTML = '';
   },
 
   result(win, champs, score) {

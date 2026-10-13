@@ -207,8 +207,11 @@ class GameScene extends Phaser.Scene {
 
   preload() {
     this.load.on('progress', (v) => {
+      const percent = Math.round(v * 100);
       document.getElementById('load-fill').style.width = `${v * 100}%`;
-      document.getElementById('load-text').textContent = `문도 불러오는 중… ${Math.round(v * 100)}%`;
+      document.getElementById('load-percent').textContent = `${percent}%`;
+      document.getElementById('load-progress').setAttribute('aria-valuenow', percent);
+      document.getElementById('load-text').textContent = percent < 100 ? '경기장 준비하는 중…' : '문도, 준비 끝!';
     });
     this.load.multiatlas('mundo', 'assets/cartoon/atlas.json', 'assets/cartoon/');
     this.load.json('meta', 'assets/cartoon/meta.json');
@@ -411,7 +414,7 @@ class GameScene extends Phaser.Scene {
     this.moveHeld = false;
     this.input.on('pointerdown', (p) => {
       Sound.unlock();
-      if (!this.player || !this.player.alive || !['play', 'countdown'].includes(this.state)) return;
+      if (!this.player || !this.player.alive || this.state !== 'play') return;
       this.moveHeld = true;
       this.moveRepeatT = 0.1;
       const g = this.pointerGround();
@@ -557,13 +560,6 @@ class GameScene extends Phaser.Scene {
     k.stats.kills++;
     v.stats.deaths++;
     Sound.death(this.vol(v));
-
-    let title;
-    if (!this.firstBlood) title = '선취점!';
-    else if (k.isPlayer) title = '적을 처치했습니다!';
-    else title = '당신이 처치되었습니다';
-    this.firstBlood = true;
-    HUD.announce(title, `${k.name}  ⟶  ${v.name}`, k.isPlayer ? 'ally' : 'enemy');
   }
 
   // ---------- 매치 흐름 ----------
@@ -589,7 +585,6 @@ class GameScene extends Phaser.Scene {
     this.score = [0, 0];
     this.round = 1;
     this.matchTime = 0;
-    this.firstBlood = false;
     HUD.clearFeeds();
     HUD.show(true);
     this.startRound();
@@ -603,11 +598,8 @@ class GameScene extends Phaser.Scene {
     initBot(this.enemy, this.diff);
     this.moveHeld = false;
     this.roundTime = 0;
-    this.state = 'countdown';
-    this.countT = 3;
-    this.lastCount = 4;
+    this.state = 'play';
     HUD.updateFight(this.champs, true);
-    HUD.announce(RULES.roundsToWin === 1 ? (this.round === 1 ? '단판 승부' : '재경기') : `라운드 ${this.round}`, '상대 문도를 쓰러뜨리면 승리!', 'neutral');
   }
 
   endRound(winner) {
@@ -620,8 +612,6 @@ class GameScene extends Phaser.Scene {
     const pt = this.player.team;
     const winnerChamp = this.champs[winner];
     if (winner >= 0) this.score[winner]++;
-    if (winner < 0) HUD.announce('무승부', '라운드를 다시 진행합니다', 'neutral');
-    else HUD.announce(winner === pt ? '라운드 승리' : '라운드 패배', `${winnerChamp.name} 승리`, winner === pt ? 'ally' : 'enemy');
     if (winner >= 0) {
       (winner === pt ? Sound.win : Sound.lose)();
       this.time.delayedCall(700, () => {
@@ -654,24 +644,12 @@ class GameScene extends Phaser.Scene {
     const watched = this.champs.find(c => c.alive && c.actionT > 0) || this.player;
     this.baron.update(this.time0, dt, watched ? sx(watched.x) : Math.sin(this.time0 * 0.45) * 400);
 
-    if (this.state === 'countdown') {
-      this.countT -= dt;
-      const n = Math.ceil(this.countT);
-      if (n !== this.lastCount && n > 0) { this.lastCount = n; HUD.countdown(String(n)); Sound.tick(); }
-      if (this.countT <= 0) {
-        this.state = 'play';
-        HUD.countdown('시작!');
-        Sound.go();
-        this.time.delayedCall(800, () => { if (this.state === 'play') HUD.countdown(''); });
-      }
-    }
-
     if (this.champs.length) {
       const playing = this.state === 'play';
       if (playing) { this.matchTime += dt; this.roundTime += dt; }
 
       const p = this.player;
-      if (this.moveHeld && p.alive && ['play', 'countdown'].includes(this.state)) {
+      if (this.moveHeld && p.alive && this.state === 'play') {
         this.moveRepeatT -= dt;
         if (this.moveRepeatT <= 0) {
           this.moveRepeatT = 0.08;
@@ -845,9 +823,19 @@ for (const [id, key, parse] of [['opt-diff', 'diff', String]]) {
   });
 }
 const scene = () => game.scene.getScene('game');
-document.getElementById('start-btn').addEventListener('click', () => {
-  document.getElementById('menu').classList.add('hidden');
+document.getElementById('start-btn').addEventListener('click', async (event) => {
+  const button = event.currentTarget;
+  const menu = document.getElementById('menu');
+  button.disabled = true;
   scene().startMatch(opts);
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    await menu.animate([{ opacity: 1 }, { opacity: 0 }], {
+      duration: 240, easing: 'ease-out', fill: 'forwards',
+    }).finished;
+  }
+  menu.classList.add('hidden');
+  menu.getAnimations().forEach(animation => animation.cancel());
+  button.disabled = false;
 });
 document.getElementById('again-btn').addEventListener('click', () => {
   document.getElementById('result').classList.add('hidden');

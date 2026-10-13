@@ -16,13 +16,13 @@ try {
   await page.goto(`http://localhost:${server.address().port}/`);
   await page.waitForFunction(() => window.__game?.scene.getScene('game').state === 'menu');
   await page.click('#start-btn');
-  await page.waitForFunction(() => window.__game.scene.getScene('game').state === 'countdown');
+  await page.waitForFunction(() => window.__game.scene.getScene('game').state === 'play');
   const checks = await page.evaluate(async () => {
     const scene = window.__game.scene.getScene('game');
     const { RULES } = await import('/src/rules.js');
     scene.scene.pause();
-    scene.update(0, 16);
-    const countdownReady = scene.state === 'countdown' && scene.roundTime === 0;
+    const startsImmediately = scene.state === 'play' && scene.roundTime < 1;
+    const overlaysRemoved = !document.querySelector('#announce, #countdown');
     scene.state = 'play';
     scene.player.qCd = scene.enemy.qCd = 999;
     scene.player.hp = 400;
@@ -53,18 +53,16 @@ try {
     const draw = scene.state === 'roundEnd' && scene.score.every(score => score === 0);
     scene.endT = 0;
     scene.update(0, 16);
-    const rematch = scene.state === 'countdown' && scene.player.hp === RULES.maxHp;
+    const rematch = scene.state === 'play' && scene.player.hp === RULES.maxHp;
     scene.state = 'play';
     scene.player.hp = 120;
     scene.update(0, 16);
     const lowHealth = document.getElementById('fighter-0').classList.contains('low-health');
     const hp = Number(document.getElementById('health-0').getAttribute('aria-valuenow'));
     scene.startRound();
-    document.getElementById('announce').innerHTML = '';
-    document.getElementById('countdown').innerHTML = '';
-    return { countdownReady, unlimited, timerRemoved, win, loss, draw, rematch, resultFrozen, lowHealth, hp };
+    return { startsImmediately, overlaysRemoved, unlimited, timerRemoved, win, loss, draw, rematch, resultFrozen, lowHealth, hp };
   });
-  assert.ok(checks.countdownReady && checks.unlimited && checks.timerRemoved);
+  assert.ok(checks.startsImmediately && checks.overlaysRemoved && checks.unlimited && checks.timerRemoved);
   assert.ok(checks.win && checks.loss && checks.draw);
   assert.ok(checks.rematch && checks.resultFrozen && checks.lowHealth);
   assert.equal(checks.hp, 121);
@@ -87,7 +85,7 @@ try {
     if (width === 390) await page.screenshot({ path: 'output/fight-hud-mobile.png' });
   }
   assert.deepEqual(errors, []);
-  console.log('Fight HUD: no time limit, knockout win/loss/draw, rematch, frozen result, low HP and responsive layout passed.');
+  console.log('Fight HUD: immediate start without announcement overlays, no time limit, knockout win/loss/draw, rematch, frozen result, low HP and responsive layout passed.');
 } finally {
   await browser.close();
   server.close();
