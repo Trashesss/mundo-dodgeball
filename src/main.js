@@ -7,6 +7,7 @@ import { HUD } from './hud.js';
 import { Sound } from './sound.js';
 import { THROW } from './throw-motion.js';
 import { createBaron } from './baron.js';
+import { track } from './analytics.js';
 
 const { PPU, SIN, COS } = PROJ;
 const sx = (x) => x * PPU;
@@ -502,7 +503,6 @@ class GameScene extends Phaser.Scene {
     c.castT = RULES.q.windup;
     c.pending = { dx, dz, paid };
     c.actionT = THROW.duration;
-    c.stats.throws++;
     c.setAnim('throw', true);
     return true;
   }
@@ -586,7 +586,7 @@ class GameScene extends Phaser.Scene {
   }
 
   // diff: easy | normal | hard | faker | twins(보통 봇 둘)
-  startMatch({ diff }) {
+  startMatch({ diff }, source = 'menu') {
     Sound.unlock();
     this.menuMundos?.forEach((s) => s.destroy());
     this.menuMundos = null;
@@ -606,6 +606,12 @@ class GameScene extends Phaser.Scene {
     HUD.clearFeeds();
     HUD.show(true, this.twins);
     this.startRound();
+    this.analyticsMatch = {
+      match_id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      difficulty: diff,
+      source,
+    };
+    track('game_started', this.analyticsMatch);
   }
 
   startRound() {
@@ -643,9 +649,24 @@ class GameScene extends Phaser.Scene {
   }
 
   endMatch() {
+    if (this.state === 'over') return;
     this.state = 'over';
     const win = this.score[this.player.team] > this.score[this.enemy.team];
     HUD.result(win, this.twins ? 'twins' : this.diff);
+    const enemyThrows = this.enemies.reduce((total, enemy) => total + enemy.stats.throws, 0);
+    const enemyHits = this.enemies.reduce((total, enemy) => total + enemy.stats.hits, 0);
+    track('game_finished', {
+      ...this.analyticsMatch,
+      result: win ? 'win' : 'loss',
+      duration_seconds: Math.round(this.matchTime * 10) / 10,
+      throws: this.player.stats.throws,
+      hits: this.player.stats.hits,
+      accuracy: this.player.stats.throws > 0
+        ? this.player.stats.hits / this.player.stats.throws : 0,
+      enemy_throws: enemyThrows,
+      enemy_hits: enemyHits,
+      enemy_accuracy: enemyThrows > 0 ? enemyHits / enemyThrows : 0,
+    });
   }
 
   backToMenu() {
@@ -724,6 +745,7 @@ class GameScene extends Phaser.Scene {
         const cl = new Cleaver(this, c, c.pending.dx, c.pending.dz);
         cl.paid = c.pending.paid;
         this.cleavers.push(cl);
+        c.stats.throws++;
         Sound.throw(this.vol(c));
         c.pending = null;
       }
@@ -867,10 +889,12 @@ document.getElementById('start-btn').addEventListener('click', async (event) => 
   button.disabled = false;
 });
 document.getElementById('again-btn').addEventListener('click', () => {
+  track('replay_clicked', scene().analyticsMatch);
   document.getElementById('result').classList.add('hidden');
-  scene().startMatch(opts);
+  scene().startMatch(opts, 'replay');
 });
 document.getElementById('menu-btn').addEventListener('click', () => {
+  track('menu_returned', scene().analyticsMatch);
   document.getElementById('result').classList.add('hidden');
   document.getElementById('menu').classList.remove('hidden');
   scene().backToMenu();
