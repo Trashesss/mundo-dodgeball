@@ -573,7 +573,7 @@ class GameScene extends Phaser.Scene {
     this.menuMundos.forEach((s) => s.setDepth(s.y));
   }
 
-  // diff: normal | hard | faker | twins(보통 봇 둘)
+  // diff: easy | normal | hard | faker | twins(보통 봇 둘)
   startMatch({ diff }) {
     Sound.unlock();
     this.menuMundos?.forEach((s) => s.destroy());

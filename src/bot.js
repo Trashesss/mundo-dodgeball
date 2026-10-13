@@ -2,6 +2,7 @@
 import { RULES } from './rules.js';
 
 export const DIFFICULTY = {
+  easy:   { react: 0.6, dodgeChance: 0.25, aimErr: 3.0, lead: 0.15, hesitate: [1.2, 3.0], flashChance: 0.0, ghostChance: 0.0 },
   normal: { react: 0.42, dodgeChance: 0.45, aimErr: 2.0, lead: 0.35, hesitate: [0.8, 2.2], flashChance: 0.0,  ghostChance: 0.1 },
   hard:   { react: 0.26, dodgeChance: 0.75, aimErr: 1.4, lead: 0.75, hesitate: [0.25, 1.1], flashChance: 0.35, ghostChance: 0.3 },
   faker:  { react: 0.14, dodgeChance: 0.93, aimErr: 0.55, lead: 1.0, hesitate: [0.05, 0.5], flashChance: 0.75, ghostChance: 0.6 },
