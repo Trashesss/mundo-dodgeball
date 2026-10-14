@@ -35,14 +35,14 @@
     <div class="fighter blue" id="fighter-0">
       <div class="fight-portrait"><img src="assets/cartoon/portrait-hud-v3.png" alt="내 문도 초상화" /></div>
       <div class="fighter-info">
-        <div class="fighter-name"><span>문도 박사</span><small>PLAYER 1</small></div>
+        <div class="fighter-name"><span id="player-name">문도 박사</span><small id="player-tag">PLAYER 1</small></div>
         <div class="health-track" id="health-0" role="progressbar" aria-label="내 문도 체력" aria-valuemin="0" aria-valuemax="640"><div class="health-fill"></div><span class="health-value" id="hp-0">640 / 640</span></div>
       </div>
     </div>
     <div class="fighter red" id="fighter-1">
       <div class="fight-portrait"><img src="assets/cartoon/portrait-hud-v3.png" alt="상대 문도 초상화" /></div>
       <div class="fighter-info">
-        <div class="fighter-name"><span id="enemy-name">문도 박사</span><small>CPU</small></div>
+        <div class="fighter-name"><span id="enemy-name">문도 박사</span><small id="enemy-tag">CPU</small></div>
         <div class="health-track" id="health-1" role="progressbar" aria-label="상대 문도 체력" aria-valuemin="0" aria-valuemax="640"><div class="health-fill"></div><span class="health-value" id="hp-1">640 / 640</span></div>
         <div class="health-track twin-track" id="health-2" role="progressbar" aria-label="두 번째 상대 문도 체력" aria-valuemin="0" aria-valuemax="640"><div class="health-fill"></div><span class="health-value" id="hp-2">640 / 640</span></div>
       </div>
@@ -50,6 +50,8 @@
   </div>
 
   <div id="chat"></div>
+  <div id="online-countdown" class="hidden" aria-live="assertive"></div>
+  <div id="net-banner" class="hidden" role="status" aria-live="polite"></div>
 
   <!-- 하단 HUD -->
   <div id="hud" class="hidden">
@@ -137,6 +139,7 @@
         </button>
       </div>
       <button id="start-btn" type="button">게임 시작</button>
+      <button id="online-btn" type="button">친구와 대결 <small>초대 링크로 1대1</small></button>
       <div class="flash-prank" id="flash-prank">
         <button id="flash-swap-btn" type="button">점멸을 F로 바꾸기</button>
         <div class="flash-prank-reply" role="status" aria-live="polite" aria-atomic="true">
@@ -144,6 +147,29 @@
           <img class="flash-prank-emote" src="assets/cartoon/mundo-thumbs-up-emote-v1.png" alt="따봉 날리는 문도" width="64" height="64" />
         </div>
       </div>
+    </main>
+  </div>
+
+  <div id="lobby" class="screen hidden" role="dialog" aria-modal="true" aria-labelledby="lobby-title" data-state="connecting">
+    <main class="lobby-card">
+      <p class="setup-brand">문도 <span>피구</span></p>
+      <h1 id="lobby-title">친구와 대결</h1>
+      <p id="lobby-status" class="lobby-status" role="status">서버에 연결하는 중…</p>
+      <div class="lobby-room">
+        <div class="lobby-code"><span>방 코드</span><strong id="lobby-code">------</strong></div>
+        <div class="lobby-link">
+          <input id="lobby-link" type="text" readonly aria-label="초대 링크" />
+          <button id="lobby-copy" type="button">초대 링크 보내기</button>
+        </div>
+        <p id="lobby-copy-status" class="lobby-copy-status" role="status"></p>
+        <ul class="lobby-players" aria-label="참가자">
+          <li id="lobby-p0" data-state="empty"><span class="lobby-role">방장</span><span class="lobby-player-status">기다리는 중…</span></li>
+          <li id="lobby-p1" data-state="empty"><span class="lobby-role">친구</span><span class="lobby-player-status">기다리는 중…</span></li>
+        </ul>
+        <p class="lobby-tip">대인전은 경기장이 줄어들지 않아요. 먼저 쓰러뜨리면 승리!</p>
+        <button id="lobby-ready" type="button">준비</button>
+      </div>
+      <button id="lobby-leave" type="button">나가기</button>
     </main>
   </div>
 

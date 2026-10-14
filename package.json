@@ -9,10 +9,16 @@
     "check:hud": "node tools/check-fight-hud.mjs",
     "preview:cartoon": "node tools/preview-cartoon.mjs",
     "bake": "node tools/bake.mjs",
-    "start": "node tools/serve.mjs"
+    "start": "node tools/serve.mjs",
+    "check:sim": "node tools/check-sim.mjs",
+    "check:online": "node tools/check-online.mjs",
+    "server": "node server/index.mjs"
   },
   "devDependencies": {
     "puppeteer-core": "^24.0.0",
     "three": "0.160.0"
+  },
+  "dependencies": {
+    "ws": "^8.22.0"
   }
 }

@@ -1,5 +1,6 @@
-// 문도 피구 — Phaser 2.5D 봇전
-// 월드 로직은 지면 좌표 (x, z)에서 돌고, 화면에는 PROJ 투영으로 그린다. 깊이는 화면 y 로 정렬.
+// 문도 피구 — Phaser 2.5D 봇전 + 친구와 온라인 1대1
+// 월드 로직(src/sim.js)은 지면 좌표 (x, z)에서 돌고, 화면에는 PROJ 투영으로 그린다. 깊이는 화면 y 로 정렬.
+// 씬 자체가 sim 의 world 역할을 한다 (champs, cleavers, state, arenaR, roundTime, shrinkTeam, judge, feed).
 import { PROJ, ARENA } from './config.js';
 import { RULES } from './rules.js';
 import { initBot, updateBot } from './bot.js';
@@ -8,6 +9,9 @@ import { Sound } from './sound.js';
 import { THROW } from './throw-motion.js';
 import { createBaron } from './baron.js';
 import { track, createTrackingId, referralContext } from './analytics.js';
+import * as Sim from './sim.js';
+import { NET, unpackChamp, unpackCleaver } from './net-protocol.js';
+import { Online, roomFromUrl } from './online.js';
 
 const { PPU, SIN, COS } = PROJ;
 const sx = (x) => x * PPU;
@@ -17,6 +21,7 @@ const BAR_OFF = 154;
 const EMOTE_DELAY = 0.25;
 const EMOTE_DURATION = 1;
 const EMOTE_SIZE = 104;
+const INTERP_MS = 100; // 대인전 상대 표시 지연: 스냅샷 3개 간격 + 도착 흔들림 여유
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 // Render at the display's physical pixel density so Retina screens are not upscaled.
@@ -36,13 +41,14 @@ uniform float uSin;
 uniform float uR;
 uniform float uInitialR;
 uniform float uBankR;
+uniform float uLeftOnly;
 varying vec2 outTexCoord;
 
 void main() {
   vec2 s = uOrigin + vec2(outTexCoord.x, 1.0 - outTexCoord.y) * uSize;
   vec2 g = vec2(s.x / uPPU, s.y / (uPPU * uSin));
   float r = length(g);
-  float boundaryR = g.x < 0.0 ? uR : uInitialR;
+  float boundaryR = g.x < 0.0 || uLeftOnly < 0.5 ? uR : uInitialR;
   if (r > uBankR) discard;
   vec3 col = mix(vec3(0.19, 0.39, 0.49), vec3(0.23, 0.40, 0.48), smoothstep(-1.2, 1.2, g.x));
   // Sparse, graphic ripples instead of realistic caustics.
@@ -51,7 +57,7 @@ void main() {
   float wave = abs(tile.y - 1.05 - sin(tile.x * 2.4) * 0.055);
   float dash = smoothstep(0.2, 0.4, tile.x) * (1.0 - smoothstep(1.2, 1.5, tile.x));
   col = mix(col, vec3(0.48, 0.69, 0.73), (1.0 - smoothstep(0.025, 0.06, wave)) * dash * 0.38);
-  float playerSide = 1.0 - smoothstep(-0.8, 0.0, g.x);
+  float playerSide = mix(1.0, 1.0 - smoothstep(-0.8, 0.0, g.x), uLeftOnly);
   float edge = (1.0 - smoothstep(0.035, 0.085, abs(r - boundaryR))) * playerSide;
   col = mix(col, vec3(0.40, 0.62, 0.85), edge * 0.65);
   float outside = smoothstep(uR, uR + 0.2, r)
@@ -65,13 +71,12 @@ void main() {
 
 // ---------------------------------------------------------------------------
 class Champ {
-  constructor(scene, { team, isPlayer }) {
+  // emote: 적중 시 따봉 표시 (봇전은 봇만, 대인전은 양쪽 모두)
+  constructor(scene, { team, isPlayer, emote = !isPlayer }) {
+    Object.assign(this, Sim.createChamp(team)); // team, side, stats
     this.scene = scene;
-    this.team = team;
-    this.side = team === 0 ? -1 : 1;
     this.isPlayer = isPlayer;
     this.hudSlot = team; // 상단 체력바 번호 (쌍둥이 모드의 두 번째 적은 2)
-    this.stats = { kills: 0, deaths: 0, throws: 0, hits: 0 };
     this.color = isPlayer ? 0x5ee05e : 0xff4040;
     this.barColor = isPlayer ? 0x48c848 : 0xd83838;
 
@@ -84,19 +89,16 @@ class Champ {
     this.ring.lineStyle(isPlayer ? 3 : 2, this.color, 0.95).strokeEllipse(0, 0, rw, rh);
     this.sprite = scene.add.sprite(0, 0, 'mundo', 'idle_2_0').setOrigin(0.5, meta.anchor).setScale(meta.scale);
     this.bar = scene.add.graphics().setDepth(DEPTH.ui);
-    if (!isPlayer) {
+    if (emote) {
       this.emote = scene.add.image(0, 0, 'mundo-emote')
         .setDisplaySize(EMOTE_SIZE, EMOTE_SIZE).setDepth(DEPTH.ui + 2).setVisible(false);
     }
   }
 
   reset(x, z) {
+    Sim.resetChamp(this, x, z);
     Object.assign(this, {
-      x, z, vx: 0, vz: 0, hp: RULES.maxHp, alive: true,
-      qCd: rand(0.6, 1.2), flashCd: 0, ghostCd: 0, ghostT: 0, slowT: 0,
-      castT: 0, pending: null, moveTarget: null, actionT: 0, hitFlash: 0, rippleT: 0,
-      celebrate: false, facing: this.team === 0 ? 0 : Math.PI, lastHp: -1, animKey: null,
-      tintState: '', emoteT: 0, emoteDelayT: 0,
+      hitFlash: 0, rippleT: 0, lastHp: -1, animKey: null, tintState: '', emoteT: 0, emoteDelayT: 0,
     });
     this.sprite.setAlpha(1).clearTint();
     this.ring.setVisible(true);
@@ -107,7 +109,7 @@ class Champ {
   }
 
   speed() {
-    return RULES.moveSpeed * (this.ghostT > 0 ? RULES.ghost.mul : 1) * (this.slowT > 0 ? 1 - RULES.q.slow : 1);
+    return Sim.champSpeed(this);
   }
 
   showEmote() {
@@ -198,21 +200,22 @@ class Champ {
   }
 }
 
-class Cleaver {
-  constructor(scene, owner, dx, dz) {
-    Object.assign(this, { owner, team: owner.team, dx, dz, dist: 0, age: 0, alive: true });
-    this.x = owner.x + dx * 0.6;
-    this.z = owner.z + dz * 0.6;
+// 식칼 화면 오브젝트. 계산 상태는 sim 의 식칼 객체(cl)가 갖고, cl.view 로 연결된다.
+class CleaverView {
+  constructor(scene, cl) {
     this.cont = scene.add.container(0, 0);
-    this.img = scene.add.image(0, 0, 'cleaver').setDisplaySize(72, 43.2).setRotation(Math.atan2(dz * SIN, dx));
+    this.img = scene.add.image(0, 0, 'cleaver').setDisplaySize(72, 43.2).setRotation(Math.atan2(cl.dz * SIN, cl.dx));
     this.cont.add(this.img);
     this.shadow = scene.add.image(0, 0, 'shadow').setDepth(DEPTH.decal).setAlpha(0.5);
     this.shadow.setDisplaySize(1.6 * PPU, 1.6 * PPU * SIN);
-    this.cont.setPosition(sx(this.x), sy(this.z, RULES.q.height)).setDepth(sy(this.z) + 2);
-    this.shadow.setPosition(sx(this.x), sy(this.z));
+    this.sync(cl);
+  }
+  sync(cl) {
+    const X = sx(cl.x), Y = sy(cl.z, RULES.q.height);
+    this.cont.setPosition(X, Y).setDepth(sy(cl.z) + 2);
+    this.shadow.setPosition(X, sy(cl.z));
   }
   destroy() {
-    this.alive = false;
     this.cont.destroy();
     this.shadow.destroy();
   }
@@ -227,6 +230,14 @@ class GameScene extends Phaser.Scene {
     this.cleavers = [];
     this.state = 'loading';
     this.time0 = 0;
+    // sim world 필드
+    this.mode = 'bot';
+    this.shrinkTeam = 0;
+    this.judge = true;
+    this.nextCleaverId = 1;
+    this.feed = [];
+    this.roundTime = 0;
+    this.netPaused = false;
   }
 
   preload() {
@@ -255,7 +266,7 @@ class GameScene extends Phaser.Scene {
     this.spawnMenuMundos();
     this.state = 'menu';
     document.getElementById('loading').classList.add('hidden');
-    document.getElementById('menu').classList.remove('hidden');
+    this.game.events.emit('mundo-ready');
   }
 
   // ---------- 리소스 ----------
@@ -404,6 +415,8 @@ class GameScene extends Phaser.Scene {
       uInitialR: { type: '1f', value: RULES.arenaR },
       // Continue the two water colors beneath the rocks where the strip was removed.
       uBankR: { type: '1f', value: ARENA.ROCK_R + 0.75 },
+      // 1: 봇전처럼 플레이어 쪽(왼쪽)만 경계를 강조, 0: 대인전 양쪽 동일
+      uLeftOnly: { type: '1f', value: 1 },
     });
     this.water = this.add.shader(base, -wx, -wy, wx * 2, wy * 2).setOrigin(0, 0).setDepth(DEPTH.water);
     this.baron = createBaron(this, sx(-11), sy(-9.8), DEPTH.arena + 1);
@@ -441,13 +454,13 @@ class GameScene extends Phaser.Scene {
   setupInput() {
     this.input.mouse.disableContextMenu();
     this.moveHeld = false;
-    this.input.on('pointerdown', (p) => {
+    this.input.on('pointerdown', () => {
       Sound.unlock();
-      if (!this.player || !this.player.alive || this.state !== 'play') return;
+      if (!this.canControl()) return;
       this.moveHeld = true;
       this.moveRepeatT = 0.1;
       const g = this.pointerGround();
-      this.player.moveTarget = this.constrain({ ...g }, this.player);
+      this.setMoveTarget(g);
       this.clickMarker(g.x, g.z);
     });
     this.input.on('pointerup', (p) => {
@@ -458,13 +471,37 @@ class GameScene extends Phaser.Scene {
       Sound.unlock();
       const p = this.player;
       if (e.code === 'KeyM') { Sound.toggleMute(); HUD.chat(Sound.muted ? '소리 끔' : '소리 켬'); return; }
-      if (!p || !p.alive || this.state !== 'play') return;
+      if (!this.canControl()) return;
       const g = this.pointerGround();
-      if (e.code === 'KeyQ') this.castQ(p, g.x, g.z);
-      else if (e.code === 'KeyD') this.castFlash(p, g.x, g.z);
-      else if (e.code === 'KeyF') this.castGhost(p);
-      else if (e.code === 'KeyS') { p.moveTarget = null; this.moveHeld = false; }
+      if (e.code === 'KeyQ') { if (this.castQ(p, g.x, g.z)) this.sendInput({ cast: 'q', tx: g.x, tz: g.z }); }
+      else if (e.code === 'KeyD') { if (this.castFlash(p, g.x, g.z)) this.sendInput({ cast: 'd', tx: g.x, tz: g.z }); }
+      else if (e.code === 'KeyF') { if (this.castGhost(p)) this.sendInput({ cast: 'f' }); }
+      else if (e.code === 'KeyS') { p.moveTarget = null; this.moveHeld = false; this.sendInput({ stop: true }); }
     });
+  }
+
+  canControl() {
+    const p = this.player;
+    if (!p || !p.alive) return false;
+    // 대인전은 카운트다운 중에도 이동 목표를 미리 찍을 수 있다 (출발은 시작 신호 후)
+    if (this.mode === 'online') return !this.netPaused && (this.state === 'play' || this.state === 'countdown');
+    return this.state === 'play';
+  }
+
+  setMoveTarget(g) {
+    const p = this.player;
+    if (!p.moveTarget) this.moveSince = performance.now(); // 서 있다가 출발한 시각 (대인전 보정용)
+    p.moveTarget = this.constrain({ x: g.x, z: g.z }, p);
+    this.sendInput({ move: { x: p.moveTarget.x, z: p.moveTarget.z } });
+  }
+
+  // 대인전: 내 입력을 서버로 보낸다. 화면에는 이미 로컬로 반영(예측)되어 있다.
+  sendInput(data) {
+    if (this.mode !== 'online') return;
+    const seq = ++this.inputSeq;
+    if (data.cast) this.lastCastSeq = seq;
+    if (data.cast === 'd') this.lastFlashSeq = seq;
+    Online.send({ type: 'input', seq, ...data });
   }
 
   pointerGround() {
@@ -487,70 +524,43 @@ class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: g, scaleX: 0.55, scaleY: 0.55 * SIN, alpha: 0, duration: 380, onComplete: () => g.destroy() });
   }
 
-  // ---------- 규칙 ----------
+  // ---------- 규칙 (계산은 src/sim.js, 여기서는 효과 표시) ----------
   updateArena() {
-    const { delay, duration, minScale } = RULES.shrink;
-    const progress = clamp((this.roundTime - delay) / duration, 0, 1);
-    this.arenaR = RULES.arenaR * (1 - (1 - minScale) * progress);
+    Sim.updateArena(this);
     this.water.setUniform('uR.value', this.arenaR);
   }
 
   constrain(p, champ) {
-    const s = champ.side;
-    const minX = RULES.midGap + RULES.champR;
-    const maxR = (champ.isPlayer ? this.arenaR : RULES.arenaR) - RULES.champR * 0.5;
-    if (p.x * s < minX) p.x = s * minX;
-    const r = Math.hypot(p.x, p.z);
-    if (r > maxR) { p.x *= maxR / r; p.z *= maxR / r; }
-    if (p.x * s < minX) {
-      p.x = s * minX;
-      const zMax = Math.sqrt(maxR * maxR - minX * minX);
-      p.z = clamp(p.z, -zMax, zMax);
-    }
-    return p;
+    return Sim.constrain(this, p, champ);
   }
 
   castQ(c, tx, tz) {
-    if (this.state !== 'play' || !c.alive || c.qCd > 0 || c.castT > 0) return false;
-    let dx = tx - c.x, dz = tz - c.z;
-    let l = Math.hypot(dx, dz);
-    if (l < 0.01) { dx = Math.cos(c.facing); dz = Math.sin(c.facing); l = 1; }
-    dx /= l; dz /= l;
-    c.facing = Math.atan2(dz, dx);
-    c.qCd = RULES.q.cd;
-    const paid = Math.min(RULES.q.cost, Math.max(0, c.hp - 1)); // 체력 비용으로 스스로 죽지 않음(최소 1)
-    c.hp -= paid;
-    c.castT = RULES.q.windup;
-    c.pending = { dx, dz, paid };
-    c.actionT = THROW.duration;
-    c.setAnim('throw', true);
-    return true;
+    const ok = Sim.castQ(this, c, tx, tz);
+    this.flushFeed();
+    return ok;
   }
 
   castFlash(c, tx, tz) {
-    if (this.state !== 'play' || !c.alive || c.flashCd > 0) return false;
-    let dx = tx - c.x, dz = tz - c.z;
-    const l = Math.hypot(dx, dz);
-    if (l < 0.01) { dx = Math.cos(c.facing); dz = Math.sin(c.facing); } else { dx /= l; dz /= l; }
-    const d = Math.min(Math.max(l, 1.5), RULES.flash.dist);
-    this.fx.spark.explode(16, sx(c.x), sy(c.z, 1));
-    const to = this.constrain({ x: c.x + dx * d, z: c.z + dz * d }, c);
-    c.x = to.x; c.z = to.z;
-    c.facing = Math.atan2(dz, dx);
-    c.flashCd = RULES.flash.cd;
-    if (c.isPlayer) { c.moveTarget = null; this.moveHeld = false; }
-    this.fx.spark.explode(22, sx(c.x), sy(c.z, 1));
-    Sound.flash(this.vol(c));
-    return true;
+    const ok = Sim.castFlash(this, c, tx, tz, { stop: c.isPlayer });
+    if (ok && c.isPlayer) this.moveHeld = false;
+    this.flushFeed();
+    return ok;
   }
 
   castGhost(c) {
-    if (this.state !== 'play' || !c.alive || c.ghostCd > 0) return false;
-    c.ghostT = RULES.ghost.dur;
-    c.ghostCd = RULES.ghost.cd;
-    this.fx.ghost.explode(20, sx(c.x), sy(c.z, 1));
-    Sound.ghost(this.vol(c));
-    return true;
+    const ok = Sim.castGhost(this, c);
+    this.flushFeed();
+    return ok;
+  }
+
+  hit(victim, cleaver) {
+    Sim.hit(this, victim, cleaver);
+    this.flushFeed();
+  }
+
+  kill(v, k) {
+    Sim.kill(this, v, k);
+    this.flushFeed();
   }
 
   vol(c) {
@@ -559,45 +569,130 @@ class GameScene extends Phaser.Scene {
     return clamp(1.1 - Math.hypot(c.x - p.x, c.z - p.z) / 25, 0.25, 0.8);
   }
 
-  hit(victim, cleaver) {
-    const k = cleaver.owner;
-    const dmg = Math.round(Math.max(RULES.q.dmgMin, victim.hp * RULES.q.dmgPct));
-    victim.hp -= dmg;
-    if (k.alive) k.hp = Math.min(RULES.maxHp, k.hp + cleaver.paid);
-    victim.slowT = RULES.q.slowDur;
-    victim.hitFlash = 0.14;
-    k.stats.hits++;
-    k.showEmote();
-    const X = sx(victim.x), Y = sy(victim.z, 1.3);
-    this.fx.hitflash.explode(1, X, Y);
-    this.fx.blood.explode(18, X, Y);
-    const txt = this.add.text(X + rand(-10, 10), Y - 30, `${dmg}`, {
-      fontFamily: 'Jua', fontSize: '24px', fontStyle: '900',
-      color: victim.isPlayer ? '#ff5a5a' : '#ffd24a', stroke: '#000', strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(DEPTH.ui + 1).setScale(1.5).setResolution(DPR * 2);
-    this.tweens.add({ targets: txt, y: txt.y - 46, scale: 1, alpha: 0, duration: 950, ease: 'Cubic.easeOut', onComplete: () => txt.destroy() });
-    Sound.hit(Math.max(this.vol(victim), this.vol(k)));
-    if (k === this.player || victim === this.player) this.cameras.main.shake(110, victim === this.player ? 0.006 : 0.003);
-    if (victim.hp <= 0) this.kill(victim, k);
+  flushFeed() {
+    if (!this.feed.length) return;
+    const list = this.feed;
+    this.feed = [];
+    for (const e of list) this.showEvent(e);
   }
 
-  kill(v, k) {
-    v.hp = 0;
-    v.alive = false;
+  // sim 이벤트 → 효과. 봇전은 로컬 sim 이, 대인전은 서버가 보낸다(remote).
+  // remote 에서는 서버가 판정한 결과(체력·사망·식칼 제거)도 여기서 반영한다.
+  showEvent(e, remote = false) {
+    const c = this.champs[e.ci];
+    const mine = remote && c === this.player; // 내 동작은 이미 로컬에서 표시함
+    switch (e.type) {
+      case 'cast':
+        if (!c || mine) return;
+        if (remote) { c.facing = e.facing; c.actionT = THROW.duration; }
+        c.setAnim('throw', true);
+        return;
+      case 'throw': {
+        if (!c) return;
+        let cl = this.cleavers.find(p => p.id === e.id);
+        if (!cl && remote) {
+          cl = { id: e.id, team: c.team, x: e.x, z: e.z, dx: e.dx, dz: e.dz, dist: 0, age: 0, alive: true };
+          this.cleavers.push(cl);
+        }
+        if (cl && !cl.view) cl.view = new CleaverView(this, cl);
+        if (remote) c.stats.throws++;
+        Sound.throw(this.vol(c));
+        return;
+      }
+      case 'flash':
+        if (!c || mine) return;
+        this.fx.spark.explode(16, sx(e.fromX), sy(e.fromZ, 1));
+        this.fx.spark.explode(22, sx(e.x), sy(e.z, 1));
+        Sound.flash(this.vol(c));
+        return;
+      case 'ghost':
+        if (!c || mine) return;
+        this.fx.ghost.explode(20, sx(c.x), sy(c.z, 1));
+        Sound.ghost(this.vol(c));
+        return;
+      case 'hit': {
+        const victim = this.champs[e.victim], k = this.champs[e.killer];
+        if (!victim || !k) return;
+        if (remote) {
+          this.removeCleaver(e.id);
+          k.stats.hits++;
+          victim.hp = Math.max(0, victim.hp - e.dmg);
+          victim.slowT = RULES.q.slowDur;
+        }
+        victim.hitFlash = 0.14;
+        k.showEmote();
+        const X = sx(victim.x), Y = sy(victim.z, 1.3);
+        this.fx.hitflash.explode(1, X, Y);
+        this.fx.blood.explode(18, X, Y);
+        const txt = this.add.text(X + rand(-10, 10), Y - 30, `${e.dmg}`, {
+          fontFamily: 'Jua', fontSize: '24px', fontStyle: '900',
+          color: victim.isPlayer ? '#ff5a5a' : '#ffd24a', stroke: '#000', strokeThickness: 4,
+        }).setOrigin(0.5).setDepth(DEPTH.ui + 1).setScale(1.5).setResolution(DPR * 2);
+        this.tweens.add({ targets: txt, y: txt.y - 46, scale: 1, alpha: 0, duration: 950, ease: 'Cubic.easeOut', onComplete: () => txt.destroy() });
+        Sound.hit(Math.max(this.vol(victim), this.vol(k)));
+        if (k === this.player || victim === this.player) this.cameras.main.shake(110, victim === this.player ? 0.006 : 0.003);
+        return;
+      }
+      case 'cleaverEnd': {
+        if (remote) this.removeCleaver(e.id);
+        this.fx.trail.explode(6, sx(e.x), sy(e.z, RULES.q.height));
+        if (Math.hypot(e.x, e.z) < ARENA.ROCK_R) this.fx.splash.explode(8, sx(e.x), sy(e.z));
+        return;
+      }
+      case 'kill': {
+        const v = this.champs[e.victim], k = this.champs[e.killer];
+        if (!v) return;
+        if (remote) {
+          if (!v.alive) return;
+          Object.assign(v, { hp: 0, alive: false, moveTarget: null, pending: null, castT: 0 });
+          if (k) k.stats.kills++;
+          v.stats.deaths++;
+        }
+        this.knockOut(v);
+        Sound.death(this.vol(v));
+      }
+    }
+  }
+
+  // 쓰러진 모습 (사망 이벤트, 또는 재접속 시 이미 쓰러져 있던 경우)
+  knockOut(v) {
     v.emoteT = 0;
     v.emoteDelayT = 0;
     v.emote?.setVisible(false);
-    v.moveTarget = null;
-    v.pending = null;
-    v.castT = 0;
     v.setAnim('death', true);
     v.ring.setVisible(false);
     v.bar.setVisible(false);
     v.shadow.setAlpha(0.35);
     this.fx.puff.explode(16, sx(v.x), sy(v.z, 0.8));
-    k.stats.kills++;
-    v.stats.deaths++;
-    Sound.death(this.vol(v));
+  }
+
+  removeCleaver(id) {
+    const i = this.cleavers.findIndex(p => p.id === id);
+    if (i < 0) return;
+    this.cleavers[i].view?.destroy();
+    this.cleavers.splice(i, 1);
+  }
+
+  clearCleavers() {
+    for (const p of this.cleavers) p.view?.destroy();
+    this.cleavers = [];
+  }
+
+  // 봇전: 로컬 판정 + 플레이어 쪽 축소. 대인전: 서버 판정 + 양쪽 같은 경기장.
+  setMode(mode) {
+    this.mode = mode;
+    this.shrinkTeam = mode === 'bot' ? 0 : null;
+    this.judge = mode === 'bot';
+    this.netPaused = false;
+    this.water.setUniform('uLeftOnly.value', mode === 'bot' ? 1 : 0);
+  }
+
+  clearMatch() {
+    this.menuMundos?.forEach((s) => s.destroy());
+    this.menuMundos = null;
+    for (const c of this.champs) c.destroy();
+    this.champs = [];
+    this.clearCleavers();
   }
 
   // ---------- 매치 흐름 ----------
@@ -612,11 +707,8 @@ class GameScene extends Phaser.Scene {
   // diff: easy | normal | hard | faker | twins(보통 봇 둘)
   startMatch({ diff }, source = 'menu') {
     Sound.unlock();
-    this.menuMundos?.forEach((s) => s.destroy());
-    this.menuMundos = null;
-    for (const c of this.champs) c.destroy();
-    for (const p of this.cleavers) p.destroy();
-    this.cleavers = [];
+    this.clearMatch();
+    this.setMode('bot');
     this.twins = diff === 'twins';
     this.diff = this.twins ? 'normal' : diff;
     this.player = new Champ(this, { team: 0, isPlayer: true });
@@ -642,8 +734,7 @@ class GameScene extends Phaser.Scene {
   startRound() {
     this.roundTime = 0;
     this.updateArena();
-    for (const p of this.cleavers) p.destroy();
-    this.cleavers = [];
+    this.clearCleavers();
     this.player.reset(-6.5, 0);
     this.enemies.forEach((e, i) => {
       const lane = this.twins ? (i ? 1 : -1) : 0;
@@ -658,8 +749,7 @@ class GameScene extends Phaser.Scene {
   endRound(winner) {
     this.state = 'roundEnd';
     // 판정 이후 날아가던 식칼이나 준비 중인 투척이 결과를 바꾸지 않도록 한다.
-    for (const cleaver of this.cleavers) cleaver.destroy();
-    this.cleavers = [];
+    this.clearCleavers();
     for (const champ of this.champs) champ.pending = null;
     this.endT = 3.4;
     const pt = this.player.team;
@@ -678,6 +768,10 @@ class GameScene extends Phaser.Scene {
     this.state = 'over';
     const win = this.score[this.player.team] > this.score[this.enemy.team];
     HUD.result(win, this.twins ? 'twins' : this.diff, this.analyticsMatch);
+    this.trackFinished(win);
+  }
+
+  trackFinished(win) {
     const enemyThrows = this.enemies.reduce((total, enemy) => total + enemy.stats.throws, 0);
     const enemyHits = this.enemies.reduce((total, enemy) => total + enemy.stats.hits, 0);
     track('game_finished', {
@@ -695,15 +789,222 @@ class GameScene extends Phaser.Scene {
   }
 
   backToMenu() {
-    for (const c of this.champs) c.destroy();
-    for (const p of this.cleavers) p.destroy();
-    this.champs = []; this.cleavers = []; this.player = null; this.enemy = null; this.enemies = [];
+    this.clearMatch();
+    this.player = null; this.enemy = null; this.enemies = [];
     HUD.show(false);
     HUD.clearFeeds();
+    HUD.banner(null);
+    HUD.countdown(0);
+    this.setMode('bot');
     this.roundTime = 0;
     this.updateArena();
     this.spawnMenuMundos();
     this.state = 'menu';
+  }
+
+  // ---------- 온라인 1대1 (서버 판정) ----------
+  setupOnlineMatch(slot, source = 'online') {
+    Sound.unlock();
+    this.clearMatch();
+    this.setMode('online');
+    this.mySlot = slot;
+    // 방장(0)은 왼쪽, 친구(1)는 오른쪽. 내 캐릭터만 초록색, 따봉은 양쪽 모두.
+    this.champs = [0, 1].map(team => new Champ(this, { team, isPlayer: team === slot, emote: true }));
+    this.player = this.champs[slot];
+    this.enemy = this.champs[1 - slot];
+    this.enemies = [this.enemy];
+    this.twins = false;
+    this.score = [0, 0];
+    this.matchTime = 0;
+    this.inputSeq = 0;
+    this.lastCastSeq = 0;
+    this.lastFlashSeq = 0;
+    this.snaps = [];
+    this.snapOffset = null;
+    this.moveSince = 0;
+    this.correction = null;
+    this.moveHeld = false;
+    HUD.clearFeeds();
+    HUD.show(true, false, { mySlot: slot });
+    this.analyticsMatch = {
+      match_id: createTrackingId(), difficulty: 'online', mode: 'online', room: Online.room, source, ...referralContext,
+    };
+  }
+
+  startOnlineRound({ round, countdownMs }) {
+    this.clearCleavers();
+    this.champs.forEach((c, i) => c.reset(NET.SPAWN[i].x, NET.SPAWN[i].z));
+    this.snaps = [];
+    this.correction = null;
+    this.moveHeld = false;
+    this.roundTime = 0;
+    this.state = 'countdown';
+    HUD.updateFight(this.champs, true);
+    HUD.countdown(countdownMs);
+    if (round === 1) track('game_started', this.analyticsMatch);
+    else HUD.chat('동시에 쓰러졌어요! 재경기합니다.');
+  }
+
+  onlineGo() {
+    if (this.mode !== 'online') return;
+    this.state = 'play';
+    HUD.countdown(0, true);
+  }
+
+  onlineRoundEnd(winner) {
+    if (this.mode !== 'online') return;
+    this.state = 'roundEnd';
+    this.clearCleavers();
+    for (const champ of this.champs) champ.pending = null;
+    this.moveHeld = false;
+    if (winner >= 0) (winner === this.mySlot ? Sound.win : Sound.lose)();
+  }
+
+  onlineOver(winner) {
+    if (this.mode !== 'online' || this.state === 'over') return;
+    this.state = 'over';
+    const win = winner === this.mySlot;
+    HUD.onlineResult(win ? 'win' : 'lose');
+    this.trackFinished(win);
+  }
+
+  // 상대가 끝내 돌아오지 않았거나 나감
+  onlineOpponentLeft() {
+    if (this.mode !== 'online') return;
+    const wasOver = this.state === 'over';
+    this.state = 'over';
+    this.netPaused = false;
+    HUD.banner(null);
+    HUD.countdown(0);
+    HUD.onlineResult('left');
+    if (!wasOver) track('online_opponent_left', this.analyticsMatch);
+  }
+
+  setNetPaused(paused) {
+    this.netPaused = paused;
+    if (paused) this.moveHeld = false;
+  }
+
+  // 서버 스냅샷: 상대는 보간 버퍼에 넣고, 나는 예측 위치를 서버 결과 쪽으로 보정한다.
+  applySnap(msg) {
+    if (this.mode !== 'online' || !this.player) return;
+    const now = Online.serverNow();
+    const states = msg.c.map(unpackChamp);
+    this.setNetPaused(!!msg.p);
+    if (['countdown', 'play', 'roundEnd'].includes(msg.ph) && this.state !== 'over' && this.state !== msg.ph) {
+      if (msg.ph === 'play') this.onlineGo();
+      else this.state = msg.ph;
+    }
+
+    // 상대 재생 시계: 서버 시각과 도착 시각의 차이를 부드럽게 따라가 지연 크기와 상관없이 보간한다
+    const arrival = msg.t - performance.now();
+    this.snapOffset = this.snapOffset == null ? arrival : this.snapOffset + (arrival - this.snapOffset) * 0.05;
+    const other = states[1 - this.mySlot];
+    this.snaps.push({ t: msg.t, s: other });
+    if (this.snaps.length > 40) this.snaps.shift();
+
+    const me = this.player, s = states[this.mySlot];
+    me.hp = s.hp;
+    me.slowT = s.slowT;
+    me.ghostT = s.ghostT;
+    me.celebrate = s.celebrate;
+    if (msg.ack >= this.lastCastSeq) Object.assign(me, { qCd: s.qCd, flashCd: s.flashCd, ghostCd: s.ghostCd });
+    if (me.alive && !s.alive) { me.alive = false; me.hp = 0; this.knockOut(me); }
+    if (me.celebrate) me.moveTarget = null;
+    if (me.alive && msg.ack >= this.lastFlashSeq) {
+      // 서버 위치를 '지금'까지 내 이동 목표 쪽으로 진행시켜 비교한다 (이동 중 뒤로 당겨지지 않게).
+      // 내가 출발한 지 얼마 안 됐으면 서버는 아직 출발 전이므로 그만큼만, 서버가 투척 준비 중이면 그 시간만큼 덜 진행한다.
+      const sinceMove = (performance.now() - this.moveSince) / 1000;
+      const ahead = Math.min(0.3, Online.rtt / 2000 + Math.max(0, now - msg.t) / 1000, sinceMove);
+      const advance = Math.max(0, ahead - Math.max(0, s.castT));
+      let tx = s.x, tz = s.z;
+      const target = me.moveTarget;
+      if (target && advance > 0 && this.state === 'play') {
+        const dx = target.x - tx, dz = target.z - tz, l = Math.hypot(dx, dz);
+        const step = Math.min(l, Sim.champSpeed(s) * advance);
+        if (l > 0) { tx += (dx / l) * step; tz += (dz / l) * step; }
+      }
+      // 이동 중에는 시계 추정 오차만큼의 차이는 무시하고(뒤로 끌려가는 떨림 방지), 크게 어긋날 때만 맞춘다.
+      const ex = tx - me.x, ez = tz - me.z, err = Math.hypot(ex, ez);
+      const tolerance = me.moveTarget ? 0.35 : 0.05;
+      if (err > 1.5) { me.x = tx; me.z = tz; this.correction = null; }
+      else if (err > tolerance) this.correction = { x: ex, z: ez };
+      else this.correction = null;
+    }
+
+    // 식칼: 서버 목록 기준으로 생성·제거, 위치는 경과 시간만큼 앞으로
+    const lead = (Math.max(0, now - msg.t) / 1000) * RULES.q.speed;
+    const ids = new Set();
+    for (const a of msg.k) {
+      const k = unpackCleaver(a);
+      ids.add(k.id);
+      let cl = this.cleavers.find(p => p.id === k.id);
+      if (!cl) {
+        cl = { ...k, age: 0, alive: true };
+        this.cleavers.push(cl);
+      }
+      Object.assign(cl, { x: k.x + k.dx * lead, z: k.z + k.dz * lead, dist: k.dist + lead });
+      if (!cl.view) cl.view = new CleaverView(this, cl);
+    }
+    for (const cl of [...this.cleavers]) if (!ids.has(cl.id)) this.removeCleaver(cl.id);
+  }
+
+  // 상대는 ~100ms 이전 시점을 두 스냅샷 사이에서 보간해 부드럽게 그린다.
+  interpolateOpponent(dt) {
+    const e = this.enemy, buf = this.snaps;
+    if (!buf.length) return;
+    const t = performance.now() + (this.snapOffset ?? 0) - INTERP_MS;
+    let a = buf[0], b = buf[0];
+    for (let i = buf.length - 1; i >= 0; i--) {
+      if (buf[i].t <= t) { a = buf[i]; b = buf[i + 1] || buf[i]; break; }
+    }
+    const k = b.t > a.t ? clamp((t - a.t) / (b.t - a.t), 0, 1) : 1;
+    const px = e.x, pz = e.z;
+    e.x = a.s.x + (b.s.x - a.s.x) * k;
+    e.z = a.s.z + (b.s.z - a.s.z) * k;
+    if (dt > 0) { e.vx = (e.x - px) / dt; e.vz = (e.z - pz) / dt; }
+    const latest = buf[buf.length - 1].s;
+    Object.assign(e, {
+      hp: latest.hp, qCd: latest.qCd, flashCd: latest.flashCd, ghostCd: latest.ghostCd,
+      ghostT: b.s.ghostT, slowT: b.s.slowT, celebrate: b.s.celebrate,
+    });
+    if (e.actionT <= 0 && Math.hypot(e.vx, e.vz) > 0.4) e.facing = Math.atan2(e.vz, e.vx);
+    else if (e.actionT <= 0 && !e.celebrate) e.facing = b.s.facing;
+    if (e.alive && !latest.alive) { e.alive = false; e.hp = 0; this.knockOut(e); }
+  }
+
+  updateOnline(dt) {
+    const p = this.player;
+    const active = !this.netPaused;
+    if (active && this.state === 'play') {
+      this.matchTime += dt;
+      this.roundTime += dt;
+    }
+    if (this.moveHeld && this.canControl()) {
+      this.moveRepeatT -= dt;
+      if (this.moveRepeatT <= 0) {
+        this.moveRepeatT = 0.08;
+        this.setMoveTarget(this.pointerGround());
+      }
+    }
+    if (active) {
+      this.updateChamp(p, dt);
+      if (this.correction && p.alive) {
+        // 남은 오차의 일부씩, 초당 최대 3유닛까지만 밀어 순간이동처럼 보이지 않게 한다
+        const err = Math.hypot(this.correction.x, this.correction.z);
+        const f = Math.min(1, dt * 10, (3 * dt) / Math.max(err, 1e-6));
+        const cx = this.correction.x * f, cz = this.correction.z * f;
+        p.x += cx; p.z += cz;
+        this.correction.x -= cx; this.correction.z -= cz;
+        this.constrain(p, p);
+      }
+      this.interpolateOpponent(dt);
+      this.updateChamp(this.enemy, dt);
+      for (const cl of this.cleavers) this.updateCleaver(cl, dt);
+    }
+    for (const c of this.champs) c.sync();
+    HUD.update(p);
+    HUD.updateFight(this.champs);
   }
 
   // ---------- 업데이트 ----------
@@ -714,7 +1015,9 @@ class GameScene extends Phaser.Scene {
     const watched = this.champs.find(c => c.alive && c.actionT > 0) || this.player;
     this.baron.update(this.time0, dt, watched ? sx(watched.x) : Math.sin(this.time0 * 0.45) * 400);
 
-    if (this.champs.length) {
+    if (this.mode === 'online') {
+      if (this.champs.length) this.updateOnline(dt);
+    } else if (this.champs.length) {
       const playing = this.state === 'play';
       if (playing) {
         this.matchTime += dt;
@@ -738,8 +1041,8 @@ class GameScene extends Phaser.Scene {
       this.cleavers = this.cleavers.filter((cl) => cl.alive);
 
       if (playing) {
-        const [a, b] = [p.alive, this.enemies.some(e => e.alive)];
-        if (!a || !b) this.endRound(a ? 0 : b ? 1 : -1);
+        const winner = Sim.roundWinner(this);
+        if (winner !== null) this.endRound(winner);
       }
       if (this.state === 'roundEnd') {
         this.endT -= dt;
@@ -755,49 +1058,21 @@ class GameScene extends Phaser.Scene {
   }
 
   updateChamp(c, dt) {
-    c.qCd = Math.max(0, c.qCd - dt);
-    c.flashCd = Math.max(0, c.flashCd - dt);
-    c.ghostCd = Math.max(0, c.ghostCd - dt);
-    c.ghostT = Math.max(0, c.ghostT - dt);
-    c.slowT = Math.max(0, c.slowT - dt);
     c.hitFlash = Math.max(0, c.hitFlash - dt);
     c.emoteT = Math.max(0, c.emoteT - dt);
     if (c.emoteDelayT > 0) {
       c.emoteDelayT = Math.max(0, c.emoteDelayT - dt);
       if (c.emoteDelayT === 0 && c.alive) c.emoteT = EMOTE_DURATION;
     }
-    c.actionT = Math.max(0, c.actionT - dt);
-    if (c.alive && this.state === 'play') c.hp = Math.min(RULES.maxHp, c.hp + RULES.regen * dt);
-
-    if (c.castT > 0) {
-      c.castT -= dt;
-      if (c.castT <= 0 && c.pending && c.alive) {
-        const cl = new Cleaver(this, c, c.pending.dx, c.pending.dz);
-        cl.paid = c.pending.paid;
-        this.cleavers.push(cl);
-        c.stats.throws++;
-        Sound.throw(this.vol(c));
-        c.pending = null;
-      }
+    let moving;
+    if (this.mode === 'online' && c !== this.player) {
+      // 상대는 서버 스냅샷 보간으로 움직인다
+      c.actionT = Math.max(0, c.actionT - dt);
+      moving = Math.hypot(c.vx, c.vz) > 0.4;
+    } else {
+      moving = Sim.updateChamp(this, c, dt);
+      this.flushFeed();
     }
-
-    const px = c.x, pz = c.z;
-    if (c.moveTarget) this.constrain(c.moveTarget, c);
-    if (c.alive && this.state === 'play' && c.castT <= 0 && c.moveTarget) {
-      const dx = c.moveTarget.x - c.x, dz = c.moveTarget.z - c.z;
-      const l = Math.hypot(dx, dz);
-      if (l < 0.06) c.moveTarget = null;
-      else {
-        const step = Math.min(l, c.speed() * dt);
-        c.x += (dx / l) * step;
-        c.z += (dz / l) * step;
-        if (c.actionT <= 0) c.facing = Math.atan2(dz, dx);
-      }
-    }
-    if (c.alive) this.constrain(c, c);
-    c.vx = (c.x - px) / dt;
-    c.vz = (c.z - pz) / dt;
-    const moving = Math.hypot(c.vx, c.vz) > 0.4;
 
     if (!c.alive) return;
     if (c.actionT > 0) { /* 투척 모션 유지 */ }
@@ -821,33 +1096,13 @@ class GameScene extends Phaser.Scene {
   }
 
   updateCleaver(p, dt) {
-    const step = RULES.q.speed * dt;
-    p.x += p.dx * step;
-    p.z += p.dz * step;
-    p.dist += step;
-    p.age += dt;
-    p.img.rotation += dt * 24 * (p.dx >= 0 ? 1 : -1);
-    const X = sx(p.x), Y = sy(p.z, RULES.q.height);
-    p.cont.setPosition(X, Y).setDepth(sy(p.z) + 2);
-    p.shadow.setPosition(X, sy(p.z));
-    this.fx.trail.emitParticleAt(X, Y, 1);
-
-    if (this.state === 'play') {
-      const hitR = RULES.q.width + RULES.champR;
-      for (const e of this.champs) {
-        if (e.team === p.owner.team || !e.alive) continue;
-        if (Math.hypot(e.x - p.x, e.z - p.z) < hitR) {
-          this.hit(e, p);
-          p.destroy();
-          return;
-        }
-      }
-    }
-    if (p.dist >= RULES.q.range) {
-      this.fx.trail.explode(6, X, Y);
-      if (Math.hypot(p.x, p.z) < ARENA.ROCK_R) this.fx.splash.explode(8, sx(p.x), sy(p.z));
-      p.destroy();
-    }
+    Sim.updateCleaver(this, p, dt);
+    this.flushFeed();
+    if (!p.view) return;
+    if (!p.alive) { p.view.destroy(); p.view = null; return; }
+    p.view.img.rotation += dt * 24 * (p.dx >= 0 ? 1 : -1);
+    p.view.sync(p);
+    this.fx.trail.emitParticleAt(sx(p.x), sy(p.z, RULES.q.height), 1);
   }
 
   ripple(x, z) {
@@ -887,6 +1142,7 @@ const game = new Phaser.Game({
   scene: [GameScene],
 });
 window.__game = game;
+window.__mundoOnline = Online;
 window.addEventListener('resize', () => game.scale.resize(window.innerWidth * DPR, window.innerHeight * DPR));
 
 // 메뉴 DOM
@@ -918,14 +1174,122 @@ document.getElementById('start-btn').addEventListener('click', async (event) => 
   menu.getAnimations().forEach(animation => animation.cancel());
   button.disabled = false;
 });
-document.getElementById('again-btn').addEventListener('click', () => {
+const $ = (id) => document.getElementById(id);
+$('again-btn').addEventListener('click', () => {
+  if (scene().mode === 'online') {
+    track('online_rematch_clicked', scene().analyticsMatch);
+    $('again-btn').disabled = true;
+    HUD.resultStatus('친구가 재대결을 수락하길 기다리는 중…');
+    Online.rematch();
+    return;
+  }
   track('replay_clicked', scene().analyticsMatch);
-  document.getElementById('result').classList.add('hidden');
+  $('result').classList.add('hidden');
   scene().startMatch(opts, 'replay');
 });
-document.getElementById('menu-btn').addEventListener('click', () => {
+$('menu-btn').addEventListener('click', () => {
   track('menu_returned', scene().analyticsMatch);
-  document.getElementById('result').classList.add('hidden');
-  document.getElementById('menu').classList.remove('hidden');
+  if (scene().mode === 'online') Online.leave();
+  $('result').classList.add('hidden');
+  $('menu').classList.remove('hidden');
   scene().backToMenu();
+});
+
+// ---------- 친구와 대결 ----------
+const showMenu = () => {
+  $('result').classList.add('hidden');
+  $('menu').classList.remove('hidden');
+  if (scene().mode === 'online' || scene().champs.length) scene().backToMenu();
+};
+$('online-btn').addEventListener('click', () => {
+  Sound.unlock();
+  $('menu').classList.add('hidden');
+  Online.create();
+});
+
+Online.hooks = {
+  onExit: showMenu,
+  onLobby: () => {
+    // 재대결 대신 대기실로 돌아온 경우 (예: 서버 재시작 후 새 방)
+    $('result').classList.add('hidden');
+    if (scene().mode === 'online') scene().backToMenu();
+    $('menu').classList.add('hidden');
+  },
+  onStart: (msg) => {
+    const s = scene();
+    $('menu').classList.add('hidden');
+    $('result').classList.add('hidden');
+    if (s.mode !== 'online' || msg.round === 1) s.setupOnlineMatch(Online.slot, s.mode === 'online' ? 'rematch' : 'online');
+    s.startOnlineRound(msg);
+  },
+  // 새로고침·재연결로 진행 중인 경기에 다시 들어옴
+  onResume: (msg) => {
+    const s = scene();
+    $('menu').classList.add('hidden');
+    HUD.banner(null);
+    if (s.mode !== 'online') {
+      s.setupOnlineMatch(Online.slot, 'resume');
+      s.champs.forEach((c, i) => c.reset(NET.SPAWN[i].x, NET.SPAWN[i].z));
+      s.state = msg.phase === 'over' ? 'roundEnd' : msg.phase;
+    }
+    s.setNetPaused(!!msg.paused);
+    if (msg.paused) HUD.banner('친구 연결을 기다리는 중…');
+  },
+  onGo: () => scene().onlineGo(),
+  onSnap: (msg) => scene().applySnap(msg),
+  onEvents: (list) => {
+    const s = scene();
+    if (s.mode === 'online' && s.champs.length) for (const e of list) s.showEvent(e, true);
+  },
+  onRoundEnd: (winner) => scene().onlineRoundEnd(winner),
+  onOver: (winner) => scene().onlineOver(winner),
+  onRematch: (want) => {
+    if (scene().mode !== 'online' || $('result').classList.contains('hidden')) return;
+    const mine = want[Online.slot], theirs = want[1 - Online.slot];
+    if (theirs && !mine) HUD.resultStatus('친구가 재대결을 원해요!');
+    else if (mine && !theirs) HUD.resultStatus('친구가 재대결을 수락하길 기다리는 중…');
+  },
+  onAway: (graceMs) => {
+    scene().setNetPaused(true);
+    const end = performance.now() + graceMs;
+    clearInterval(awayTimer);
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((end - performance.now()) / 1000));
+      HUD.banner(`친구 연결이 끊겼어요. 다시 들어오길 기다리는 중… (${left}초)`);
+    };
+    tick();
+    awayTimer = setInterval(tick, 250);
+  },
+  onBack: () => {
+    clearInterval(awayTimer);
+    scene().setNetPaused(false);
+    HUD.banner(null);
+    HUD.chat('친구가 다시 들어왔어요!');
+  },
+  onOpponentLeft: () => {
+    clearInterval(awayTimer);
+    const s = scene();
+    if (s.mode === 'online' && s.champs.length) s.onlineOpponentLeft();
+    else if (!$('lobby').classList.contains('hidden')) Online.renderLobby();
+  },
+  onReconnecting: () => {
+    scene().setNetPaused(true);
+    HUD.banner('연결이 끊겼어요. 다시 연결하는 중…');
+  },
+  onReconnected: () => {
+    HUD.banner(null);
+  },
+  onLost: () => {
+    clearInterval(awayTimer);
+    showMenu();
+    HUD.chat('서버 연결이 끊겨서 메뉴로 돌아왔어요.');
+  },
+};
+let awayTimer = null;
+
+// 초대 링크(?room=CODE)로 들어오면 메뉴 대신 바로 대기실로
+game.events.once('mundo-ready', () => {
+  const code = roomFromUrl();
+  if (code) Online.join(code);
+  else $('menu').classList.remove('hidden');
 });

@@ -1,0 +1,21 @@
+# /etc/systemd/system/mundo-pigu.service — 문도 피구 온라인 1대1 서버
+# nginx 가 https://<host>/ws 를 127.0.0.1:3000/ws 로 넘긴다 (3000 은 외부에 열지 않음).
+[Unit]
+Description=Mundo Pigu online 1v1 game server
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/mundo-pigu
+ExecStart=/usr/bin/node server/index.mjs
+Environment=NODE_ENV=production PORT=3000 HOST=127.0.0.1
+DynamicUser=yes
+Restart=always
+RestartSec=2
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

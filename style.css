@@ -372,3 +372,79 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* ---------- 친구와 대결 ---------- */
+#online-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  width: 100%; margin-top: 12px; padding: 14px 24px;
+  border: 3px solid var(--entry-ink); border-radius: 16px 12px 18px 14px;
+  background: #c5a4ed; color: #30223e; font: 400 22px 'Jua', sans-serif; cursor: pointer;
+  box-shadow: inset 0 3px #eee0ff80; transition: transform .15s, background .15s;
+}
+#online-btn small { color: #5a4570; font-size: 13px; }
+#online-btn:active { transform: translateY(1px); }
+@media (hover: hover) { #online-btn:hover { background: #dbc0fb; transform: translateY(-2px); } }
+
+#lobby {
+  background: radial-gradient(ellipse at 50% 38%, #28434ae8, #14252df2 48%, #0c171ff7 90%);
+  color: var(--entry-text);
+}
+.lobby-card { width: min(440px, 100%); margin: auto; text-align: center; }
+.lobby-card .setup-brand { margin: 0 0 4px; font-size: 40px; }
+#lobby-title { margin: 0 0 6px; font-size: 26px; font-weight: 400; }
+.lobby-status { min-height: 1.5em; margin: 0 0 18px; color: var(--entry-green); font-size: 17px; word-break: keep-all; }
+#lobby[data-state="error"] .lobby-status { color: #f0b2a8; }
+#lobby:not([data-state="room"]) .lobby-room { display: none; }
+.lobby-code { display: flex; align-items: baseline; justify-content: center; gap: 12px; margin-bottom: 12px; }
+.lobby-code span { color: var(--entry-muted); font-size: 14px; }
+.lobby-code strong { font-size: 40px; font-weight: 400; letter-spacing: 6px; color: #fff3bd; text-shadow: 0 3px #08171f; }
+.lobby-link { display: flex; gap: 8px; }
+#lobby-link {
+  flex: 1; min-width: 0; padding: 10px 12px; border: 2px solid #52676d; border-radius: 10px;
+  background: #0c171f; color: var(--entry-muted); font: 14px/1.4 sans-serif; user-select: text;
+}
+#lobby-copy, #lobby-ready, #lobby-leave {
+  border: 3px solid var(--entry-ink); border-radius: 14px 18px 12px 16px; font: 400 18px 'Jua', sans-serif; cursor: pointer;
+  transition: transform .15s, background .15s;
+}
+#lobby-copy { padding: 10px 14px; background: #c5a4ed; color: #30223e; white-space: nowrap; }
+.lobby-copy-status { min-height: 1.4em; margin: 6px 0 10px; color: var(--entry-green); font-size: 14px; }
+.lobby-players { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 0 12px; padding: 0; list-style: none; }
+.lobby-players li {
+  display: flex; flex-direction: column; gap: 4px; padding: 14px 8px;
+  border: 2px dashed #52676d; border-radius: 14px; background: #0c171f99;
+}
+.lobby-role { font-size: 18px; }
+.lobby-player-status { color: var(--entry-muted); font-size: 14px; }
+.lobby-players li[data-state="joined"] { border-style: solid; border-color: #8fa7aa; }
+.lobby-players li[data-state="ready"] { border-style: solid; border-color: var(--entry-green); background: #b9e39e1f; }
+.lobby-players li[data-state="ready"] .lobby-player-status { color: var(--entry-green); }
+.lobby-players li[data-state="away"] .lobby-player-status { color: #f0b2a8; }
+.lobby-tip { margin: 0 0 16px; color: #8fa7aa; font-size: 13px; word-break: keep-all; }
+#lobby-ready { width: 100%; padding: 16px; background: var(--entry-green); color: #26362c; font-size: 22px; box-shadow: inset 0 3px #e2ffd780; }
+#lobby-ready.on { background: #35434b; color: var(--entry-muted); box-shadow: none; }
+#lobby-leave { width: 100%; margin-top: 10px; padding: 12px; background: #35434b; color: var(--entry-muted); }
+@media (hover: hover) {
+  #lobby-copy:hover, #lobby-ready:hover, #lobby-leave:hover { transform: translateY(-2px); }
+}
+#lobby button:active { transform: translateY(1px); }
+@media (max-width: 420px) {
+  .lobby-link { flex-direction: column; }
+  .lobby-code strong { font-size: 34px; }
+}
+
+#online-countdown {
+  position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%); z-index: 5; pointer-events: none;
+  color: #fff3bd; font-size: clamp(72px, 14vw, 128px); text-shadow: 0 6px #08171f, 0 0 24px #0008;
+}
+#online-countdown.pop { animation: countdown-pop .5s ease-out; }
+@keyframes countdown-pop { from { transform: translate(-50%, -50%) scale(1.6); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+#net-banner {
+  position: fixed; left: 50%; top: 96px; transform: translateX(-50%); z-index: 6; max-width: calc(100% - 32px);
+  padding: 10px 18px; border: 2px solid var(--entry-ink); border-radius: 12px;
+  background: #f0b2a8; color: #3a1d18; font-size: 16px; text-align: center; word-break: keep-all;
+}
+@media (prefers-reduced-motion: reduce) {
+  #online-countdown.pop { animation: none; }
+  #online-btn, #lobby button { transition: none; }
+}
