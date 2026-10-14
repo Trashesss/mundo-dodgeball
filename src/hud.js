@@ -1,6 +1,7 @@
 // DOM 기반 HUD (하단 스킬바, 상단 체력, 채팅, 결과 화면)
 import { RULES } from './rules.js';
 import { track, createTrackingId } from './analytics.js';
+import { DIFFICULTY_NAMES, shareContent } from './share.js';
 
 const $ = (id) => document.getElementById(id);
 let shareData;
@@ -55,10 +56,10 @@ $('share-btn').addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(invitation);
       track('share_completed', { ...properties, method: 'clipboard' });
-      if (isCurrent()) $('share-status').textContent = '초대장 복사 완료! 친구 채팅방에 던져줘. 🪓';
+      if (isCurrent()) $('share-status').textContent = '메시지 복사 완료! 친구 채팅방에 던져줘. 🪓';
     } catch {
       if (!isCurrent()) return;
-      $('share-status').textContent = '아래 초대장을 복사해서 친구에게 보내줘!';
+      $('share-status').textContent = '아래 메시지를 복사해서 친구에게 보내줘!';
       $('share-copy').value = invitation;
       $('share-copy').classList.remove('hidden');
       $('share-copy').focus();
@@ -133,17 +134,16 @@ export const HUD = {
   },
 
   result(win, difficulty, matchProperties = {}) {
-    const names = { easy: '쉬움', normal: '보통', hard: '어려움', faker: '페이커', twins: '쌍둥이' };
+    const names = DIFFICULTY_NAMES;
     resultVersion += 1;
     shareProperties = { ...matchProperties, difficulty, result: win ? 'win' : 'loss' };
+    const { title, text } = shareContent(difficulty, win);
     shareData = {
-      title: '문도에게 와! 🪓 | 문도 피구',
-      text: win
-        ? `문도 피구 ${names[difficulty]} 난이도 클리어! 🪓 너도 피할 수 있겠냐? 문도에게 와!`
-        : `문도 피구 ${names[difficulty]} 난이도에서 문도한테 혼났다… 🪓 친구야, 내 복수 좀 해줘! 문도에게 와!`,
-      url: new URL(location.pathname, location.origin).href,
+      title, text,
+      url: new URL(`share/${difficulty}-${win ? 'win' : 'loss'}.html`, new URL(location.pathname, location.origin)).href,
     };
     $('share-btn').disabled = false;
+    $('share-btn').textContent = win ? '자랑하기' : '공유하기';
     $('share-status').textContent = '';
     $('share-copy').value = '';
     $('share-copy').classList.add('hidden');

@@ -32,7 +32,7 @@ try {
   });
   const baseUrl = `http://localhost:${server.address().port}/`;
   const incomingId = '12345678-1234-4123-8123-123456789abc';
-  await page.goto(`${baseUrl}?share_id=${incomingId}&private=do-not-forward#result`);
+  await page.goto(`${baseUrl}share/twins-win.html?share_id=${incomingId}&private=do-not-forward#result`);
   await page.waitForFunction(() => window.__game?.scene.getScene('game').state === 'menu');
   await page.evaluate(() => {
     const scene = window.__game.scene.getScene('game');

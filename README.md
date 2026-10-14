@@ -25,6 +25,9 @@ npm start        # http://localhost:5173
 
 공유 성장 지표:
 
+- 승리 결과에서는 `자랑하기`, 패배 결과에서는 `공유하기` 버튼을 표시한다. 공유 메시지에는 난이도와 결과를 표시하고, 승패 모두 `날아오는 식칼을 피하고, 상대 문도를 쓰러뜨리는 피구 게임` 설명을 사용한다.
+- `share/`의 난이도·승패별 정적 페이지가 메신저용 OG/Twitter 문구와 이미지를 제공하고, 방문자는 추적 쿼리를 유지한 채 게임으로 이동한다. 문구 또는 디자인 수정 후 `node tools/render-share-preview.mjs`로 페이지와 이미지를 함께 다시 생성한다.
+
 - `share_clicked`: 공유 버튼 클릭마다 새 무작위 UUID `share_id` 생성. `match_id`, `difficulty`, `result` 포함
 - `share_completed`: 네이티브 공유 API 성공 (`method: native`) 또는 클립보드 복사 성공 (`method: clipboard`). 실제 친구에게 전달·열람되었다는 뜻은 아니다.
 - `share_cancelled`: 네이티브 공유창 취소

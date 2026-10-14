@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import puppeteer from 'puppeteer-core';
 import { serve } from './serve.mjs';
+import { DIFFICULTY_NAMES, shareContent } from '../src/share.js';
 
 const server = await serve(0);
 const browser = await puppeteer.launch({
@@ -25,8 +26,10 @@ try {
   await page.waitForFunction(() => !document.getElementById('share-btn').disabled);
   const shared = await page.evaluate(() => window.shared);
   assert.match(shared.text, /어려움 난이도 클리어/);
+  assert.equal(shared.title, '[문도 피구] 어려움 난이도 클리어!');
+  assert.equal(await page.$eval('#share-btn', el => el.textContent), '자랑하기');
   const sharedUrl = new URL(shared.url);
-  assert.equal(sharedUrl.origin + sharedUrl.pathname, `http://localhost:${server.address().port}/`);
+  assert.equal(sharedUrl.origin + sharedUrl.pathname, `http://localhost:${server.address().port}/share/hard-win.html`);
   assert.match(sharedUrl.searchParams.get('share_id'), /^[0-9a-f-]{36}$/);
   assert.equal(sharedUrl.searchParams.get('utm_source'), 'friend');
   assert.equal(sharedUrl.searchParams.get('utm_medium'), 'share');
@@ -39,14 +42,15 @@ try {
   });
   await page.click('#share-btn');
   await page.waitForFunction(() => document.getElementById('share-status').textContent.includes('복사 완료'));
-  assert.match(await page.evaluate(() => window.copied), /쌍둥이.*복수/);
+  assert.match(await page.evaluate(() => window.copied), /쌍둥이 난이도 실패/);
+  assert.equal(await page.$eval('#share-btn', el => el.textContent), '공유하기');
   await page.evaluate(() => {
     window.showResult();
     navigator.clipboard.writeText = async () => { throw new Error('Permission denied'); };
   });
   await page.click('#share-btn');
   await page.waitForSelector('#share-copy:not(.hidden)');
-  assert.match(await page.$eval('#share-copy', el => el.value), /문도에게 와/);
+  assert.match(await page.$eval('#share-copy', el => el.value), /날아오는 식칼을 피하고, 상대 문도를 쓰러뜨리는 피구 게임/);
   await page.evaluate(() => {
     window.showResult();
     Object.defineProperty(navigator, 'share', { configurable: true, value: async () => { throw new DOMException('Canceled', 'AbortError'); } });
@@ -66,6 +70,26 @@ try {
     await page.screenshot({ path: `output/share-${width}.png` });
   }
   assert.deepEqual(errors, []);
+  const crawler = await browser.newPage();
+  await crawler.setJavaScriptEnabled(false);
+  for (const difficulty of Object.keys(DIFFICULTY_NAMES)) {
+    for (const result of ['win', 'loss']) {
+      const { title, description } = shareContent(difficulty, result === 'win');
+      await crawler.goto(`http://localhost:${server.address().port}/share/${difficulty}-${result}.html`);
+      assert.equal(await crawler.$eval('meta[property="og:title"]', el => el.content), title);
+      assert.equal(await crawler.$eval('meta[name="twitter:title"]', el => el.content), title);
+      assert.equal(await crawler.$eval('meta[property="og:description"]', el => el.content), description);
+      const imageUrl = await crawler.$eval('meta[property="og:image"]', el => el.content);
+      assert.ok(imageUrl.endsWith(`/share-preview-${difficulty}-${result}.png`));
+      assert.ok(fs.existsSync(`assets/cartoon/share-preview-${difficulty}-${result}.png`));
+    }
+  }
+  await crawler.close();
+  await page.bringToFront();
+  await page.goto(shared.url);
+  await page.waitForFunction(() => window.__game?.scene.getScene('game').state === 'menu');
+  assert.equal(new URL(page.url()).pathname, '/');
+  assert.equal(new URL(page.url()).search, sharedUrl.search);
   console.log('Result sharing: native share, outcome text, clean URL, clipboard, manual fallback, cancellation and responsive layout passed.');
 } finally {
   await browser.close();
