@@ -1192,11 +1192,17 @@ $('mode-back-btn').addEventListener('click', () => {
   selectMenuView();
   $('practice-btn').focus();
 });
+// 대인전 재대결 안내: 승자는 가르쳐주고 패자는 배운다
+const rematchStatus = (kind) => {
+  const won = $('result').dataset.outcome === 'win';
+  if (kind === 'wanted') return won ? '상대방이 한 수 더 배우고 싶대요!' : '상대방이 한 수 더 가르쳐주겠대요!';
+  return won ? '상대방이 배우러 오길 기다리는 중…' : '상대방이 가르쳐주길 기다리는 중…';
+};
 $('again-btn').addEventListener('click', () => {
   if (scene().mode === 'online') {
     track('online_rematch_clicked', scene().analyticsMatch);
     $('again-btn').disabled = true;
-    HUD.resultStatus('상대방이 재대결을 수락하길 기다리는 중…');
+    HUD.resultStatus(rematchStatus('waiting'));
     Online.rematch();
     return;
   }
@@ -1265,8 +1271,8 @@ Online.hooks = {
   onRematch: (want) => {
     if (scene().mode !== 'online' || $('result').classList.contains('hidden')) return;
     const mine = want[Online.slot], theirs = want[1 - Online.slot];
-    if (theirs && !mine) HUD.resultStatus('상대방이 재대결을 원해요!');
-    else if (mine && !theirs) HUD.resultStatus('상대방이 재대결을 수락하길 기다리는 중…');
+    if (theirs && !mine) HUD.resultStatus(rematchStatus('wanted'));
+    else if (mine && !theirs) HUD.resultStatus(rematchStatus('waiting'));
   },
   onAway: (graceMs) => {
     scene().setNetPaused(true);

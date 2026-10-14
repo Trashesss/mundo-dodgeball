@@ -104,7 +104,8 @@ try {
   // 재대결: 한쪽이 누르면 상대에게 안내, 둘 다 누르면 다시 시작
   step('재대결: 한쪽이 누르면 상대에게 안내, 둘 다 누르면 다시 시작');
   await host.click('#again-btn');
-  await guest.waitForFunction(() => document.getElementById('share-status').textContent.includes('재대결을 원해요'));
+  await guest.waitForFunction(() => document.getElementById('share-status').textContent === '상대방이 한 수 더 가르쳐주겠대요!');
+  assert.equal(await host.$eval('#share-status', (el) => el.textContent), '상대방이 배우러 오길 기다리는 중…');
   await guest.click('#again-btn');
   for (const page of [host, guest]) await waitScene(page, "s.state === 'countdown' || s.state === 'play'");
   assert.ok(await host.$eval('#result', (el) => el.classList.contains('hidden')));
