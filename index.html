@@ -89,6 +89,12 @@
   <div id="menu" class="screen hidden">
     <main class="match-setup" aria-labelledby="select-title">
       <header class="setup-heading">
+        <div id="practice-heading" class="practice-heading hidden">
+          <p class="setup-brand">
+            문도 <span>피구</span>
+          </p>
+          <img class="practice-art" src="assets/cartoon/mundo-bot-v6.png" alt="" width="160" height="160" />
+        </div>
         <div class="setup-intro">
           <img class="setup-portrait" src="assets/cartoon/portrait-hud-v3.png" alt="식칼을 든 문도 박사" width="144" height="144" />
           <div class="setup-intro-copy">
@@ -103,9 +109,35 @@
           <li><kbd>D</kbd> 점멸</li>
           <li><kbd>F</kbd> 유체화</li>
         </ul>
-        <h1 id="select-title">봇 난이도 선택</h1>
-        <p class="setup-subtitle" id="difficulty-label">상대 봇의 난이도를 골라주세요.</p>
+        <h1 id="select-title">게임 모드 선택</h1>
+        <p class="setup-subtitle" id="difficulty-label">어떤 게임을 플레이할까요?</p>
       </header>
+      <div id="mode-select" class="mode-select">
+        <button id="quick-match-btn" class="mode-card" type="button" disabled aria-describedby="quick-match-status">
+          <span id="quick-match-status" class="mode-status">준비 중</span>
+          <img src="assets/cartoon/mundo-quick-match-v4.png" alt="식칼을 든 문도 VS 물음표로 가려진 정체불명의 상대" width="240" height="160" />
+          <span class="mode-name">빠른 대전</span>
+          <span class="mode-description">새로운 상대와 바로 한 판</span>
+        </button>
+        <button id="practice-btn" class="mode-card" type="button">
+          <img src="assets/cartoon/mundo-bot-v6.png" alt="" width="160" height="160" />
+          <span class="mode-name">인공지능 상대 연습</span>
+          <span class="mode-description">난이도를 골라 문도 봇과 한 판</span>
+        </button>
+        <button id="online-btn" class="mode-card" type="button">
+          <img src="assets/cartoon/mundo-friends-v4.png" alt="집중해서 게임하는 문도와 발로 마우스를 누르며 웃는 문도" width="320" height="160" />
+          <span class="mode-name">사용자 지정 게임</span>
+          <span class="mode-description">친구와 플레이</span>
+        </button>
+        <div class="flash-prank" id="flash-prank">
+          <button id="flash-swap-btn" type="button">점멸을 F로 바꾸기</button>
+          <div class="flash-prank-reply" role="status" aria-live="polite" aria-atomic="true">
+            <span id="flash-swap-status"></span>
+            <img class="flash-prank-emote" src="assets/cartoon/mundo-thumbs-up-emote-v1.png" alt="따봉 날리는 문도" width="64" height="64" />
+          </div>
+        </div>
+      </div>
+      <section id="practice-select" class="hidden" aria-labelledby="select-title">
       <div id="opt-diff" role="group" aria-labelledby="difficulty-label">
         <button type="button" data-v="easy" aria-pressed="false">
           <span class="difficulty-top"><span class="difficulty-level">LEVEL 01</span><span class="difficulty-check" aria-hidden="true"></span></span>
@@ -140,22 +172,19 @@
       </div>
       <div class="setup-actions">
         <button id="start-btn" type="button">게임 시작</button>
-        <button id="online-btn" type="button">친구와 대결 <small>초대 링크로 1대1</small></button>
+        <button id="mode-back-btn" type="button">뒤로가기</button>
       </div>
-      <div class="flash-prank" id="flash-prank">
-        <button id="flash-swap-btn" type="button">점멸을 F로 바꾸기</button>
-        <div class="flash-prank-reply" role="status" aria-live="polite" aria-atomic="true">
-          <span id="flash-swap-status"></span>
-          <img class="flash-prank-emote" src="assets/cartoon/mundo-thumbs-up-emote-v1.png" alt="따봉 날리는 문도" width="64" height="64" />
-        </div>
-      </div>
+      </section>
     </main>
   </div>
 
   <div id="lobby" class="screen hidden" role="dialog" aria-modal="true" aria-labelledby="lobby-title" data-state="connecting">
     <main class="lobby-card">
-      <p class="setup-brand">문도 <span>피구</span></p>
-      <h1 id="lobby-title">친구와 대결</h1>
+      <p class="setup-brand">
+        문도 <span>피구</span>
+        <img class="lobby-brand-image" src="assets/cartoon/mundo-friends-v4.png" alt="" width="320" height="160" />
+      </p>
+      <h1 id="lobby-title">사용자 지정 게임</h1>
       <p id="lobby-status" class="lobby-status" role="status">서버에 연결하는 중…</p>
       <div class="lobby-room">
         <div class="lobby-code"><span>방 코드</span><strong id="lobby-code">------</strong></div>
@@ -180,6 +209,7 @@
   <div id="result" class="screen hidden" role="dialog" aria-modal="true" aria-labelledby="result-title">
     <div class="match-result">
       <img class="result-portrait" src="assets/cartoon/portrait-hud-v3.png" alt="" width="160" height="160" />
+      <img class="result-meme" src="assets/cartoon/mundo-bad-play-meme-v1.png" alt="문도가 상대에게 너 개못하잖아라고 말하는 짤. 전적 199패 1승, 최근 전적 1승." width="1681" height="936" />
       <h1 id="result-title">난이도 클리어!</h1>
       <div class="result-actions">
         <button id="share-btn" type="button">자랑하기</button>

@@ -1175,6 +1175,22 @@ document.getElementById('start-btn').addEventListener('click', async (event) => 
   button.disabled = false;
 });
 const $ = (id) => document.getElementById(id);
+function selectMenuView(practice = false) {
+  $('menu').classList.toggle('practice-view', practice);
+  $('practice-heading').classList.toggle('hidden', !practice);
+  $('mode-select').classList.toggle('hidden', practice);
+  $('practice-select').classList.toggle('hidden', !practice);
+  $('select-title').textContent = practice ? '인공지능 상대 연습' : '게임 모드 선택';
+  $('difficulty-label').textContent = practice ? '시간이 지날수록 경기장이 좁아집니다.' : '어떤 게임을 플레이할까요?';
+}
+$('practice-btn').addEventListener('click', () => {
+  selectMenuView(true);
+  $('opt-diff').querySelector('button.on').focus();
+});
+$('mode-back-btn').addEventListener('click', () => {
+  selectMenuView();
+  $('practice-btn').focus();
+});
 $('again-btn').addEventListener('click', () => {
   if (scene().mode === 'online') {
     track('online_rematch_clicked', scene().analyticsMatch);
@@ -1191,6 +1207,7 @@ $('menu-btn').addEventListener('click', () => {
   track('menu_returned', scene().analyticsMatch);
   if (scene().mode === 'online') Online.leave();
   $('result').classList.add('hidden');
+  selectMenuView();
   $('menu').classList.remove('hidden');
   scene().backToMenu();
 });
@@ -1198,6 +1215,7 @@ $('menu-btn').addEventListener('click', () => {
 // ---------- 친구와 대결 ----------
 const showMenu = () => {
   $('result').classList.add('hidden');
+  selectMenuView();
   $('menu').classList.remove('hidden');
   if (scene().mode === 'online' || scene().champs.length) scene().backToMenu();
 };

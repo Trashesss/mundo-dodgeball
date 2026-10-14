@@ -15,6 +15,7 @@ try {
   await page.setViewport({ width: 1440, height: 1000 });
   await page.goto(`http://localhost:${server.address().port}/`);
   await page.waitForFunction(() => window.__game?.scene.getScene('game').state === 'menu');
+  await page.click('#practice-btn');
   await page.click('#start-btn');
   const checks = await page.evaluate(async () => {
     const scene = window.__game.scene.getScene('game');

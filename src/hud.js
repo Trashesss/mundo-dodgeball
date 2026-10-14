@@ -7,19 +7,16 @@ const $ = (id) => document.getElementById(id);
 let shareData;
 let shareProperties;
 let resultVersion = 0;
+let flashReplyTimer;
 
 $('flash-swap-btn').addEventListener('click', () => {
-  const button = $('flash-swap-btn');
-  button.disabled = true;
-  $('flash-prank').classList.remove('revealed');
-  button.textContent = '점멸을 F로 바꾸는 중…';
-  $('flash-swap-status').textContent = '';
-  setTimeout(() => {
-    button.textContent = '점멸을 F로 바꾸기';
-    button.disabled = false;
-    $('flash-swap-status').textContent = 'F는 Fail의 F다.';
-    $('flash-prank').classList.add('revealed');
-  }, 900);
+  clearTimeout(flashReplyTimer);
+  $('flash-swap-status').textContent = 'F는 Fail의 F다.';
+  $('flash-prank').classList.add('revealed');
+  flashReplyTimer = setTimeout(() => {
+    $('flash-prank').classList.remove('revealed');
+    $('flash-swap-status').textContent = '';
+  }, 1500);
 });
 
 $('share-btn').addEventListener('click', async () => {
@@ -137,6 +134,7 @@ export const HUD = {
     $('share-copy').classList.add('hidden');
     $('share-status').textContent = kind === 'left' ? '친구 연결이 끊겨서 경기가 끝났어요.' : '';
     $('result').dataset.outcome = kind === 'win' ? 'win' : 'lose';
+    $('result').dataset.art = kind === 'lose' ? 'custom-loss' : 'portrait';
     $('result-title').textContent = { win: '친구를 이겼다!', lose: '친구에게 졌다…', left: '상대가 나갔어요' }[kind];
     $('result').classList.remove('hidden');
   },
@@ -222,6 +220,7 @@ export const HUD = {
     this.show(false);
     this.clearFeeds();
     $('result').dataset.outcome = win ? 'win' : 'lose';
+    $('result').dataset.art = 'portrait';
     $('result-title').textContent = `${names[difficulty]} 난이도 ${win ? '클리어!' : '실패'}`;
     $('result').classList.remove('hidden');
   },

@@ -39,6 +39,7 @@ try {
   page.on('pageerror', e => errors.push(e.message));
   await page.goto(`http://localhost:${server.address().port}/`);
   await page.waitForFunction(() => window.__game?.scene.getScene('game').state === 'menu');
+  await page.click('#practice-btn');
   await page.click('#start-btn');
   await page.waitForFunction(() => window.__game.scene.getScene('game').state === 'play');
   const checks = await page.evaluate(async () => {
