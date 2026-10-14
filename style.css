@@ -250,7 +250,7 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 .setup-description { margin: 0; font-size: 18px; line-height: 1.5; word-break: keep-all; }
 .setup-arena-tip { margin: 6px 0 0; color: var(--entry-muted); font-size: 14px; line-height: 1.5; word-break: keep-all; }
 .setup-controls {
-  display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 22px;
+  display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: center; gap: 10px 22px;
   margin: 0 0 32px; padding: 14px 12px; list-style: none;
   border-block: 1px solid #b3c2c325; color: var(--entry-muted); font-size: 14px;
 }
@@ -260,6 +260,24 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
   border-radius: 5px; color: var(--entry-text); font: inherit; line-height: 20px;
 }
 .setup-controls kbd { min-width: 26px; text-align: center; }
+.flash-prank { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 14px; }
+#flash-swap-btn {
+  min-width: 160px; padding: 4px 8px; border: 1px solid #52676d; border-radius: 8px;
+  background: #24373f; color: var(--entry-muted); font: 14px/20px 'Jua', sans-serif; cursor: pointer; white-space: nowrap;
+}
+#flash-swap-btn:hover { border-color: var(--entry-green); color: var(--entry-green); }
+#flash-swap-btn:disabled { cursor: wait; opacity: .65; }
+.flash-prank-reply { display: none; align-items: center; justify-content: center; gap: 6px; color: var(--entry-green); font-size: 18px; }
+.flash-prank.revealed .flash-prank-reply { display: flex; }
+.flash-prank-emote { width: 64px; height: 64px; object-fit: contain; animation: mundo-thumb .4s ease-out both; }
+@keyframes mundo-thumb {
+  from { opacity: 0; transform: translateY(12px) scale(.4) rotate(-16deg); }
+  70% { opacity: 1; transform: translateY(-4px) scale(1.12) rotate(6deg); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flash-prank-emote { animation: none; }
+}
 .setup-heading h1 { margin: 0 0 10px; color: var(--entry-text); font-size: 24px; font-weight: 400; }
 .setup-subtitle { margin: 0 0 28px; color: var(--entry-muted); font-size: 16px; }
 #opt-diff { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }

@@ -7,6 +7,20 @@ let shareData;
 let shareProperties;
 let resultVersion = 0;
 
+$('flash-swap-btn').addEventListener('click', () => {
+  const button = $('flash-swap-btn');
+  button.disabled = true;
+  $('flash-prank').classList.remove('revealed');
+  button.textContent = '점멸을 F로 바꾸는 중…';
+  $('flash-swap-status').textContent = '';
+  setTimeout(() => {
+    button.textContent = '점멸을 F로 바꾸기';
+    button.disabled = false;
+    $('flash-swap-status').textContent = 'F는 Fail의 F다.';
+    $('flash-prank').classList.add('revealed');
+  }, 900);
+});
+
 $('share-btn').addEventListener('click', async () => {
   if (!shareData) return;
   const version = resultVersion;
