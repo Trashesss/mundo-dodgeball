@@ -273,7 +273,7 @@ export const Online = {
     $('lobby').classList.remove('hidden');
     $('lobby').dataset.state = 'error';
     $('lobby-status').textContent = text;
-    $('lobby-leave').textContent = '메뉴로';
+    $('lobby-leave').textContent = '뒤로가기';
   },
 
   renderLobby() {
