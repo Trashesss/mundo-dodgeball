@@ -108,7 +108,9 @@ export class Room {
         if (this.slots.every(x => x.rematch)) this.startMatch();
         return;
       case 'leave': return this.leave(slot, 'left');
-      case 'ping': return this.send(slot, { type: 'pong', c: msg.c, t: this.time() });
+      case 'ping':
+        if (Number.isFinite(msg.c)) this.send(slot, { type: 'pong', c: msg.c, t: this.time() });
+        return;
       // tools/check-online.mjs 전용 (MUNDO_TEST=1 일 때만): 체력을 바꿔 빠르게 승부를 낸다
       case 'debug':
         if (process.env.MUNDO_TEST === '1' && this.world && Array.isArray(msg.hp)) {

@@ -10,6 +10,8 @@ const HOST = process.env.HOST || '127.0.0.1';
 const MAX_ROOMS = 500;
 const IDLE_MS = 10 * 60 * 1000;
 const MAX_MSGS_PER_SEC = 120;
+const MAX_CONNS_PER_IP = 8;     // 한 사람이 방을 잔뜩 만들어 서버를 채우지 못하게
+const MAX_FAILED_JOINS = 10;    // 방 코드 무작위 대입 방지 (연결당)
 const ORIGINS = [
   /^https:\/\/trashesss\.github\.io$/,
   /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/,
@@ -17,6 +19,15 @@ const ORIGINS = [
 ];
 
 const rooms = new Map();
+const connsByIp = new Map();
+
+// nginx 뒤에서는 접속 주소가 항상 127.0.0.1 이므로, 로컬 프록시가 붙인 X-Forwarded-For 의 마지막 값을 쓴다
+function clientIp(req) {
+  const remote = req.socket.remoteAddress || '';
+  const local = remote === '127.0.0.1' || remote === '::1' || remote === '::ffff:127.0.0.1';
+  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',').map(s => s.trim()).filter(Boolean);
+  return local && forwarded.length ? forwarded[forwarded.length - 1] : remote;
+}
 
 function newCode() {
   for (;;) {
@@ -26,7 +37,8 @@ function newCode() {
 }
 
 const server = http.createServer((req, res) => {
-  if (req.url === '/health' || req.url === '/ws/health') {
+  // 서버 안에서만 확인용 (nginx 는 /ws 만 넘기므로 외부에 노출되지 않음)
+  if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok: true, rooms: rooms.size }));
     return;
@@ -41,7 +53,12 @@ const wss = new WebSocketServer({
   verifyClient: ({ origin }) => !origin || ORIGINS.some(re => re.test(origin)),
 });
 
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
+  const ip = clientIp(req);
+  const conns = (connsByIp.get(ip) || 0) + 1;
+  if (conns > MAX_CONNS_PER_IP) { ws.close(4029, 'too many connections'); return; }
+  connsByIp.set(ip, conns);
+  let failedJoins = 0;
   ws.isAlive = true;
   ws.on('pong', () => { ws.isAlive = true; });
   let room = null;
@@ -72,7 +89,11 @@ wss.on('connection', (ws) => {
     }
     if (msg.type === 'join') {
       const target = isRoomCode(msg.room) ? rooms.get(msg.room) : null;
-      if (!target) { send({ type: 'error', code: 'notFound' }); return; }
+      if (!target) {
+        send({ type: 'error', code: 'notFound' });
+        if (++failedJoins >= MAX_FAILED_JOINS) ws.close(4029, 'too many failed joins');
+        return;
+      }
       if (target === room && slot >= 0) return;
       detach();
       let s = typeof msg.token === 'string' ? target.rejoin(ws, msg.token) : -1;
@@ -81,7 +102,10 @@ wss.on('connection', (ws) => {
       room = target; slot = s;
       return;
     }
-    if (msg.type === 'ping' && !room) { send({ type: 'pong', c: msg.c, t: Math.round(performance.now()) }); return; }
+    if (msg.type === 'ping' && !room) {
+      if (Number.isFinite(msg.c)) send({ type: 'pong', c: msg.c, t: Math.round(performance.now()) });
+      return;
+    }
     if (room && slot >= 0) {
       if (msg.type === 'leave') { detach(); return; }
       room.handle(slot, msg);
@@ -89,6 +113,8 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
+    const left = (connsByIp.get(ip) || 1) - 1;
+    if (left > 0) connsByIp.set(ip, left); else connsByIp.delete(ip);
     if (room && slot >= 0) room.disconnect(slot, ws);
   });
 });

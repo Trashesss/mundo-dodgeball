@@ -15,12 +15,14 @@ const storage = {
   remove(key) { try { sessionStorage.removeItem(key); } catch { /* 무시 */ } },
 };
 
-// ?server= 로 테스트 서버 지정, 로컬 개발은 localhost:3000
+// 로컬 개발 페이지에서만 ?server= 로 다른 서버를 지정할 수 있다.
+// 배포 페이지는 항상 공식 서버를 쓴다 (남이 만든 링크로 친구를 엉뚱한 서버에 붙이지 못하게).
+const LOCAL_PAGE = ['localhost', '127.0.0.1'].includes(location.hostname);
 export function serverUrl() {
+  if (!LOCAL_PAGE) return DEFAULT_SERVER;
   const q = new URLSearchParams(location.search).get('server');
   if (q && /^wss?:\/\//.test(q)) return q;
-  if (['localhost', '127.0.0.1'].includes(location.hostname)) return `ws://${location.hostname}:3000/ws`;
-  return DEFAULT_SERVER;
+  return `ws://${location.hostname}:3000/ws`;
 }
 
 export function roomFromUrl() {
@@ -39,7 +41,7 @@ function inviteUrl(code) {
   const url = new URL(location.pathname, location.origin);
   url.searchParams.set('room', code);
   const server = new URLSearchParams(location.search).get('server');
-  if (server) url.searchParams.set('server', server);
+  if (server && LOCAL_PAGE) url.searchParams.set('server', server);
   return url.href;
 }
 
