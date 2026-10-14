@@ -65,6 +65,7 @@ export const Online = {
   intent: null,
   reconnectUntil: 0,
   pingTimer: null,
+  createStatusTimer: null,
 
   // ---------- 연결 ----------
   connect() {
@@ -146,6 +147,7 @@ export const Online = {
   },
 
   reset() {
+    clearTimeout(this.createStatusTimer);
     this.closeSocket();
     Object.assign(this, { room: null, slot: -1, token: null, players: [null, null], intent: null, reconnectUntil: 0 });
   },
@@ -154,7 +156,10 @@ export const Online = {
   async create() {
     this.reset();
     this.intent = 'create';
-    this.showLobby('방을 만드는 중…');
+    this.showLobby('친구에게 초대 링크를 보내주세요.');
+    this.createStatusTimer = setTimeout(() => {
+      $('lobby-status').textContent = '문도가 방을 만드는 중...';
+    }, 1000);
     try {
       await this.connect();
       this.send({ type: 'create' });
@@ -198,6 +203,7 @@ export const Online = {
     switch (msg.type) {
       case 'pong': return this.onPong(msg);
       case 'joined': {
+        clearTimeout(this.createStatusTimer);
         const reconnected = !!this.reconnectUntil;
         Object.assign(this, { room: msg.room, slot: msg.slot, token: msg.token, reconnectUntil: 0 });
         storage.set(TOKEN_KEY(msg.room), msg.token);
@@ -266,10 +272,12 @@ export const Online = {
   },
 
   hideLobby() {
+    clearTimeout(this.createStatusTimer);
     $('lobby').classList.add('hidden');
   },
 
   lobbyError(text) {
+    clearTimeout(this.createStatusTimer);
     $('lobby').classList.remove('hidden');
     $('lobby').dataset.state = 'error';
     $('lobby-status').textContent = text;
