@@ -65,7 +65,7 @@ nginx가 `https://3.37.101.179/ws`를 `127.0.0.1:3000/ws`로 WebSocket 업그레
 SSH_TARGET=ubuntu@3.37.101.179 SSH_KEY=~/.ssh/<lightsail-key>.pem server/deploy.sh
 ```
 
-허용 Origin은 `https://trashesss.github.io`와 localhost이며, 다른 도메인은 `EXTRA_ORIGINS=https://a.example,https://b.example` 환경 변수로 추가한다.
+허용 Origin은 배포 서버(`NODE_ENV=production`)에서 `https://trashesss.github.io`뿐이고, localhost 페이지는 로컬에서 띄운 개발 서버(`npm run server`)에서만 허용한다. 다른 도메인은 `EXTRA_ORIGINS=https://a.example,https://b.example` 환경 변수로 추가한다.
 
 ## 구조
 - Q 투척은 참고 영상처럼 식칼을 머리 위로 들어 올린 뒤 상체와 함께 앞으로 휘두르고, 발을 디딘 채 자세를 회복한다. 30프레임을 60fps로 재생하며 `src/throw-motion.js`에서 투척 자세와 발사 시점(0.14초), 회복 시간(0.5초)을 공유한다. 발사 뒤에는 빈손으로 회복하고 식칼이 다시 나타난다. 이동은 발사 직후 가능하며, 회복 중에는 투척 방향을 유지한다.

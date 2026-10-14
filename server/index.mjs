@@ -12,9 +12,11 @@ const IDLE_MS = 10 * 60 * 1000;
 const MAX_MSGS_PER_SEC = 120;
 const MAX_CONNS_PER_IP = 8;     // 한 사람이 방을 잔뜩 만들어 서버를 채우지 못하게
 const MAX_FAILED_JOINS = 10;    // 방 코드 무작위 대입 방지 (연결당)
+// 배포 서버(NODE_ENV=production)는 게임 사이트만 허용한다. localhost 페이지는 로컬 개발 서버에서만 허용.
+const PRODUCTION = process.env.NODE_ENV === 'production';
 const ORIGINS = [
   /^https:\/\/trashesss\.github\.io$/,
-  /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/,
+  ...(PRODUCTION ? [] : [/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/]),
   ...(process.env.EXTRA_ORIGINS || '').split(',').filter(Boolean).map(o => new RegExp(`^${o.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`)),
 ];
 
