@@ -51,7 +51,18 @@
 
   <div id="chat"></div>
   <div id="online-countdown" class="hidden" aria-live="assertive"></div>
-  <div id="net-banner" class="hidden" role="status" aria-live="polite"></div>
+  <div id="net-banner" class="hidden" role="status" aria-live="polite" aria-atomic="true">
+    <div class="net-status">
+      <img class="net-portrait" src="assets/cartoon/portrait-hud-v3.png" alt="" width="256" height="256" />
+      <h2 id="net-title"></h2>
+      <p id="net-detail"></p>
+      <div id="net-wait" aria-hidden="true">
+        <span class="net-wait-dots"><i></i><i></i><i></i></span>
+        <span>상대방을 기다리는 중</span>
+        <strong id="net-seconds"></strong>
+      </div>
+    </div>
+  </div>
 
   <!-- 하단 HUD -->
   <div id="hud" class="hidden">
@@ -180,28 +191,46 @@
 
   <div id="lobby" class="screen hidden" role="dialog" aria-modal="true" aria-labelledby="lobby-title" data-state="connecting">
     <main class="lobby-card">
-      <p class="setup-brand">
-        문도 <span>피구</span>
+      <header class="lobby-heading">
+        <p class="setup-brand">문도 <span>피구</span></p>
+        <h1 id="lobby-title">사용자 지정 게임</h1>
         <img class="lobby-brand-image" src="assets/cartoon/mundo-friends-v4.png" alt="" width="320" height="160" />
-      </p>
-      <h1 id="lobby-title">사용자 지정 게임</h1>
+      </header>
       <p id="lobby-status" class="lobby-status" role="status">서버에 연결하는 중…</p>
+      <div class="lobby-entry">
+        <section class="lobby-panel lobby-create-panel" aria-labelledby="lobby-create-title">
+          <h2 id="lobby-create-title">새 방 만들기</h2>
+          <p><span>방을 만들고 상대방을 초대하세요</span><span>상대방은 초대 코드나 링크로 들어올 수 있어요</span></p>
+          <button id="lobby-create" type="button">방 만들기</button>
+        </section>
+        <form id="lobby-join-form" class="lobby-panel" novalidate>
+          <label for="lobby-join-code">방 코드로 입장</label>
+          <input id="lobby-join-code" type="text" placeholder="6자리 방 코드" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="lobby-join-status" />
+          <p id="lobby-join-status" role="status"></p>
+          <button id="lobby-join" type="submit">입장하기</button>
+        </form>
+      </div>
       <div class="lobby-room">
-        <div class="lobby-code"><span>방 코드</span><strong id="lobby-code">------</strong></div>
-        <div class="lobby-link">
-          <input id="lobby-link" type="text" readonly aria-label="초대 링크" />
-          <button id="lobby-copy" type="button">초대 링크 보내기</button>
-        </div>
+        <section class="lobby-panel lobby-invite" aria-label="친구 초대">
+        <h2>초대 코드</h2>
+        <div class="lobby-code"><strong id="lobby-code">------</strong></div>
         <p id="lobby-copy-status" class="lobby-copy-status" role="status"></p>
+        <div class="lobby-link">
+          <input id="lobby-link" class="hidden" type="text" readonly aria-label="초대 링크" />
+          <button id="lobby-copy" type="button">초대 링크 복사하기</button>
+        </div>
+        </section>
+        <section class="lobby-panel lobby-match" aria-labelledby="lobby-players-title">
+        <h2 id="lobby-players-title">대전 준비</h2>
         <ul class="lobby-players" aria-label="참가자">
-          <li id="lobby-p0" data-state="empty"><span class="lobby-role">방장</span><span class="lobby-player-status">기다리는 중…</span></li>
-          <li id="lobby-p1" data-state="empty"><span class="lobby-role">친구</span><span class="lobby-player-status">기다리는 중…</span></li>
+          <li id="lobby-p0" data-state="empty"><span class="lobby-role">방장</span><span class="lobby-player-status">기다리는 중</span></li>
+          <li id="lobby-p1" data-state="empty"><span class="lobby-role">친구</span><span class="lobby-player-status">기다리는 중</span></li>
         </ul>
-        <p class="lobby-tip">대인전은 경기장이 줄어들지 않아요. 먼저 쓰러뜨리면 승리!</p>
         <button id="lobby-ready" type="button">준비</button>
+        </section>
       </div>
       <div class="lobby-actions">
-        <button id="lobby-leave" type="button">나가기</button>
+        <button id="lobby-leave" type="button">뒤로가기</button>
       </div>
     </main>
   </div>
@@ -209,8 +238,10 @@
   <div id="result" class="screen hidden" role="dialog" aria-modal="true" aria-labelledby="result-title">
     <div class="match-result">
       <img class="result-portrait" src="assets/cartoon/portrait-hud-v3.png" alt="" width="160" height="160" />
-      <img class="result-meme" src="assets/cartoon/mundo-bad-play-meme-v1.png" alt="문도가 상대에게 너 개못하잖아라고 말하는 짤. 전적 199패 1승, 최근 전적 1승." width="1681" height="936" />
+      <img class="result-meme result-meme-loss" src="assets/cartoon/mundo-bad-play-meme-v1.png" alt="문도가 상대에게 너 개못하잖아라고 말하는 짤. 전적 199패 1승, 최근 전적 1승." width="1681" height="936" />
+      <img class="result-meme result-meme-win" src="assets/cartoon/mundo-satisfied-meme-v6.png" alt="양복을 입은 문도가 의자에 기대 흡족하게 웃는 짤. 흡족." width="1402" height="1122" />
       <h1 id="result-title">난이도 클리어!</h1>
+      <p id="result-subtitle" class="hidden"></p>
       <div class="result-actions">
         <button id="share-btn" type="button">자랑하기</button>
         <button id="again-btn" type="button">다시 하기</button>
@@ -221,6 +252,7 @@
     </div>
   </div>
 
+  <div id="copy-snackbar" role="status" aria-live="polite" aria-atomic="true"></div>
   <script type="module" src="src/main.js"></script>
 </body>
 </html>

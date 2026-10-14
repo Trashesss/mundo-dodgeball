@@ -66,6 +66,7 @@ export const Online = {
   reconnectUntil: 0,
   pingTimer: null,
   createStatusTimer: null,
+  snackbarTimer: null,
 
   // ---------- 연결 ----------
   connect() {
@@ -153,10 +154,20 @@ export const Online = {
   },
 
   // ---------- 방 ----------
+  openLobby() {
+    this.reset();
+    this.showLobby('');
+    $('lobby').dataset.state = 'entry';
+    $('lobby-leave').textContent = '뒤로가기';
+    $('lobby-join-code').value = '';
+    $('lobby-join-code').removeAttribute('aria-invalid');
+    $('lobby-join-status').textContent = '';
+  },
+
   async create() {
     this.reset();
     this.intent = 'create';
-    this.showLobby('친구에게 초대 링크를 보내주세요.');
+    this.showLobby('');
     this.createStatusTimer = setTimeout(() => {
       $('lobby-status').textContent = '문도가 방을 만드는 중...';
     }, 1000);
@@ -265,14 +276,18 @@ export const Online = {
     $('lobby').dataset.state = this.room ? 'room' : 'connecting';
     $('lobby-code').textContent = code || '------';
     $('lobby-link').value = code ? inviteUrl(code) : '';
+    $('lobby-link').classList.add('hidden');
     $('lobby-copy-status').textContent = '';
-    $('lobby-leave').textContent = '나가기';
-    if (status) $('lobby-status').textContent = status;
+    $('lobby-leave').textContent = '뒤로가기';
+    if (status !== undefined) $('lobby-status').textContent = status;
     this.renderLobby();
   },
 
   hideLobby() {
     clearTimeout(this.createStatusTimer);
+    clearTimeout(this.snackbarTimer);
+    $('copy-snackbar').classList.remove('visible');
+    $('copy-snackbar').textContent = '';
     $('lobby').classList.add('hidden');
   },
 
@@ -294,13 +309,13 @@ export const Online = {
       el.dataset.state = state;
       el.querySelector('.lobby-role').textContent = `${i === 0 ? '방장' : '친구'}${i === this.slot ? ' (나)' : ''}`;
       el.querySelector('.lobby-player-status').textContent = {
-        empty: '기다리는 중…', away: '연결 끊김', ready: '준비 완료!', joined: '준비 중',
+        empty: '기다리는 중', away: '연결 끊김', ready: '준비 완료', joined: '준비 중',
       }[state];
     });
     $('lobby-ready').textContent = me?.ready ? '준비 취소' : '준비';
     $('lobby-ready').classList.toggle('on', !!me?.ready);
-    $('lobby-status').textContent = !other ? '친구에게 초대 링크를 보내주세요.'
-      : !other.connected ? '친구 연결이 끊겼어요. 다시 들어오길 기다리는 중…'
+    $('lobby-status').textContent = !other ? ''
+      : !other.connected ? '상대방 연결이 끊겼어요. 다시 들어오길 기다리는 중…'
         : me?.ready && other.ready ? '곧 시작합니다!'
           : me?.ready ? '친구가 준비하길 기다리는 중…'
             : '준비되면 버튼을 눌러주세요.';
@@ -315,8 +330,16 @@ export const Online = {
     }
     try {
       await navigator.clipboard.writeText(`${data.text}\n${url}`);
-      $('lobby-copy-status').textContent = '초대 메시지 복사 완료! 친구에게 보내주세요.';
+      $('lobby-copy-status').textContent = '';
+      clearTimeout(this.snackbarTimer);
+      $('copy-snackbar').textContent = '초대 링크 복사 완료';
+      $('copy-snackbar').classList.add('visible');
+      this.snackbarTimer = setTimeout(() => {
+        $('copy-snackbar').classList.remove('visible');
+        $('copy-snackbar').textContent = '';
+      }, 2000);
     } catch {
+      $('lobby-link').classList.remove('hidden');
       $('lobby-link').focus();
       $('lobby-link').select();
       $('lobby-copy-status').textContent = '링크를 복사해서 친구에게 보내주세요.';
@@ -326,6 +349,23 @@ export const Online = {
 };
 
 $('lobby-ready').addEventListener('click', () => Online.toggleReady());
+$('lobby-create').addEventListener('click', () => Online.create());
+$('lobby-join-code').addEventListener('input', () => {
+  $('lobby-join-code').value = $('lobby-join-code').value.toUpperCase();
+  $('lobby-join-code').removeAttribute('aria-invalid');
+  $('lobby-join-status').textContent = '';
+});
+$('lobby-join-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const code = $('lobby-join-code').value.trim().toUpperCase();
+  if (!isRoomCode(code)) {
+    $('lobby-join-code').setAttribute('aria-invalid', 'true');
+    $('lobby-join-status').textContent = '올바른 6자리 방 코드를 입력하세요.';
+    $('lobby-join-code').focus();
+    return;
+  }
+  Online.join(code);
+});
 $('lobby-copy').addEventListener('click', () => Online.shareInvite());
 $('lobby-leave').addEventListener('click', () => {
   Online.leave();

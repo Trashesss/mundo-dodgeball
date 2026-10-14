@@ -46,6 +46,7 @@ try {
   const host = await open(base);
   await waitScene(host, "s.state === 'menu'");
   await host.click('#online-btn');
+  await host.click('#lobby-create');
   await host.waitForFunction(() => /^[A-Z2-9]{6}$/.test(document.getElementById('lobby-code').textContent));
   const link = await host.$eval('#lobby-link', (el) => el.value);
   assert.match(link, /[?&]room=[A-Z2-9]{6}/);
@@ -95,8 +96,8 @@ try {
   await evalScene(host, 's.player.qCd = 0; s.lastCastSeq = 0; if (s.castQ(s.player, s.enemy.x, s.enemy.z)) s.sendInput({ cast: "q", tx: s.enemy.x, tz: s.enemy.z });');
   await waitScene(guest, '!s.player.alive', 4000);
   for (const page of [host, guest]) await page.waitForFunction(() => !document.getElementById('result').classList.contains('hidden'), { timeout: 8000 });
-  assert.equal(await resultTitle(host), '친구를 이겼다!');
-  assert.equal(await resultTitle(guest), '친구에게 졌다…');
+  assert.equal(await resultTitle(host), '승리!');
+  assert.equal(await resultTitle(guest), '패배');
   assert.ok(await host.$eval('#share-btn', (el) => el.classList.contains('hidden')));
   await guest.screenshot({ path: 'output/online-result-guest.png' });
 
@@ -114,14 +115,23 @@ try {
   await guest.reload();
   await waitScene(guest, "s.mode === 'online' && s.mySlot === 1 && s.state === 'play' && !s.netPaused", 10000);
   await waitScene(host, '!s.netPaused');
+  await host.waitForFunction(() => document.getElementById('net-banner').dataset.state === 'back' && !document.getElementById('net-banner').classList.contains('hidden'));
+  assert.equal(await host.$eval('#net-title', (el) => el.textContent), '상대방이 다시 돌아왔어요!');
+  await host.screenshot({ path: 'output/online-back.png' });
+  await host.waitForFunction(() => document.getElementById('net-banner').classList.contains('hidden'));
   assert.ok(await host.$eval('#net-banner', (el) => el.classList.contains('hidden')));
 
   // 상대 이탈: 15초 동안 기다린 뒤 안내
   step('상대 이탈: 15초 동안 기다린 뒤 안내');
   await guest.browser().close();
-  await host.waitForFunction(() => document.getElementById('net-banner').textContent.includes('친구 연결이 끊겼어요'), { timeout: 15000 });
+  await host.waitForFunction(() => document.getElementById('net-banner').textContent.includes('상대방 연결이 끊겼어요'), { timeout: 15000 });
   assert.ok(await evalScene(host, 'return s.netPaused;'));
   await host.screenshot({ path: 'output/online-away.png' });
+  await host.setViewport({ width: 390, height: 844 });
+  await host.screenshot({ path: 'output/online-away-mobile.png' });
+  await host.setViewport({ width: 844, height: 390 });
+  await host.screenshot({ path: 'output/online-away-landscape.png' });
+  await host.setViewport({ width: 1200, height: 800 });
   await host.waitForFunction(() => document.getElementById('result-title').textContent === '상대가 나갔어요', { timeout: 20000 });
   assert.ok(await host.$eval('#again-btn', (el) => el.classList.contains('hidden')));
   await host.click('#menu-btn');

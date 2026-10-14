@@ -114,9 +114,19 @@ export const HUD = {
   },
 
   // 연결 상태 안내 (null 이면 숨김)
-  banner(text) {
-    $('net-banner').textContent = text || '';
-    $('net-banner').classList.toggle('hidden', !text);
+  _bannerTimer: null,
+  banner(text, { state = 'waiting', detail = '곧 돌아올 거예요. 잠시만 기다려 주세요.', seconds = null } = {}) {
+    clearTimeout(this._bannerTimer);
+    const el = $('net-banner');
+    el.classList.toggle('hidden', !text);
+    if (!text) return;
+    el.dataset.state = state;
+    $('net-title').textContent = text;
+    $('net-detail').textContent = detail;
+    $('net-detail').classList.toggle('hidden', !detail);
+    $('net-wait').classList.toggle('hidden', state === 'back');
+    $('net-seconds').textContent = seconds === null ? '' : `${seconds}초`;
+    if (state === 'back') this._bannerTimer = setTimeout(() => this.banner(null), 1800);
   },
 
   // 대인전 결과: win | lose | left(상대가 나감)
@@ -130,12 +140,14 @@ export const HUD = {
     $('again-btn').classList.toggle('hidden', kind === 'left');
     $('again-btn').disabled = false;
     $('again-btn').textContent = '재대결';
-    $('menu-btn').textContent = '메뉴로';
+    $('menu-btn').textContent = '뒤로가기';
     $('share-copy').classList.add('hidden');
-    $('share-status').textContent = kind === 'left' ? '친구 연결이 끊겨서 경기가 끝났어요.' : '';
+    $('share-status').textContent = '';
     $('result').dataset.outcome = kind === 'win' ? 'win' : 'lose';
-    $('result').dataset.art = kind === 'lose' ? 'custom-loss' : 'portrait';
-    $('result-title').textContent = { win: '친구를 이겼다!', lose: '친구에게 졌다…', left: '상대가 나갔어요' }[kind];
+    $('result').dataset.art = { win: 'custom-win', lose: 'custom-loss', left: 'portrait' }[kind];
+    $('result-title').textContent = { win: '승리!', lose: '패배', left: '상대가 나갔어요' }[kind];
+    $('result-subtitle').textContent = { win: '실력으로 증명하셨습니다.', lose: '실력이 들통났습니다..' }[kind] || '';
+    $('result-subtitle').classList.toggle('hidden', kind === 'left');
     $('result').classList.remove('hidden');
   },
 
@@ -221,6 +233,8 @@ export const HUD = {
     this.clearFeeds();
     $('result').dataset.outcome = win ? 'win' : 'lose';
     $('result').dataset.art = 'portrait';
+    $('result-subtitle').textContent = '';
+    $('result-subtitle').classList.add('hidden');
     $('result-title').textContent = `${names[difficulty]} 난이도 ${win ? '클리어!' : '실패'}`;
     $('result').classList.remove('hidden');
   },

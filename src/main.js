@@ -467,6 +467,7 @@ class GameScene extends Phaser.Scene {
       if (!p.leftButtonDown() && !p.rightButtonDown()) this.moveHeld = false;
     });
     this.input.keyboard.on('keydown', (e) => {
+      if (e.target.closest?.('input, textarea, [contenteditable="true"]')) return;
       if (e.repeat) return;
       Sound.unlock();
       const p = this.player;
@@ -1222,7 +1223,7 @@ const showMenu = () => {
 $('online-btn').addEventListener('click', () => {
   Sound.unlock();
   $('menu').classList.add('hidden');
-  Online.create();
+  Online.openLobby();
 });
 
 Online.hooks = {
@@ -1251,7 +1252,7 @@ Online.hooks = {
       s.state = msg.phase === 'over' ? 'roundEnd' : msg.phase;
     }
     s.setNetPaused(!!msg.paused);
-    if (msg.paused) HUD.banner('친구 연결을 기다리는 중…');
+    if (msg.paused) HUD.banner('친구 연결을 기다려요');
   },
   onGo: () => scene().onlineGo(),
   onSnap: (msg) => scene().applySnap(msg),
@@ -1273,7 +1274,7 @@ Online.hooks = {
     clearInterval(awayTimer);
     const tick = () => {
       const left = Math.max(0, Math.ceil((end - performance.now()) / 1000));
-      HUD.banner(`친구 연결이 끊겼어요. 다시 들어오길 기다리는 중… (${left}초)`);
+      HUD.banner('상대방 연결이 끊겼어요', { detail: '', seconds: left });
     };
     tick();
     awayTimer = setInterval(tick, 250);
@@ -1281,8 +1282,7 @@ Online.hooks = {
   onBack: () => {
     clearInterval(awayTimer);
     scene().setNetPaused(false);
-    HUD.banner(null);
-    HUD.chat('친구가 다시 들어왔어요!');
+    HUD.banner('상대방이 다시 돌아왔어요!', { state: 'back', detail: '' });
   },
   onOpponentLeft: () => {
     clearInterval(awayTimer);
@@ -1292,7 +1292,7 @@ Online.hooks = {
   },
   onReconnecting: () => {
     scene().setNetPaused(true);
-    HUD.banner('연결이 끊겼어요. 다시 연결하는 중…');
+    HUD.banner('다시 연결하고 있어요', { detail: '연결되면 대결을 이어서 할 수 있어요.' });
   },
   onReconnected: () => {
     HUD.banner(null);
