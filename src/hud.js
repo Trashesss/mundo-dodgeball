@@ -129,7 +129,7 @@ export const HUD = {
     $('share-btn').classList.add('hidden');
     $('again-btn').classList.toggle('hidden', kind === 'left');
     $('again-btn').disabled = false;
-    $('again-btn').textContent = '재대결';
+    $('again-btn').textContent = kind === 'win' ? '다시 한 수 가르쳐주기' : '다시 한 수 배우기';
     $('menu-btn').textContent = '뒤로가기';
     $('share-status').textContent = '';
     $('result').dataset.outcome = kind === 'win' ? 'win' : 'lose';
