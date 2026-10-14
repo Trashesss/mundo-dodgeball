@@ -505,19 +505,19 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 }
 .lobby-card { width: min(760px, 100%); margin: auto; }
 .lobby-heading {
-  display: grid; grid-template-columns: 1fr 180px; grid-template-areas: 'brand art' 'title art';
+  display: grid; grid-template-columns: 1fr 280px; grid-template-areas: 'brand art' 'title art';
   align-items: center; gap: 8px 20px; margin-bottom: 16px;
 }
 .lobby-card .setup-brand { grid-area: brand; margin: 0; font-size: 22px; letter-spacing: -1px; }
 #lobby-title { grid-area: title; margin: 0; font-size: 34px; line-height: 1.2; font-weight: 400; }
-.lobby-brand-image { grid-area: art; display: block; width: 180px; height: 96px; object-fit: contain; }
+.lobby-brand-image { grid-area: art; justify-self: end; display: block; width: 280px; height: 128px; object-fit: cover; }
 .practice-view .setup-intro, .practice-view .setup-controls { display: none; }
 .lobby-status { min-height: 24px; margin: 0 0 14px; color: var(--entry-muted); font-size: 16px; line-height: 1.5; word-break: keep-all; }
-#lobby[data-state="entry"] .lobby-status, .lobby-status:empty { display: none; }
+#lobby:is([data-state="entry"], [data-state="creating"]) .lobby-status, .lobby-status:empty { display: none; }
 #lobby[data-state="error"] .lobby-status { color: #f0b2a8; }
 .lobby-entry, .lobby-room { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 #lobby:not([data-state="room"]) .lobby-room,
-#lobby:not(:is([data-state="entry"], [data-state="error"])) .lobby-entry { display: none; }
+#lobby:not(:is([data-state="entry"], [data-state="creating"], [data-state="error"])) .lobby-entry { display: none; }
 .lobby-panel { min-width: 0; padding: 20px; border: 1px solid #52676d; border-radius: 18px; background: #10212be6; }
 .lobby-panel h2, #lobby-join-form label { display: block; margin: 0 0 16px; font-size: 20px; font-weight: 400; }
 .lobby-entry .lobby-panel { display: flex; flex-direction: column; }
@@ -560,10 +560,10 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 #lobby button:active { transform: translateY(1px); }
 @media (max-width: 600px) {
   #lobby { padding: 16px; }
-  .lobby-heading { grid-template-columns: 1fr 100px; gap: 6px 8px; margin-bottom: 12px; }
+  .lobby-heading { grid-template-columns: 1fr 128px; gap: 6px 8px; margin-bottom: 12px; }
   .lobby-card .setup-brand { font-size: 18px; }
   #lobby-title { font-size: 25px; }
-  .lobby-brand-image { width: 100px; height: 72px; }
+  .lobby-brand-image { width: 128px; height: 58px; }
   .lobby-status { font-size: 14px; margin-bottom: 10px; }
   .lobby-entry, .lobby-room { grid-template-columns: 1fr; gap: 12px; }
   .lobby-panel { padding: 16px; }
@@ -582,7 +582,7 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
   .lobby-card .setup-brand { font-size: 18px; }
   #lobby-title { font-size: 26px; }
   .lobby-heading { margin-bottom: 8px; }
-  .lobby-brand-image { height: 56px; }
+  .lobby-brand-image { width: min(176px, 100%); height: 80px; }
   .lobby-status { margin-bottom: 8px; }
   .lobby-panel { padding: 12px; }
   .lobby-panel h2, #lobby-join-form label { margin-bottom: 8px; }

@@ -167,9 +167,11 @@ export const Online = {
   async create() {
     this.reset();
     this.intent = 'create';
-    this.showLobby('');
+    // 방이 만들어질 때까지 입장 화면을 그대로 두어 레이아웃이 흔들리지 않게 한다
+    $('lobby').dataset.state = 'creating';
+    this.setEntryBusy(true);
     this.createStatusTimer = setTimeout(() => {
-      $('lobby-status').textContent = '문도가 방을 만드는 중...';
+      $('lobby-create').textContent = '방을 생성하는 중';
     }, 1000);
     try {
       await this.connect();
@@ -271,7 +273,14 @@ export const Online = {
   },
 
   // ---------- 대기실 화면 ----------
+  setEntryBusy(busy) {
+    $('lobby-create').disabled = busy;
+    $('lobby-join').disabled = busy;
+    if (!busy) $('lobby-create').textContent = '방 만들기';
+  },
+
   showLobby(status, code = this.room) {
+    this.setEntryBusy(false);
     $('lobby').classList.remove('hidden');
     $('lobby').dataset.state = this.room ? 'room' : 'connecting';
     $('lobby-code').textContent = code || '------';
@@ -293,6 +302,7 @@ export const Online = {
 
   lobbyError(text) {
     clearTimeout(this.createStatusTimer);
+    this.setEntryBusy(false);
     $('lobby').classList.remove('hidden');
     $('lobby').dataset.state = 'error';
     $('lobby-status').textContent = text;
@@ -307,7 +317,7 @@ export const Online = {
       const el = $(`lobby-p${i}`);
       const state = !p ? 'empty' : !p.connected ? 'away' : p.ready ? 'ready' : 'joined';
       el.dataset.state = state;
-      el.querySelector('.lobby-role').textContent = `${i === 0 ? '방장' : '친구'}${i === this.slot ? ' (나)' : ''}`;
+      el.querySelector('.lobby-role').textContent = `${i === 0 ? '방장' : '상대방'}${i === this.slot ? ' (나)' : ''}`;
       el.querySelector('.lobby-player-status').textContent = {
         empty: '기다리는 중', away: '연결 끊김', ready: '준비 완료', joined: '준비 중',
       }[state];
@@ -317,7 +327,7 @@ export const Online = {
     $('lobby-status').textContent = !other ? ''
       : !other.connected ? '상대방 연결이 끊겼어요. 다시 들어오길 기다리는 중…'
         : me?.ready && other.ready ? '곧 시작합니다!'
-          : me?.ready ? '친구가 준비하길 기다리는 중…'
+          : me?.ready ? '상대방을 기다리는 중'
             : '준비되면 버튼을 눌러주세요.';
   },
 
