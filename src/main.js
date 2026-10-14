@@ -39,22 +39,23 @@ void main() {
   vec2 s = uOrigin + vec2(outTexCoord.x, 1.0 - outTexCoord.y) * uSize;
   vec2 g = vec2(s.x / uPPU, s.y / (uPPU * uSin));
   float r = length(g);
+  float boundaryR = g.x < 0.0 ? uR : uInitialR;
   if (r > uBankR) discard;
-  vec3 col = g.x < 0.0 ? vec3(0.19, 0.39, 0.49) : vec3(0.23, 0.40, 0.48);
+  vec3 col = mix(vec3(0.19, 0.39, 0.49), vec3(0.23, 0.40, 0.48), smoothstep(-1.2, 1.2, g.x));
   // Sparse, graphic ripples instead of realistic caustics.
   vec2 cell = vec2(g.x + sin(g.y * 1.8) * 0.23 + uTime * 0.12, g.y);
   vec2 tile = mod(cell + vec2(floor(g.y / 2.1) * 1.3, 0.0), vec2(3.8, 2.1));
   float wave = abs(tile.y - 1.05 - sin(tile.x * 2.4) * 0.055);
   float dash = smoothstep(0.2, 0.4, tile.x) * (1.0 - smoothstep(1.2, 1.5, tile.x));
   col = mix(col, vec3(0.48, 0.69, 0.73), (1.0 - smoothstep(0.025, 0.06, wave)) * dash * 0.38);
-  float edge = 1.0 - smoothstep(0.035, 0.085, abs(r - uR));
-  col = mix(col, vec3(0.65, 0.77, 0.77), edge * 0.65);
-  // Fade in the outside tint as shrinking starts, continuing it beneath the rocks.
+  float playerSide = 1.0 - smoothstep(-0.8, 0.0, g.x);
+  float edge = (1.0 - smoothstep(0.035, 0.085, abs(r - boundaryR))) * playerSide;
+  col = mix(col, vec3(0.40, 0.62, 0.85), edge * 0.65);
   float outside = smoothstep(uR, uR + 0.2, r)
-    * smoothstep(0.0, 0.2, uInitialR - uR);
+    * smoothstep(0.0, 0.2, uInitialR - uR) * playerSide;
   col = mix(col, vec3(0.12, 0.26, 0.62), outside * 0.65);
-  float ring = 1.0 - smoothstep(0.025, 0.12, abs(r - uR));
-  col = mix(col, vec3(0.38, 0.85, 1.0), ring * (0.8 + 0.2 * sin(uTime * 3.0)));
+  float ring = (1.0 - smoothstep(0.025, 0.12, abs(r - boundaryR))) * playerSide;
+  col = mix(col, vec3(0.32, 0.60, 0.88), ring * (0.8 + 0.2 * sin(uTime * 3.0)));
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -422,7 +423,7 @@ class GameScene extends Phaser.Scene {
       this.moveHeld = true;
       this.moveRepeatT = 0.1;
       const g = this.pointerGround();
-      this.player.moveTarget = this.constrain({ ...g }, this.player.team);
+      this.player.moveTarget = this.constrain({ ...g }, this.player);
       this.clickMarker(g.x, g.z);
     });
     this.input.on('pointerup', (p) => {
@@ -468,17 +469,12 @@ class GameScene extends Phaser.Scene {
     const progress = clamp((this.roundTime - delay) / duration, 0, 1);
     this.arenaR = RULES.arenaR * (1 - (1 - minScale) * progress);
     this.water.setUniform('uR.value', this.arenaR);
-    this.boundaryWards.forEach(({ ward, shadow }, i) => {
-      const y = sy(this.arenaR * 0.82 * (i * 2 / 3 - 1));
-      ward.setY(y).setDepth(y + 1);
-      shadow.setY(y);
-    });
   }
 
-  constrain(p, team) {
-    const s = team === 0 ? -1 : 1;
+  constrain(p, champ) {
+    const s = champ.side;
     const minX = RULES.midGap + RULES.champR;
-    const maxR = this.arenaR - RULES.champR * 0.5;
+    const maxR = (champ.isPlayer ? this.arenaR : RULES.arenaR) - RULES.champR * 0.5;
     if (p.x * s < minX) p.x = s * minX;
     const r = Math.hypot(p.x, p.z);
     if (r > maxR) { p.x *= maxR / r; p.z *= maxR / r; }
@@ -514,7 +510,7 @@ class GameScene extends Phaser.Scene {
     if (l < 0.01) { dx = Math.cos(c.facing); dz = Math.sin(c.facing); } else { dx /= l; dz /= l; }
     const d = Math.min(Math.max(l, 1.5), RULES.flash.dist);
     this.fx.spark.explode(16, sx(c.x), sy(c.z, 1));
-    const to = this.constrain({ x: c.x + dx * d, z: c.z + dz * d }, c.team);
+    const to = this.constrain({ x: c.x + dx * d, z: c.z + dz * d }, c);
     c.x = to.x; c.z = to.z;
     c.facing = Math.atan2(dz, dx);
     c.flashCd = RULES.flash.cd;
@@ -703,7 +699,7 @@ class GameScene extends Phaser.Scene {
         this.moveRepeatT -= dt;
         if (this.moveRepeatT <= 0) {
           this.moveRepeatT = 0.08;
-          p.moveTarget = this.constrain({ ...this.pointerGround() }, p.team);
+          p.moveTarget = this.constrain({ ...this.pointerGround() }, p);
         }
       }
       if (playing) for (const e of this.enemies) if (e.alive) updateBot(e, this, dt);
@@ -753,7 +749,7 @@ class GameScene extends Phaser.Scene {
     }
 
     const px = c.x, pz = c.z;
-    if (c.moveTarget) this.constrain(c.moveTarget, c.team);
+    if (c.moveTarget) this.constrain(c.moveTarget, c);
     if (c.alive && this.state === 'play' && c.castT <= 0 && c.moveTarget) {
       const dx = c.moveTarget.x - c.x, dz = c.moveTarget.z - c.z;
       const l = Math.hypot(dx, dz);
@@ -765,7 +761,7 @@ class GameScene extends Phaser.Scene {
         if (c.actionT <= 0) c.facing = Math.atan2(dz, dx);
       }
     }
-    if (c.alive) this.constrain(c, c.team);
+    if (c.alive) this.constrain(c, c);
     c.vx = (c.x - px) / dt;
     c.vz = (c.z - pz) / dt;
     const moving = Math.hypot(c.vx, c.vz) > 0.4;

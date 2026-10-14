@@ -30,9 +30,9 @@ function pickWanderPoint(c, game) {
   const s = c.side;
   const near = 1.8 + c.ai.style * 3;
   const x = s * rand(near, near + 7);
-  const zMax = game.arenaR * 0.75;
+  const zMax = RULES.arenaR * 0.75;
   const z = c.ai.lane ? c.ai.lane * rand(0.5, zMax) : rand(-zMax, zMax);
-  return game.constrain({ x, z }, c.team);
+  return game.constrain({ x, z }, c);
 }
 
 // 날아오는 식칼 중 맞을 것 같은 가장 급한 것
@@ -64,7 +64,7 @@ function dodge(c, game, threat) {
   else { nx /= perp; nz /= perp; }
   const need = hitR - perp + 0.6;
   const trySide = (sx, sz) => {
-    const target = game.constrain({ x: c.x + sx * (need + 0.8), z: c.z + sz * (need + 0.8) }, c.team);
+    const target = game.constrain({ x: c.x + sx * (need + 0.8), z: c.z + sz * (need + 0.8) }, c);
     // 이동 후 탄도선에서 얼마나 벗어나는지
     const rx = target.x - p.x, rz = target.z - p.z;
     const along = rx * p.dx + rz * p.dz;

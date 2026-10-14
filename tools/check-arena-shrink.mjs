@@ -31,16 +31,29 @@ try {
       champ.z = 8;
       champ.moveTarget = { x: champ.side * 12, z: 10 };
       champ.qCd = 999;
+      if (!champ.isPlayer) champ.ai.wanderT = 999;
     }
     scene.update(0, 16);
     const maxR = RULES.arenaR * RULES.shrink.minScale - RULES.champR * 0.5;
-    const contained = scene.champs.every(champ =>
-      Math.hypot(champ.x, champ.z) <= maxR + 1e-9 &&
-      champ.x * champ.side >= RULES.midGap + RULES.champR &&
-      Math.hypot(champ.moveTarget.x, champ.moveTarget.z) <= maxR + 1e-9);
+    const botMaxR = RULES.arenaR - RULES.champR * 0.5;
+    const contained = scene.champs.every(champ => {
+      const limit = champ.isPlayer ? maxR : botMaxR;
+      return Math.hypot(champ.x, champ.z) <= limit + 1e-9 &&
+        champ.x * champ.side >= RULES.midGap + RULES.champR &&
+        Math.hypot(champ.moveTarget.x, champ.moveTarget.z) <= limit + 1e-9;
+    });
+    const botsOutsideShrinkingRing = scene.enemies.every(champ =>
+      Math.hypot(champ.x, champ.z) > maxR &&
+      Math.hypot(champ.moveTarget.x, champ.moveTarget.z) > maxR);
     scene.player.flashCd = 0;
     scene.castFlash(scene.player, -100, 100);
     const flashContained = Math.hypot(scene.player.x, scene.player.z) <= maxR + 1e-9;
+    const botFlashContained = scene.enemies.every(champ => {
+      champ.flashCd = 0;
+      scene.castFlash(champ, 100, 100);
+      const radius = Math.hypot(champ.x, champ.z);
+      return radius > maxR && radius <= botMaxR + 1e-9;
+    });
     const shaderMatches = scene.water.uniforms.uR.value === scene.arenaR;
     scene.endRound(0);
     const frozen = scene.arenaR;
@@ -56,7 +69,7 @@ try {
     scene.roundTime = 90;
     scene.updateArena();
     scene.update(0, 16);
-    return { samples, contained, flashContained, shaderMatches, resultFrozen, roundReset, menuReset };
+    return { samples, contained, botsOutsideShrinkingRing, flashContained, botFlashContained, shaderMatches, resultFrozen, roundReset, menuReset };
   });
   const expected = [14, 14 - 4.2 / 60, 11.9, 9.8, 9.8];
   checks.samples.forEach((radius, i) => assert.ok(Math.abs(radius - expected[i]) < 1e-9));
@@ -66,7 +79,7 @@ try {
   fs.mkdirSync('output', { recursive: true });
   await page.screenshot({ path: 'output/arena-shrink.png' });
   assert.deepEqual(errors, []);
-  console.log('Arena shrink: timing, 70% radius, player/bot movement, flash, shader, result freeze and resets passed.');
+  console.log('Arena shrink: timing, 70% radius, player-only constraints, unrestricted bots, flash, shader, result freeze and resets passed.');
 } finally {
   await browser.close();
   server.close();
