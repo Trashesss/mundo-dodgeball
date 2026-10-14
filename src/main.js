@@ -1196,7 +1196,7 @@ $('again-btn').addEventListener('click', () => {
   if (scene().mode === 'online') {
     track('online_rematch_clicked', scene().analyticsMatch);
     $('again-btn').disabled = true;
-    HUD.resultStatus('친구가 재대결을 수락하길 기다리는 중…');
+    HUD.resultStatus('상대방이 재대결을 수락하길 기다리는 중…');
     Online.rematch();
     return;
   }
@@ -1252,7 +1252,7 @@ Online.hooks = {
       s.state = msg.phase === 'over' ? 'roundEnd' : msg.phase;
     }
     s.setNetPaused(!!msg.paused);
-    if (msg.paused) HUD.banner('친구 연결을 기다려요');
+    if (msg.paused) HUD.banner('상대방 연결을 기다려요');
   },
   onGo: () => scene().onlineGo(),
   onSnap: (msg) => scene().applySnap(msg),
@@ -1265,8 +1265,8 @@ Online.hooks = {
   onRematch: (want) => {
     if (scene().mode !== 'online' || $('result').classList.contains('hidden')) return;
     const mine = want[Online.slot], theirs = want[1 - Online.slot];
-    if (theirs && !mine) HUD.resultStatus('친구가 재대결을 원해요!');
-    else if (mine && !theirs) HUD.resultStatus('친구가 재대결을 수락하길 기다리는 중…');
+    if (theirs && !mine) HUD.resultStatus('상대방이 재대결을 원해요!');
+    else if (mine && !theirs) HUD.resultStatus('상대방이 재대결을 수락하길 기다리는 중…');
   },
   onAway: (graceMs) => {
     scene().setNetPaused(true);

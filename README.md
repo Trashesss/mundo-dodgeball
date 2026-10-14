@@ -35,7 +35,7 @@ localhost 에서 열면 게임은 `ws://localhost:3000/ws` 에 붙는다. 배포
 - `share_clicked`: 공유 버튼 클릭마다 새 무작위 UUID `share_id` 생성. `match_id`, `difficulty`, `result` 포함
 - `share_completed`: 네이티브 공유 API 성공 (`method: native`) 또는 클립보드 복사 성공 (`method: clipboard`). 실제 친구에게 전달·열람되었다는 뜻은 아니다.
 - `share_cancelled`: 네이티브 공유창 취소
-- `share_manual_copy_shown`: 자동 복사 실패로 수동 복사 영역 표시. 복사 완료로 집계하지 않는다.
+- `share_failed`: 자동 복사 실패. 복사 완료로 집계하지 않는다.
 - 공유 URL에 `share_id`, `utm_source=friend`, `utm_medium=share`를 붙인다. 기존 쿼리·해시는 전달하지 않는다. 사용자 ID나 이메일을 링크에 넣지 않는다.
 - `invite_opened`: 유효한 UUID v4 `share_id`가 있는 페이지 방문. 새로고침도 이벤트가 발생하므로 유입 성과는 고유 사용자로 집계한다. 자기 링크 방문이나 전달된 링크의 재공유도 포함될 수 있어 실제 친구 수와 같지는 않다.
 - `game_started`, `game_finished`에는 `entry_source` (`share` / `direct`)를 추가하고 공유 유입이면 `referral_share_id`도 붙인다. 이 귀속은 현재 페이지와 그 안의 재도전 동안 유지되며, 추적 파라미터 없는 새 방문에는 이어지지 않는다. `source` (`menu` / `replay`)는 게임 시작 방식으로 별도 유지한다.

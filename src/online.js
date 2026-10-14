@@ -286,7 +286,6 @@ export const Online = {
     $('lobby-code').textContent = code || '------';
     $('lobby-link').value = code ? inviteUrl(code) : '';
     $('lobby-link').classList.add('hidden');
-    $('lobby-copy-status').textContent = '';
     $('lobby-leave').textContent = '뒤로가기';
     if (status !== undefined) $('lobby-status').textContent = status;
     this.renderLobby();
@@ -341,7 +340,6 @@ export const Online = {
     }
     try {
       await navigator.clipboard.writeText(`${data.text}\n${url}`);
-      $('lobby-copy-status').textContent = '';
       clearTimeout(this.snackbarTimer);
       $('copy-snackbar').textContent = '초대 링크 복사 완료';
       $('copy-snackbar').classList.add('visible');
@@ -353,7 +351,6 @@ export const Online = {
       $('lobby-link').classList.remove('hidden');
       $('lobby-link').focus();
       $('lobby-link').select();
-      $('lobby-copy-status').textContent = '링크를 복사해서 친구에게 보내주세요.';
     }
     track('online_invite_shared', { room: this.room });
   },

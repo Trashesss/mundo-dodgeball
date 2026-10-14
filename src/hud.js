@@ -33,13 +33,11 @@ $('share-btn').addEventListener('click', async () => {
   const isCurrent = () => version === resultVersion && !$('result').classList.contains('hidden');
   $('share-btn').disabled = true;
   $('share-status').textContent = '';
-  $('share-copy').classList.add('hidden');
   try {
     if (navigator.share) {
       try {
         await navigator.share(data);
         track('share_completed', { ...properties, method: 'native' });
-        if (isCurrent()) $('share-status').textContent = '문도, 친구 기다린다!';
         return;
       } catch (error) {
         if (error.name === 'AbortError') {
@@ -49,19 +47,11 @@ $('share-btn').addEventListener('click', async () => {
         if (!isCurrent()) return;
       }
     }
-    const invitation = `${data.text}\n${data.url}`;
     try {
-      await navigator.clipboard.writeText(invitation);
+      await navigator.clipboard.writeText(`${data.text}\n${data.url}`);
       track('share_completed', { ...properties, method: 'clipboard' });
-      if (isCurrent()) $('share-status').textContent = '메시지 복사 완료! 친구 채팅방에 던져줘. 🪓';
     } catch {
-      if (!isCurrent()) return;
-      $('share-status').textContent = '아래 메시지를 복사해서 친구에게 보내줘!';
-      $('share-copy').value = invitation;
-      $('share-copy').classList.remove('hidden');
-      $('share-copy').focus();
-      $('share-copy').select();
-      track('share_manual_copy_shown', { ...properties, method: 'manual' });
+      track('share_failed', { ...properties, method: 'clipboard' });
     }
   } finally {
     if (version === resultVersion) $('share-btn').disabled = false;
@@ -75,9 +65,9 @@ export const HUD = {
     $('topbar').classList.toggle('twins', twins);
     if (online) {
       const mine = (slot) => slot === online.mySlot;
-      $('player-name').textContent = mine(0) ? '나' : '친구';
+      $('player-name').textContent = mine(0) ? '나' : '상대방';
       $('player-tag').textContent = mine(0) ? 'YOU' : 'FRIEND';
-      $('enemy-name').textContent = mine(1) ? '나' : '친구';
+      $('enemy-name').textContent = mine(1) ? '나' : '상대방';
       $('enemy-tag').textContent = mine(1) ? 'YOU' : 'FRIEND';
     } else {
       $('player-name').textContent = '문도 박사';
@@ -141,7 +131,6 @@ export const HUD = {
     $('again-btn').disabled = false;
     $('again-btn').textContent = '재대결';
     $('menu-btn').textContent = '뒤로가기';
-    $('share-copy').classList.add('hidden');
     $('share-status').textContent = '';
     $('result').dataset.outcome = kind === 'win' ? 'win' : 'lose';
     $('result').dataset.art = { win: 'custom-win', lose: 'custom-loss', left: 'portrait' }[kind];
@@ -227,8 +216,6 @@ export const HUD = {
     $('again-btn').textContent = '다시 하기';
     $('menu-btn').textContent = '난이도 선택';
     $('share-status').textContent = '';
-    $('share-copy').value = '';
-    $('share-copy').classList.add('hidden');
     this.show(false);
     this.clearFeeds();
     $('result').dataset.outcome = win ? 'win' : 'lose';

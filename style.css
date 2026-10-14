@@ -214,11 +214,6 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 #share-btn { background: #c5a4ed; color: #30223e; box-shadow: inset 0 3px #eee0ff80; }
 #share-btn:disabled { cursor: wait; opacity: .7; }
 .share-status { min-height: 1.5em; margin: 8px 0 0; color: var(--entry-green); font-size: 16px; }
-.share-copy {
-  display: block; width: min(380px, 100%); min-height: 110px; margin: 10px auto 0;
-  padding: 12px; border: 2px solid #c5a4ed; border-radius: 12px;
-  background: #14252d; color: var(--entry-text); font: 16px/1.5 sans-serif; user-select: text;
-}
 @media (hover: hover) {
   #share-btn:hover { background: #dbc0fb; transform: translateY(-2px); }
   #again-btn:hover { background: #c9efb4; transform: translateY(-2px); }
@@ -545,8 +540,6 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 .lobby-link { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
 #lobby-link { font-family: sans-serif; font-size: 13px; }
 #lobby-copy { width: 100%; padding: 12px 8px; background: #c5a4ed; color: #30223e; font-size: 20px; }
-.lobby-copy-status { margin: 0 0 10px; color: var(--entry-green); font-size: 13px; line-height: 1.4; }
-.lobby-copy-status:empty { display: none; }
 .lobby-players { display: grid; grid-template-columns: 1fr 1fr; min-height: 84px; gap: 10px; margin: 0 0 16px; padding: 0; list-style: none; text-align: center; }
 .lobby-players li { display: flex; flex-direction: column; gap: 8px; padding: 18px 4px; border: 1px solid #52676d; border-radius: 12px; background: #0c171f99; }
 .lobby-role { font-size: 17px; }
@@ -579,7 +572,6 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
   #lobby-join-status { min-height: 3em; }
   .lobby-code { min-height: 60px; padding-block: 8px; margin-bottom: 12px; }
   .lobby-code strong { font-size: 30px; letter-spacing: 3px; }
-  .lobby-copy-status { font-size: 12px; }
   .lobby-players { min-height: 60px; margin-bottom: 12px; }
   .lobby-players li { padding: 12px 4px; gap: 6px; }
   .lobby-actions { margin-top: 10px; }

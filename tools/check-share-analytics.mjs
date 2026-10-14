@@ -94,8 +94,8 @@ try {
   await page.click('#share-btn');
   await page.waitForFunction(() => !document.getElementById('share-btn').disabled);
   events = await page.evaluate(() => window.events);
-  assert.deepEqual(events.slice(-2).map(event => event.name), ['share_clicked', 'share_manual_copy_shown']);
-  assert.ok((await page.$eval('#share-copy', element => element.value)).includes(events.at(-1).properties.share_id));
+  assert.deepEqual(events.slice(-2).map(event => event.name), ['share_clicked', 'share_failed']);
+  assert.equal(events.at(-1).properties.method, 'clipboard');
   const shareIds = events.filter(event => event.name === 'share_clicked').map(event => event.properties.share_id);
   assert.equal(new Set(shareIds).size, 4);
 

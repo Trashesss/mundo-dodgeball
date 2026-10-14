@@ -41,7 +41,7 @@ try {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async text => { window.copied = text; } } });
   });
   await page.click('#share-btn');
-  await page.waitForFunction(() => document.getElementById('share-status').textContent.includes('복사 완료'));
+  await page.waitForFunction(() => window.copied);
   assert.match(await page.evaluate(() => window.copied), /쌍둥이 난이도 실패/);
   assert.equal(await page.$eval('#share-btn', el => el.textContent), '공유하기');
   await page.evaluate(() => {
@@ -49,8 +49,8 @@ try {
     navigator.clipboard.writeText = async () => { throw new Error('Permission denied'); };
   });
   await page.click('#share-btn');
-  await page.waitForSelector('#share-copy:not(.hidden)');
-  assert.match(await page.$eval('#share-copy', el => el.value), /날아오는 식칼을 피하고, 상대 문도를 쓰러뜨리는 피구 게임/);
+  await page.waitForFunction(() => !document.getElementById('share-btn').disabled);
+  assert.equal(await page.$eval('#share-status', el => el.textContent), '');
   await page.evaluate(() => {
     window.showResult();
     Object.defineProperty(navigator, 'share', { configurable: true, value: async () => { throw new DOMException('Canceled', 'AbortError'); } });
@@ -58,7 +58,6 @@ try {
   await page.click('#share-btn');
   await page.waitForFunction(() => !document.getElementById('share-btn').disabled);
   assert.equal(await page.$eval('#share-status', el => el.textContent), '');
-  assert.ok(await page.$eval('#share-copy', el => el.classList.contains('hidden')));
   fs.mkdirSync('output', { recursive: true });
   for (const [width, height] of [[1440, 1000], [390, 844], [667, 375]]) {
     await page.setViewport({ width, height });

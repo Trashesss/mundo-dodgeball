@@ -72,7 +72,7 @@ try {
   assert.deepEqual(roles[1].slice(0, 4), [1, 1, true, false]);
   assert.ok(roles.every((r) => r[4] === 14 && r[5] && r[6]), 'no shrink, both champs have thumbs-up emote');
   assert.equal(await host.$eval('#player-name', (el) => el.textContent), '나');
-  assert.equal(await guest.$eval('#player-name', (el) => el.textContent), '친구');
+  assert.equal(await guest.$eval('#player-name', (el) => el.textContent), '상대방');
 
   // 이동 동기화: 친구가 움직이면 방장 화면의 상대도 따라온다
   step('이동 동기화: 친구가 움직이면 방장 화면의 상대도 따라온다');
