@@ -14,6 +14,9 @@ const sx = (x) => x * PPU;
 const sy = (z, y = 0) => (z * SIN - y * COS) * PPU;
 const DEPTH = { water: -1000, arena: -900, decal: -800, ring: -700, fx: 5000, ui: 10000 };
 const BAR_OFF = 154;
+const EMOTE_DELAY = 0.25;
+const EMOTE_DURATION = 1;
+const EMOTE_SIZE = 104;
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 // Render at the display's physical pixel density so Retina screens are not upscaled.
@@ -81,6 +84,10 @@ class Champ {
     this.ring.lineStyle(isPlayer ? 3 : 2, this.color, 0.95).strokeEllipse(0, 0, rw, rh);
     this.sprite = scene.add.sprite(0, 0, 'mundo', 'idle_2_0').setOrigin(0.5, meta.anchor).setScale(meta.scale);
     this.bar = scene.add.graphics().setDepth(DEPTH.ui);
+    if (!isPlayer) {
+      this.emote = scene.add.image(0, 0, 'mundo-emote')
+        .setDisplaySize(EMOTE_SIZE, EMOTE_SIZE).setDepth(DEPTH.ui + 2).setVisible(false);
+    }
   }
 
   reset(x, z) {
@@ -89,7 +96,7 @@ class Champ {
       qCd: rand(0.6, 1.2), flashCd: 0, ghostCd: 0, ghostT: 0, slowT: 0,
       castT: 0, pending: null, moveTarget: null, actionT: 0, hitFlash: 0, rippleT: 0,
       celebrate: false, facing: this.team === 0 ? 0 : Math.PI, lastHp: -1, animKey: null,
-      tintState: '',
+      tintState: '', emoteT: 0, emoteDelayT: 0,
     });
     this.sprite.setAlpha(1).clearTint();
     this.ring.setVisible(true);
@@ -101,6 +108,11 @@ class Champ {
 
   speed() {
     return RULES.moveSpeed * (this.ghostT > 0 ? RULES.ghost.mul : 1) * (this.slowT > 0 ? 1 - RULES.q.slow : 1);
+  }
+
+  showEmote() {
+    if (!this.emote || !this.alive) return;
+    this.emoteDelayT = EMOTE_DELAY;
   }
 
   dirIndex() {
@@ -160,6 +172,16 @@ class Champ {
     this.shadow.setPosition(X, Y);
     this.ring.setPosition(X, Y);
     this.bar.setPosition(X, Y - BAR_OFF);
+    if (this.emote) {
+      const visible = this.alive && this.emoteT > 0;
+      this.emote.setVisible(visible);
+      if (visible) {
+        const enter = clamp((EMOTE_DURATION - this.emoteT) / 0.15, 0, 1);
+        const size = EMOTE_SIZE * (0.75 + 0.25 * enter);
+        this.emote.setPosition(X, Y - BAR_OFF - 60 - enter * 8)
+          .setDisplaySize(size, size).setAlpha(clamp(this.emoteT / 0.3, 0, 1));
+      }
+    }
     const tint = this.hitFlash > 0 ? 'hit' : this.slowT > 0 ? 'slow' : '';
     if (tint !== this.tintState) {
       this.tintState = tint;
@@ -171,6 +193,7 @@ class Champ {
   }
 
   destroy() {
+    this.emote?.destroy();
     for (const o of [this.sprite, this.shadow, this.ring, this.bar]) o.destroy();
   }
 }
@@ -219,6 +242,7 @@ class GameScene extends Phaser.Scene {
     this.load.json('arenaMeta', 'assets/cartoon/arena.json');
     this.load.image('arena', 'assets/cartoon/arena.png');
     this.load.image('baron-cute', 'assets/cartoon/baron-cute.png');
+    this.load.image('mundo-emote', 'assets/cartoon/mundo-thumbs-up-emote-v1.png');
   }
 
   create() {
@@ -543,6 +567,7 @@ class GameScene extends Phaser.Scene {
     victim.slowT = RULES.q.slowDur;
     victim.hitFlash = 0.14;
     k.stats.hits++;
+    k.showEmote();
     const X = sx(victim.x), Y = sy(victim.z, 1.3);
     this.fx.hitflash.explode(1, X, Y);
     this.fx.blood.explode(18, X, Y);
@@ -559,6 +584,9 @@ class GameScene extends Phaser.Scene {
   kill(v, k) {
     v.hp = 0;
     v.alive = false;
+    v.emoteT = 0;
+    v.emoteDelayT = 0;
+    v.emote?.setVisible(false);
     v.moveTarget = null;
     v.pending = null;
     v.castT = 0;
@@ -733,6 +761,11 @@ class GameScene extends Phaser.Scene {
     c.ghostT = Math.max(0, c.ghostT - dt);
     c.slowT = Math.max(0, c.slowT - dt);
     c.hitFlash = Math.max(0, c.hitFlash - dt);
+    c.emoteT = Math.max(0, c.emoteT - dt);
+    if (c.emoteDelayT > 0) {
+      c.emoteDelayT = Math.max(0, c.emoteDelayT - dt);
+      if (c.emoteDelayT === 0 && c.alive) c.emoteT = EMOTE_DURATION;
+    }
     c.actionT = Math.max(0, c.actionT - dt);
     if (c.alive && this.state === 'play') c.hp = Math.min(RULES.maxHp, c.hp + RULES.regen * dt);
 
