@@ -1176,16 +1176,28 @@ document.getElementById('start-btn').addEventListener('click', async (event) => 
   button.disabled = false;
 });
 const $ = (id) => document.getElementById(id);
-function selectMenuView(practice = false) {
+function selectMenuView(view = 'modes') {
+  const practice = view === 'practice';
   $('menu').classList.toggle('practice-view', practice);
+  $('menu').classList.toggle('quick-match-view', view === 'quick-match');
   $('practice-heading').classList.toggle('hidden', !practice);
-  $('mode-select').classList.toggle('hidden', practice);
+  $('mode-select').classList.toggle('hidden', view !== 'modes');
   $('practice-select').classList.toggle('hidden', !practice);
+  $('quick-match-notice').classList.toggle('hidden', view !== 'quick-match');
   $('select-title').textContent = practice ? '인공지능 상대 연습' : '게임 모드 선택';
   $('difficulty-label').textContent = practice ? '시간이 지날수록 경기장이 좁아집니다.' : '어떤 게임을 플레이할까요?';
 }
+$('quick-match-btn').addEventListener('click', () => {
+  track('quick_match_clicked', referralContext);
+  selectMenuView('quick-match');
+  $('quick-match-back-btn').focus();
+});
+$('quick-match-back-btn').addEventListener('click', () => {
+  selectMenuView();
+  $('quick-match-btn').focus();
+});
 $('practice-btn').addEventListener('click', () => {
-  selectMenuView(true);
+  selectMenuView('practice');
   $('opt-diff').querySelector('button.on').focus();
 });
 $('mode-back-btn').addEventListener('click', () => {

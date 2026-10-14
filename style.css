@@ -395,7 +395,7 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 }
 .mode-card img { width: clamp(96px, 20vh, 160px); height: clamp(96px, 20vh, 160px); object-fit: contain; }
 #quick-match-btn img { width: 100%; max-width: 240px; }
-#quick-match-btn { border-color: #f4d47d; background: #3e4545; cursor: default; }
+#quick-match-btn { border-color: #f4d47d; background: #3e4545; }
 .mode-status {
   position: absolute; top: 12px; right: 12px; padding: 4px 9px; border-radius: 20px;
   background: #f4d47d1a; color: #f4d47d; font-size: 12px;
@@ -423,6 +423,25 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 @media (max-height: 500px) {
   .mode-card { padding: 10px; gap: 6px; }
   .mode-card img { width: 72px; height: 72px; }
+}
+
+/* 빠른 대전 준비 중 안내 */
+.quick-match-view .setup-heading { display: none; }
+.quick-match-notice { text-align: center; word-break: keep-all; }
+.quick-match-notice h2 {
+  margin: 0; color: #f0b2a8; font-size: clamp(30px, 6vw, 56px); font-weight: 400;
+  line-height: 1.2; letter-spacing: -1px; text-shadow: 0 5px #08171f; text-wrap: balance;
+}
+#quick-match-back-btn {
+  width: min(320px, 100%); min-height: 58px; margin-top: 28px; padding: 12px;
+  border: 3px solid var(--entry-ink); border-radius: 16px; background: #35434b;
+  color: var(--entry-muted); font: 400 20px 'Jua', sans-serif; cursor: pointer;
+}
+#quick-match-back-btn:focus-visible { outline: 3px solid var(--entry-text); outline-offset: 4px; }
+@media (hover: hover) { #quick-match-back-btn:hover { background: #43555c; color: var(--entry-text); } }
+@media (max-height: 560px) {
+  .quick-match-notice .net-portrait { width: clamp(80px, 27dvh, 150px); margin-bottom: 12px; }
+  #quick-match-back-btn { min-height: 50px; margin-top: 16px; padding: 8px; }
 }
 
 /* Keep the complete setup visible as the available window height changes. */

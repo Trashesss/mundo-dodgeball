@@ -124,7 +124,7 @@
         <p class="setup-subtitle" id="difficulty-label">어떤 게임을 플레이할까요?</p>
       </header>
       <div id="mode-select" class="mode-select">
-        <button id="quick-match-btn" class="mode-card" type="button" disabled aria-describedby="quick-match-status">
+        <button id="quick-match-btn" class="mode-card" type="button" aria-describedby="quick-match-status">
           <span id="quick-match-status" class="mode-status">준비 중</span>
           <img src="assets/cartoon/mundo-quick-match-v4.png" alt="식칼을 든 문도 VS 물음표로 가려진 정체불명의 상대" width="240" height="160" />
           <span class="mode-name">빠른 대전</span>
@@ -148,6 +148,11 @@
           </div>
         </div>
       </div>
+      <section id="quick-match-notice" class="quick-match-notice hidden" role="alert">
+        <img class="net-portrait" src="assets/cartoon/portrait-hud-v3.png" alt="" width="256" height="256" />
+        <h2>준비 중이에요</h2>
+        <button id="quick-match-back-btn" type="button">뒤로가기</button>
+      </section>
       <section id="practice-select" class="hidden" aria-labelledby="select-title">
       <div id="opt-diff" role="group" aria-labelledby="difficulty-label">
         <button type="button" data-v="easy" aria-pressed="false">
