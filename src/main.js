@@ -26,6 +26,9 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 // Render at the display's physical pixel density so Retina screens are not upscaled.
 const DPR = Math.min(window.devicePixelRatio || 1, 3);
+// 타격감: 피격 시 맞은 챔피언을 잠깐 멈추고(히트스톱), 카메라를 식칼 방향으로 튕긴다.
+const HIT_STOP = { hit: 0.13, kill: 0.26, jitter: 8, catchUp: 30 };
+const CAM_KICK = { recover: 45, traumaDecay: 14, noise: 8 }; // recover: 반동 복귀 속도(클수록 짧다)
 
 const WATER_FRAG = `
 #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -99,6 +102,7 @@ class Champ {
     Sim.resetChamp(this, x, z);
     Object.assign(this, {
       hitFlash: 0, rippleT: 0, lastHp: -1, animKey: null, tintState: '', emoteT: 0, emoteDelayT: 0,
+      hitStop: 0, hitStopDur: 0, jitter: 0, stopX: 0, stopY: 0, lagX: 0, lagY: 0, kickX: 0, kickY: 0,
     });
     this.sprite.setAlpha(1).clearTint();
     this.ring.setVisible(true);
@@ -111,6 +115,17 @@ class Champ {
   speed() {
     return Sim.champSpeed(this);
   }
+
+  // 화면 위치를 멈춘 채 떨게 한다. 계산 위치는 계속 움직이고, 풀린 뒤 lag 로 부드럽게 따라붙는다.
+  freeze(dur, kickX, kickY) {
+    if (this.hitStop <= 0) { this.stopX = this.sprite.x - this.jitterX(); this.stopY = this.sprite.y - this.jitterY(); }
+    this.hitStop = Math.max(this.hitStop, dur);
+    this.hitStopDur = this.hitStop;
+    this.kickX = kickX; this.kickY = kickY;
+  }
+
+  jitterX() { return this.hitStop > 0 ? this.jitter * this.kickX : 0; }
+  jitterY() { return this.hitStop > 0 ? this.jitter * this.kickY : 0; }
 
   showEmote() {
     if (!this.emote || !this.alive) return;
@@ -167,8 +182,14 @@ class Champ {
   }
 
   sync() {
-    const X = sx(this.x), Y = sy(this.z);
-    this.sprite.setPosition(X, Y).setDepth(this.alive ? Y : Y - 40);
+    let X = sx(this.x), Y = sy(this.z);
+    if (this.hitStop > 0) { this.lagX = this.stopX - X; this.lagY = this.stopY - Y; }
+    X += this.lagX; Y += this.lagY;
+    // 식칼 방향으로 좌우 번갈아 떨리며 점점 잦아든다
+    this.jitter = this.hitStop > 0
+      ? HIT_STOP.jitter * (this.hitStop / this.hitStopDur) * (Math.floor(this.hitStop * 60) % 2 ? 1 : -1) : 0;
+    this.sprite.setPosition(X + this.jitterX(), Y + this.jitterY()).setDepth(this.alive ? Y : Y - 40);
+    this.sprite.anims.timeScale = this.hitStop > 0 ? 0 : this.animKey === 'run' ? this.sprite.anims.timeScale || 1 : 1;
     const opacity = this.alive && this.ghostT > 0 ? 0.82 : 1;
     this.sprite.setAlpha(opacity);
     this.shadow.setPosition(X, Y);
@@ -230,6 +251,7 @@ class GameScene extends Phaser.Scene {
     this.cleavers = [];
     this.state = 'loading';
     this.time0 = 0;
+    this.camKick = { x: 0, y: 0, trauma: 0 };
     // sim world 필드
     this.mode = 'bot';
     this.shrinkTeam = 0;
@@ -435,7 +457,7 @@ class GameScene extends Phaser.Scene {
   makeFx() {
     const P = (config) => this.add.particles(0, 0, 'dot', { emitting: false, ...config }).setDepth(DEPTH.fx);
     this.fx = {
-      blood: P({ speed: { min: 60, max: 240 }, angle: { min: 180, max: 360 }, gravityY: 520, lifespan: 650, scale: { start: 0.55, end: 0.1 }, tint: [0xff2a2a, 0xb00000, 0x9a2fd0] }),
+      blood: P({ speed: { min: 60, max: 240 }, angle: { min: 180, max: 360 }, gravityY: 520, lifespan: 650, scale: { start: 0.55, end: 0.1 }, tint: [0xc45cff, 0x8a2be2, 0x5e1a9e] }),
       hitflash: P({ speed: 0, lifespan: 180, scale: { start: 2.4, end: 0.5 }, alpha: { start: 0.9, end: 0 }, blendMode: 'ADD', tint: 0xffe0e0 }),
       trail: P({ speed: 0, lifespan: 220, scale: { start: 0.55, end: 0 }, alpha: { start: 0.55, end: 0 }, blendMode: 'ADD', tint: 0xcfe3ff }),
       spark: P({ speed: { min: 40, max: 200 }, lifespan: 420, scale: { start: 0.6, end: 0 }, blendMode: 'ADD', tint: [0xfff3a0, 0xffd040, 0xffffff] }),
@@ -621,6 +643,12 @@ class GameScene extends Phaser.Scene {
           victim.slowT = RULES.q.slowDur;
         }
         victim.hitFlash = 0.14;
+        // 식칼 진행 방향(화면 좌표). 예전 서버 이벤트에는 방향이 없어 던진 쪽 → 맞은 쪽으로 대신한다.
+        let kx = e.dx ?? victim.x - k.x, ky = (e.dz ?? victim.z - k.z) * SIN;
+        const kl = Math.hypot(kx, ky) || 1;
+        kx /= kl; ky /= kl;
+        victim.freeze(HIT_STOP.hit, kx, ky);
+        this.kickCamera(e.dmg, kx, ky, victim, k);
         k.showEmote();
         const X = sx(victim.x), Y = sy(victim.z, 1.3);
         this.fx.hitflash.explode(1, X, Y);
@@ -631,7 +659,6 @@ class GameScene extends Phaser.Scene {
         }).setOrigin(0.5).setDepth(DEPTH.ui + 1).setScale(1.5).setResolution(DPR * 2);
         this.tweens.add({ targets: txt, y: txt.y - 46, scale: 1, alpha: 0, duration: 950, ease: 'Cubic.easeOut', onComplete: () => txt.destroy() });
         Sound.hit(Math.max(this.vol(victim), this.vol(k)));
-        if (k === this.player || victim === this.player) this.cameras.main.shake(110, victim === this.player ? 0.006 : 0.003);
         return;
       }
       case 'cleaverEnd': {
@@ -649,10 +676,34 @@ class GameScene extends Phaser.Scene {
           if (k) k.stats.kills++;
           v.stats.deaths++;
         }
+        v.freeze(HIT_STOP.kill, v.kickX, v.kickY);
+        this.kickCamera(0, v.kickX, v.kickY, v, k, true);
         this.knockOut(v);
         Sound.death(this.vol(v));
       }
     }
+  }
+
+  // 식칼 방향으로 카메라를 한 번 튕긴다 + 아주 짧은 무작위 떨림(trauma). 내가 맞았을 때 가장 세다.
+  kickCamera(dmg, kx, ky, victim, killer, isKill = false) {
+    const s = this.camKick;
+    const mine = victim === this.player ? 1 : killer === this.player ? 0.6 : 0.3;
+    const size = isKill ? 1.6 : clamp(dmg / (RULES.maxHp * RULES.q.dmgPct), 0.8, 1.5);
+    const px = 12 * mine * size * DPR / this.cameras.main.zoom; // 최대 변위(화면 px)를 월드 px 로
+    s.x += kx * px;
+    s.y += ky * px;
+    s.trauma = Math.min(1, s.trauma + (isKill ? 0.7 : 0.45) * mine * size);
+  }
+
+  updateCamKick(dt) {
+    const s = this.camKick;
+    // 맞은 프레임에 최대로 밀린 모습을 먼저 보여주고, 다음 프레임부터 빠르게 원위치
+    const n = s.trauma * s.trauma * CAM_KICK.noise * DPR / this.cameras.main.zoom;
+    const out = { x: s.x + rand(-n, n), y: s.y + rand(-n, n) };
+    const k = Math.exp(-CAM_KICK.recover * dt);
+    s.x *= k; s.y *= k;
+    s.trauma = Math.max(0, s.trauma - dt * CAM_KICK.traumaDecay);
+    return out;
   }
 
   // 쓰러진 모습 (사망 이벤트, 또는 재접속 시 이미 쓰러져 있던 경우)
@@ -1055,11 +1106,16 @@ class GameScene extends Phaser.Scene {
       HUD.update(p);
       HUD.updateFight(this.champs);
     }
-    this.updateCamera();
+    this.updateCamera(dt);
   }
 
   updateChamp(c, dt) {
     c.hitFlash = Math.max(0, c.hitFlash - dt);
+    c.hitStop = Math.max(0, c.hitStop - dt);
+    if (c.hitStop <= 0) {
+      const k = Math.exp(-dt * HIT_STOP.catchUp);
+      c.lagX *= k; c.lagY *= k;
+    }
     c.emoteT = Math.max(0, c.emoteT - dt);
     if (c.emoteDelayT > 0) {
       c.emoteDelayT = Math.max(0, c.emoteDelayT - dt);
@@ -1112,7 +1168,7 @@ class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: r, scaleX: 0.75, scaleY: 0.75 * SIN, alpha: 0, duration: 750, onComplete: () => r.destroy() });
   }
 
-  updateCamera() {
+  updateCamera(dt = 0) {
     // 경기장 전체(암벽 + 캐릭터 머리 높이)가 상단바·하단 HUD를 피해 한 화면에 들어오도록 고정
     const cam = this.cameras.main;
     const padTop = 110 * DPR, padBot = 120 * DPR;
@@ -1120,10 +1176,12 @@ class GameScene extends Phaser.Scene {
     const top = sy(-ARENA.ROCK_R, 3.2), bot = sy(ARENA.ROCK_R) + 0.5 * PPU;
     const zoom = Math.min(cam.width / (halfW * 2), (cam.height - padTop - padBot) / (bot - top));
     cam.setZoom(zoom);
-    const centerY = (top + bot) / 2 - (padTop - padBot) / 2 / zoom;
-    cam.centerOn(0, centerY);
+    // 카메라를 반대로 밀어 화면 속 경기장이 식칼 방향으로 튕기게 한다
+    const kick = this.updateCamKick(dt);
+    const centerX = -kick.x, centerY = (top + bot) / 2 - (padTop - padBot) / 2 / zoom - kick.y;
+    cam.centerOn(centerX, centerY);
     const width = Math.ceil(cam.width / zoom) + 4, height = Math.ceil(cam.height / zoom) + 4;
-    const x = -width / 2, y = centerY - height / 2;
+    const x = centerX - width / 2, y = centerY - height / 2;
     this.bank.setPosition(x, y).setSize(width, height);
     this.bank.tilePositionX = x;
     this.bank.tilePositionY = y;

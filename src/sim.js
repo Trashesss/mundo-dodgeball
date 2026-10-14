@@ -107,7 +107,10 @@ export function hit(world, victim, cleaver) {
   if (k.alive) k.hp = Math.min(RULES.maxHp, k.hp + cleaver.paid);
   victim.slowT = RULES.q.slowDur;
   k.stats.hits++;
-  emit(world, { type: 'hit', id: cleaver.id, victim: ci(world, victim), killer: ci(world, k), dmg, x: victim.x, z: victim.z });
+  emit(world, {
+    type: 'hit', id: cleaver.id, victim: ci(world, victim), killer: ci(world, k), dmg, x: victim.x, z: victim.z,
+    dx: Math.round(cleaver.dx * 100) / 100, dz: Math.round(cleaver.dz * 100) / 100,
+  });
   if (victim.hp <= 0) kill(world, victim, k);
 }
 
