@@ -1185,7 +1185,7 @@ function selectMenuView(view = 'modes') {
   $('practice-select').classList.toggle('hidden', !practice);
   $('quick-match-notice').classList.toggle('hidden', view !== 'quick-match');
   $('select-title').textContent = practice ? '인공지능 상대 연습' : '게임 모드 선택';
-  $('difficulty-label').textContent = practice ? '시간이 지날수록 경기장이 좁아집니다.' : '어떤 게임을 플레이할까요?';
+  $('difficulty-label').textContent = practice ? '시간이 지날수록 경기장이 좁아집니다.' : '어떤 모드를 플레이할까요?';
 }
 $('quick-match-btn').addEventListener('click', () => {
   track('quick_match_clicked', referralContext);
