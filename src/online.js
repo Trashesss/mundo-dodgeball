@@ -46,11 +46,11 @@ function inviteUrl(code) {
 }
 
 const ERRORS = {
-  notFound: '방을 찾을 수 없어요. 링크를 다시 확인해 주세요.',
-  full: '이미 두 명이 들어간 방이에요.',
-  started: '이미 경기가 진행 중인 방이에요.',
-  busy: '서버가 붐벼요. 잠시 후 다시 시도해 주세요.',
-  offline: '게임 서버에 연결할 수 없어요. 잠시 후 다시 시도해 주세요.',
+  notFound: '방을 찾을 수 없어요',
+  full: '이미 정원이 찬 방이에요',
+  started: '이미 경기가 진행 중이에요',
+  busy: '서버가 혼잡해요',
+  offline: '게임 서버에 연결할 수 없어요',
 };
 
 export const Online = {
@@ -305,7 +305,8 @@ export const Online = {
     this.setEntryBusy(false);
     $('lobby').classList.remove('hidden');
     $('lobby').dataset.state = 'error';
-    $('lobby-status').textContent = text;
+    $('lobby-status').textContent = '';
+    $('lobby-error-title').textContent = text;
     $('lobby-leave').textContent = '뒤로가기';
   },
 
@@ -378,6 +379,8 @@ $('lobby-join-form').addEventListener('submit', (event) => {
 });
 $('lobby-copy').addEventListener('click', () => Online.shareInvite());
 $('lobby-leave').addEventListener('click', () => {
+  // 에러 화면에서는 방 만들기/입장 화면으로 돌아가 다시 시도할 수 있게 한다
+  if ($('lobby').dataset.state === 'error') { Online.openLobby(); return; }
   Online.leave();
   Online.hooks.onExit?.();
 });

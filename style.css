@@ -514,10 +514,17 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 .practice-view .setup-intro, .practice-view .setup-controls { display: none; }
 .lobby-status { min-height: 24px; margin: 0 0 14px; color: var(--entry-muted); font-size: 16px; line-height: 1.5; word-break: keep-all; }
 #lobby:is([data-state="entry"], [data-state="creating"]) .lobby-status, .lobby-status:empty { display: none; }
-#lobby[data-state="error"] .lobby-status { color: #f0b2a8; }
+#lobby:not([data-state="error"]) .lobby-error, #lobby[data-state="error"] :is(.lobby-heading, .lobby-status) { display: none; }
+.lobby-error { padding: 8px 0 20px; text-align: center; word-break: keep-all; }
+#lobby[data-state="error"] .lobby-actions { justify-content: center; }
+#lobby[data-state="error"] #lobby-leave { width: min(320px, 100%); }
+#lobby-error-title {
+  margin: 0; color: #f0b2a8; font-size: clamp(30px, 6vw, 56px); font-weight: 400;
+  line-height: 1.2; letter-spacing: -1px; text-shadow: 0 5px #08171f; text-wrap: balance;
+}
 .lobby-entry, .lobby-room { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 #lobby:not([data-state="room"]) .lobby-room,
-#lobby:not(:is([data-state="entry"], [data-state="creating"], [data-state="error"])) .lobby-entry { display: none; }
+#lobby:not(:is([data-state="entry"], [data-state="creating"])) .lobby-entry { display: none; }
 .lobby-panel { min-width: 0; padding: 20px; border: 1px solid #52676d; border-radius: 18px; background: #10212be6; }
 .lobby-panel h2, #lobby-join-form label { display: block; margin: 0 0 16px; font-size: 20px; font-weight: 400; }
 .lobby-entry .lobby-panel { display: flex; flex-direction: column; }
@@ -551,7 +558,7 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 #lobby-ready { width: 100%; margin-top: auto; padding: 12px; background: var(--entry-green); color: #26362c; font-size: 20px; }
 #lobby-ready.on { background: #35434b; color: var(--entry-muted); }
 .lobby-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
-#lobby-leave { width: 100%; min-width: 100px; padding: 10px 20px; background: #35434b; color: var(--entry-muted); }
+#lobby #lobby-leave { width: 100%; min-width: 100px; min-height: 58px; padding: 12px; border-width: 3px; border-radius: 16px; background: #35434b; color: var(--entry-muted); font-size: 20px; }
 .practice-view #mode-back-btn { width: 100%; margin-top: 0; padding: 16px 12px; border: 3px solid var(--entry-ink); border-radius: 16px; background: #35434b; color: var(--entry-muted); font-size: 20px; box-shadow: inset 0 3px #ffffff18; transition: transform .15s, background .15s; }
 @media (hover: hover) {
   #lobby button:hover { filter: brightness(1.1); }
@@ -590,6 +597,8 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
   .lobby-players li { padding-block: 8px; gap: 4px; }
   #lobby-ready, #lobby-copy { padding-block: 10px; }
   .lobby-actions { margin-top: 8px; }
+  #lobby #lobby-leave { min-height: 50px; padding: 8px; }
+  .lobby-error .net-portrait { width: clamp(80px, 27dvh, 150px); margin-bottom: 12px; }
 }
 
 @media (min-width: 601px) and (max-height: 450px) {
