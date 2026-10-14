@@ -214,7 +214,7 @@ export const HUD = {
     $('again-btn').classList.remove('hidden');
     $('again-btn').disabled = false;
     $('again-btn').textContent = '다시 하기';
-    $('menu-btn').textContent = '난이도 선택';
+    $('menu-btn').textContent = '뒤로가기';
     $('share-status').textContent = '';
     this.show(false);
     this.clearFeeds();
