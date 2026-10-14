@@ -334,7 +334,7 @@ export const Online = {
   async shareInvite() {
     const url = $('lobby-link').value;
     if (!url) return;
-    const data = { title: '문도 피구 1대1', text: '[문도 피구] 식칼 피구 한 판 붙자! 링크 눌러서 들어와.', url };
+    const data = { title: '문도 피구 1대1 초대', text: '[문도 피구] 1대1 게임에 초대합니다.', url };
     if (navigator.share && matchMedia('(pointer: coarse)').matches) {
       try { await navigator.share(data); return; } catch (error) { if (error.name === 'AbortError') return; }
     }

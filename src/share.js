@@ -6,5 +6,5 @@ export const GAME_DESCRIPTION = '날아오는 식칼을 피하고, 상대 문도
 
 export function shareContent(difficulty, win) {
   const heading = `${DIFFICULTY_NAMES[difficulty]} 난이도 ${win ? '클리어!' : '실패'}`;
-  return { heading, description: GAME_DESCRIPTION, title: `[문도 피구] ${heading}`, text: `[문도 피구] ${heading}\n${GAME_DESCRIPTION}` };
+  return { heading, description: GAME_DESCRIPTION, title: `[문도 피구] ${heading}`, text: `[문도 피구] ${heading}` };
 }

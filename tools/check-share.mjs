@@ -20,12 +20,13 @@ try {
     document.getElementById('menu').classList.add('hidden');
     window.showResult = (win = true, difficulty = 'hard') => HUD.result(win, difficulty);
     window.showResult();
+    window.matchMedia = query => ({ matches: query === '(pointer: coarse)' });
     Object.defineProperty(navigator, 'share', { configurable: true, value: async data => { window.shared = data; } });
   });
   await page.click('#share-btn');
   await page.waitForFunction(() => !document.getElementById('share-btn').disabled);
   const shared = await page.evaluate(() => window.shared);
-  assert.match(shared.text, /어려움 난이도 클리어/);
+  assert.equal(shared.text, '[문도 피구] 어려움 난이도 클리어!');
   assert.equal(shared.title, '[문도 피구] 어려움 난이도 클리어!');
   assert.equal(await page.$eval('#share-btn', el => el.textContent), '자랑하기');
   const sharedUrl = new URL(shared.url);
@@ -37,12 +38,16 @@ try {
   assert.equal(sharedUrl.hash, '');
   await page.evaluate(() => {
     window.showResult(false, 'twins');
-    Object.defineProperty(navigator, 'share', { configurable: true, value: undefined });
+    window.matchMedia = () => ({ matches: false });
+    Object.defineProperty(navigator, 'share', { configurable: true, value: async data => { window.shared = data; } });
+    window.shared = null;
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async text => { window.copied = text; } } });
   });
   await page.click('#share-btn');
   await page.waitForFunction(() => window.copied);
-  assert.match(await page.evaluate(() => window.copied), /쌍둥이 난이도 실패/);
+  const copied = await page.evaluate(() => window.copied);
+  assert.match(copied, /^\[문도 피구\] 쌍둥이 난이도 실패\nhttp:\/\/localhost:\d+\/share\/twins-loss\.html\?share_id=/);
+  assert.equal(await page.evaluate(() => window.shared), null, 'Desktop copies instead of opening the share sheet');
   assert.equal(await page.$eval('#share-btn', el => el.textContent), '공유하기');
   await page.evaluate(() => {
     window.showResult();

@@ -10,7 +10,7 @@ fs.mkdirSync('share', { recursive: true });
 const variants = [{ query: '', image: 'share-preview.png' }];
 for (const difficulty of Object.keys(DIFFICULTY_NAMES)) {
   for (const result of ['win', 'loss']) {
-    const { title, text, description } = shareContent(difficulty, result === 'win');
+    const { title, description } = shareContent(difficulty, result === 'win');
     const slug = `${difficulty}-${result}`;
     const url = `${site}share/${slug}.html`;
     const image = `share-preview-${slug}.png`;
@@ -24,7 +24,7 @@ for (const difficulty of Object.keys(DIFFICULTY_NAMES)) {
     fs.writeFileSync(`share/${slug}.html`, `${head}</head>
 <body>
   <h1>${title}</h1>
-  <p>${text}</p>
+  <p>${description}</p>
   <a href="../">문도 피구 하러 가기</a>
   <script>
     const game = new URL('../', location.href);

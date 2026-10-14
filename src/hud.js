@@ -34,7 +34,7 @@ $('share-btn').addEventListener('click', async () => {
   $('share-btn').disabled = true;
   $('share-status').textContent = '';
   try {
-    if (navigator.share) {
+    if (navigator.share && matchMedia('(pointer: coarse)').matches) {
       try {
         await navigator.share(data);
         track('share_completed', { ...properties, method: 'native' });
