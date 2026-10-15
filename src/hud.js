@@ -67,7 +67,7 @@ $('share-btn').addEventListener('click', async () => {
 export const HUD = {
   // online: { mySlot } 이면 대인전 이름표 (왼쪽 0번이 방장)
   show(on, twins = false, online = null) {
-    for (const id of ['topbar', 'hud']) $(id).classList.toggle('hidden', !on);
+    for (const id of ['topbar', 'hud', 'joy-zone']) $(id).classList.toggle('hidden', !on);
     $('topbar').classList.toggle('twins', twins);
     if (online) {
       const mine = (slot) => slot === online.mySlot;

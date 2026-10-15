@@ -12,6 +12,7 @@ import { track, createTrackingId, referralContext } from './analytics.js';
 import * as Sim from './sim.js';
 import { NET, unpackChamp, unpackCleaver } from './net-protocol.js';
 import { Online, roomFromUrl } from './online.js';
+import { isTouchDevice, setupTouchControls } from './touch-controls.js';
 
 const { PPU, SIN, COS } = PROJ;
 const sx = (x) => x * PPU;
@@ -285,6 +286,7 @@ class GameScene extends Phaser.Scene {
     this.buildArena();
     this.makeFx();
     this.setupInput();
+    if (this.touchMode) this.touch = setupTouchControls(this, { sx, sy, depth: DEPTH.ring + 1 });
     this.spawnMenuMundos();
     this.state = 'menu';
     document.getElementById('loading').classList.add('hidden');
@@ -476,9 +478,11 @@ class GameScene extends Phaser.Scene {
   setupInput() {
     this.input.mouse.disableContextMenu();
     this.moveHeld = false;
+    // 터치 기기는 화면 탭 이동 대신 조이스틱으로 움직인다 (src/touch-controls.js)
+    this.touchMode = isTouchDevice();
     this.input.on('pointerdown', () => {
       Sound.unlock();
-      if (!this.canControl()) return;
+      if (this.touchMode || !this.canControl()) return;
       this.moveHeld = true;
       this.moveRepeatT = 0.1;
       const g = this.pointerGround();
@@ -496,11 +500,19 @@ class GameScene extends Phaser.Scene {
       if (e.code === 'KeyM') { Sound.toggleMute(); HUD.chat(Sound.muted ? '소리 끔' : '소리 켬'); return; }
       if (!this.canControl()) return;
       const g = this.pointerGround();
-      if (e.code === 'KeyQ') { if (this.castQ(p, g.x, g.z)) this.sendInput({ cast: 'q', tx: g.x, tz: g.z }); }
-      else if (e.code === 'KeyD') { if (this.castFlash(p, g.x, g.z)) this.sendInput({ cast: 'd', tx: g.x, tz: g.z }); }
-      else if (e.code === 'KeyF') { if (this.castGhost(p)) this.sendInput({ cast: 'f' }); }
+      if (e.code === 'KeyQ') this.useSkill('q', g.x, g.z);
+      else if (e.code === 'KeyD') this.useSkill('d', g.x, g.z);
+      else if (e.code === 'KeyF') this.useSkill('f');
       else if (e.code === 'KeyS') { p.moveTarget = null; this.moveHeld = false; this.sendInput({ stop: true }); }
     });
+  }
+
+  // 키보드와 터치가 함께 쓰는 시전. 성공하면 대인전 서버에도 보낸다.
+  useSkill(key, tx, tz) {
+    const p = this.player;
+    if (key === 'q') { if (this.castQ(p, tx, tz)) this.sendInput({ cast: 'q', tx, tz }); }
+    else if (key === 'd') { if (this.castFlash(p, tx, tz)) this.sendInput({ cast: 'd', tx, tz }); }
+    else if (key === 'f') { if (this.castGhost(p)) this.sendInput({ cast: 'f' }); }
   }
 
   canControl() {
@@ -1114,6 +1126,7 @@ class GameScene extends Phaser.Scene {
       HUD.update(p);
       HUD.updateFight(this.champs);
     }
+    this.touch?.update(dt);
     this.updateCamera(dt);
   }
 

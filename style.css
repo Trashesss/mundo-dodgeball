@@ -785,3 +785,33 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
   .practice-view #opt-diff button { min-height: 54px; padding-block: 6px; }
   .practice-view .setup-actions #start-btn, .practice-view #mode-back-btn { min-height: 46px; padding: 8px; }
 }
+
+/* ---------- 모바일 조작 (조이스틱 + 드래그 조준 스킬) ---------- */
+#joy-zone { display: none; }
+body.touch #game canvas { touch-action: none; }
+body.touch #joy-zone {
+  display: block; position: fixed; left: 0; bottom: 0; width: 50vw; height: 50vh;
+  touch-action: none; user-select: none; -webkit-user-select: none;
+}
+#joy-base {
+  /* 스킬 버튼(바닥 18px + 이름 14px + 간격 5px + 반지름 26px)과 같은 높이에 가운데를 둔다 */
+  position: absolute; left: calc(16px + 40px + env(safe-area-inset-left)); top: calc(100% - 63px - env(safe-area-inset-bottom));
+  width: 80px; height: 80px; margin: -40px 0 0 -40px; border-radius: 50%;
+  background: #14202c80; border: 3px solid #ffffff40; opacity: .55; pointer-events: none;
+}
+#joy-base.active { opacity: 1; }
+#joy-knob {
+  position: absolute; left: 50%; top: 50%; width: 36px; height: 36px; margin: -18px 0 0 -18px; border-radius: 50%;
+  background: #f4e8c8; border: 3px solid #080e16; box-shadow: 0 3px 0 #080e16;
+}
+body.touch #hud {
+  left: auto; right: calc(16px + env(safe-area-inset-right)); bottom: calc(18px + env(safe-area-inset-bottom));
+  transform: none; z-index: 1; pointer-events: auto; touch-action: none; user-select: none; -webkit-user-select: none;
+}
+body.touch .skills { align-items: flex-end; gap: 10px; padding: 0; background: none; border: 0; box-shadow: none; }
+body.touch .skill .key { display: none; }
+body.touch .spell-name { line-height: 14px; text-shadow: 0 1px 2px #000, 0 0 4px #000; }
+body.touch .skill { width: 52px; height: 52px; border-radius: 50%; }
+body.touch .skill .cdtext { font-size: 18px; }
+body.touch .spell:has(#sk-q) { order: 3; }
+body.touch .skill.aiming { border-color: #fff; box-shadow: 0 0 14px #5ff4ff; }
