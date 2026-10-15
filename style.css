@@ -815,3 +815,11 @@ body.touch .skill { width: 52px; height: 52px; border-radius: 50%; }
 body.touch .skill .cdtext { font-size: 18px; }
 body.touch .spell:has(#sk-q) { order: 3; }
 body.touch .skill.aiming { border-color: #fff; box-shadow: 0 0 14px #5ff4ff; }
+@media (min-width: 390px) {
+  body.touch .skill { width: 68px; height: 68px; }
+  body.touch .skill .cdtext { font-size: 23px; }
+  body.touch .spell-name { font-size: 13px; }
+  /* 스킬 버튼(바닥 18px + 이름 14px + 간격 5px + 반지름 34px)과 같은 높이 */
+  #joy-base { left: calc(16px + 52px + env(safe-area-inset-left)); top: calc(100% - 71px - env(safe-area-inset-bottom)); width: 104px; height: 104px; margin: -52px 0 0 -52px; }
+  #joy-knob { width: 46px; height: 46px; margin: -23px 0 0 -23px; }
+}

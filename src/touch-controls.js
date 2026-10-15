@@ -3,7 +3,7 @@ import { PROJ } from './config.js';
 import { RULES } from './rules.js';
 
 const { PPU, SIN } = PROJ;
-const JOY_R = 32;      // 노브가 움직일 수 있는 반경(px)
+const JOY_R = 0.4;     // 노브가 움직일 수 있는 반경 (조이스틱 판 지름 대비, 화면 크기별로 판 크기가 다르다)
 const JOY_DEAD = 10;   // 이 안쪽은 정지
 const AIM_R = 90;      // 이만큼 끌면 점멸 최대 거리
 const AIM_DEAD = 15;   // 이보다 짧게 끌면 탭으로 본다
@@ -51,7 +51,8 @@ export function setupTouchControls(scene, { sx, sy, depth }) {
     if (e.pointerId !== joy.id) return;
     let dx = e.clientX - joy.ox, dy = e.clientY - joy.oy;
     const l = Math.hypot(dx, dy);
-    if (l > JOY_R) { dx *= JOY_R / l; dy *= JOY_R / l; }
+    const max = base.offsetWidth * JOY_R;
+    if (l > max) { dx *= max / l; dy *= max / l; }
     knob.style.transform = `translate(${dx}px, ${dy}px)`;
     const dir = l > JOY_DEAD ? groundDir(dx, dy) : null;
     if (dir && !joy.dir) joy.t = 0; // 새로 밀기 시작하면 바로 출발
