@@ -50,8 +50,10 @@ $('share-btn').addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(`${data.text}\n${data.url}`);
       track('share_completed', { ...properties, method: 'clipboard' });
+      if (isCurrent()) $('share-status').textContent = '결과와 링크를 복사했어요! 친구에게 보내 자랑해보세요.';
     } catch {
       track('share_failed', { ...properties, method: 'clipboard' });
+      if (isCurrent()) $('share-status').textContent = '복사하지 못했어요. 브라우저의 클립보드 권한을 확인하고 다시 눌러 주세요.';
     }
   } finally {
     if (version === resultVersion) $('share-btn').disabled = false;
