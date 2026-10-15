@@ -396,10 +396,6 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 .mode-card img { width: clamp(96px, 20vh, 160px); height: clamp(96px, 20vh, 160px); object-fit: contain; }
 #quick-match-btn img { width: 100%; max-width: 240px; }
 #quick-match-btn { border-color: #f4d47d; background: #3e4545; }
-.mode-status {
-  position: absolute; top: 12px; right: 12px; padding: 4px 9px; border-radius: 20px;
-  background: #f4d47d1a; color: #f4d47d; font-size: 12px;
-}
 #online-btn img { width: 100%; max-width: 320px; }
 .mode-name { font-size: clamp(20px, 2.5vw, 28px); word-break: keep-all; }
 .mode-description { color: var(--entry-muted); font-size: 16px; word-break: keep-all; }
@@ -415,7 +411,7 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
   .mode-select { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   #quick-match-btn { grid-column: 1 / -1; display: grid; grid-template-columns: 108px 1fr; gap: 6px 12px; text-align: left; }
   #quick-match-btn img { grid-row: span 2; height: 72px; }
-  #quick-match-btn .mode-name { align-self: end; padding-right: 64px; }
+  #quick-match-btn .mode-name { align-self: end; }
   #quick-match-btn .mode-description { align-self: start; }
   .mode-card { padding: 18px 10px; gap: 10px; }
   .mode-description { font-size: 13px; }
@@ -425,13 +421,18 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
   .mode-card img { width: 72px; height: 72px; }
 }
 
-/* 빠른 대전 준비 중 안내 */
+/* 빠른 대전 상대 찾기 */
 .quick-match-view .setup-heading { display: none; }
 .quick-match-notice { text-align: center; word-break: keep-all; }
 .quick-match-notice h2 {
-  margin: 0; color: #f0b2a8; font-size: clamp(30px, 6vw, 56px); font-weight: 400;
+  margin: 0; color: var(--entry-text); font-size: clamp(30px, 6vw, 56px); font-weight: 400;
   line-height: 1.2; letter-spacing: -1px; text-shadow: 0 5px #08171f; text-wrap: balance;
 }
+.quick-match-notice[data-state="error"] h2 { color: #f0b2a8; }
+.quick-match-elapsed {
+  margin: 12px 0 0; color: var(--entry-muted); font-size: 22px; font-variant-numeric: tabular-nums;
+}
+.quick-match-notice[data-state="error"] .quick-match-elapsed { visibility: hidden; }
 #quick-match-back-btn {
   width: min(320px, 100%); min-height: 58px; margin-top: 28px; padding: 12px;
   border: 3px solid var(--entry-ink); border-radius: 16px; background: #35434b;

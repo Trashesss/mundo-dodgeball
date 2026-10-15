@@ -1,4 +1,4 @@
-// 친구와 대결: 서버 연결, 재접속, 서버 시계 맞추기, 대기실 화면.
+// 친구와 대결·빠른 대전: 서버 연결, 재접속, 서버 시계 맞추기, 대기실 화면.
 // 경기 화면 처리는 main.js 가 Online.hooks 로 받는다.
 import { NET, isRoomCode } from './net-protocol.js';
 import { track } from './analytics.js';
@@ -63,6 +63,8 @@ export const Online = {
   rtt: 120,
   offset: null,
   intent: null,
+  quick: false,
+  gen: 0,
   reconnectUntil: 0,
   pingTimer: null,
   createStatusTimer: null,
@@ -70,12 +72,15 @@ export const Online = {
 
   // ---------- 연결 ----------
   connect() {
+    const gen = this.gen;
     return new Promise((resolve, reject) => {
       let ws;
       try { ws = new WebSocket(serverUrl()); } catch (error) { reject(error); return; }
       const timer = setTimeout(() => { ws.close(); reject(new Error('timeout')); }, CONNECT_TIMEOUT_MS);
       ws.onopen = () => {
         clearTimeout(timer);
+        // 연결되는 사이 취소·다른 모드로 바뀌었으면 이 연결은 버린다
+        if (gen !== this.gen) { ws.close(); reject(new Error('stale')); return; }
         this.ws = ws;
         this.ping();
         clearInterval(this.pingTimer);
@@ -119,7 +124,8 @@ export const Online = {
     clearInterval(this.pingTimer);
     this.ws = null;
     if (!this.room || !this.token) {
-      if (!$('lobby').classList.contains('hidden')) this.lobbyError(ERRORS.offline);
+      if (this.quick) this.quickError(ERRORS.offline);
+      else if (!$('lobby').classList.contains('hidden')) this.lobbyError(ERRORS.offline);
       return;
     }
     if (!this.reconnectUntil) {
@@ -132,8 +138,8 @@ export const Online = {
       try {
         await this.connect();
         this.send({ type: 'join', room: this.room, token: this.token });
-      } catch {
-        if (!this.ws) this.onClose();
+      } catch (error) {
+        if (error.message !== 'stale' && !this.ws) this.onClose();
       }
     }, RETRY_MS);
   },
@@ -148,9 +154,10 @@ export const Online = {
   },
 
   reset() {
+    this.gen++;
     clearTimeout(this.createStatusTimer);
     this.closeSocket();
-    Object.assign(this, { room: null, slot: -1, token: null, players: [null, null], intent: null, reconnectUntil: 0 });
+    Object.assign(this, { room: null, slot: -1, token: null, players: [null, null], intent: null, quick: false, reconnectUntil: 0 });
   },
 
   // ---------- 방 ----------
@@ -176,8 +183,8 @@ export const Online = {
     try {
       await this.connect();
       this.send({ type: 'create' });
-    } catch {
-      this.lobbyError(ERRORS.offline);
+    } catch (error) {
+      if (error.message !== 'stale') this.lobbyError(ERRORS.offline);
     }
   },
 
@@ -188,9 +195,32 @@ export const Online = {
     try {
       await this.connect();
       this.send({ type: 'join', room: code, token: storage.get(TOKEN_KEY(code)) || undefined });
-    } catch {
-      this.lobbyError(ERRORS.offline);
+    } catch (error) {
+      if (error.message !== 'stale') this.lobbyError(ERRORS.offline);
     }
+  },
+
+  // 빠른 대전: 서버 대기열에 들어가 상대가 오면 바로 경기가 시작된다
+  async quickMatch() {
+    this.reset();
+    this.quick = true;
+    try {
+      await this.connect();
+      this.send({ type: 'queue' });
+    } catch (error) {
+      if (error.message !== 'stale') this.quickError(ERRORS.offline);
+    }
+  },
+
+  cancelQueue() {
+    this.send({ type: 'unqueue' });
+    this.reset();
+  },
+
+  quickError(text) {
+    this.closeSocket();
+    this.quick = false;
+    this.hooks.onQuickError?.(text);
   },
 
   toggleReady() {
@@ -218,20 +248,22 @@ export const Online = {
       case 'joined': {
         clearTimeout(this.createStatusTimer);
         const reconnected = !!this.reconnectUntil;
-        Object.assign(this, { room: msg.room, slot: msg.slot, token: msg.token, reconnectUntil: 0 });
+        Object.assign(this, { room: msg.room, slot: msg.slot, token: msg.token, quick: !!msg.quick, reconnectUntil: 0 });
         storage.set(TOKEN_KEY(msg.room), msg.token);
         setUrlRoom(msg.room);
         if (this.intent === 'create') track('online_room_created', { room: msg.room });
+        else if (this.quick && !reconnected) track('quick_match_found', { room: msg.room, slot: msg.slot });
         else if (this.intent === 'join') track('online_room_joined', { room: msg.room, slot: msg.slot });
         this.intent = null;
         if (reconnected) h.onReconnected?.();
-        if (msg.phase === 'lobby') { h.onLobby?.(); this.showLobby(); }
+        if (this.quick) { if (msg.phase !== 'lobby') h.onResume?.(msg); }
+        else if (msg.phase === 'lobby') { h.onLobby?.(); this.showLobby(); }
         else { this.hideLobby(); h.onResume?.(msg); }
         return;
       }
       case 'lobby':
         this.players = msg.players;
-        this.renderLobby();
+        if (!this.quick) this.renderLobby();
         return;
       case 'start':
         this.hideLobby();
@@ -253,6 +285,7 @@ export const Online = {
         return h.onOpponentLeft?.(msg.reason);
       case 'error':
         if (this.reconnectUntil) { this.giveUp(); return; }
+        if (this.quick && this.room == null) { this.quickError(ERRORS[msg.code] || ERRORS.offline); return; }
         if (this.room == null) {
           this.closeSocket();
           setUrlRoom(null);

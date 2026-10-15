@@ -124,8 +124,7 @@
         <p class="setup-subtitle" id="difficulty-label">어떤 모드를 플레이할까요?</p>
       </header>
       <div id="mode-select" class="mode-select">
-        <button id="quick-match-btn" class="mode-card" type="button" aria-describedby="quick-match-status">
-          <span id="quick-match-status" class="mode-status">준비 중</span>
+        <button id="quick-match-btn" class="mode-card" type="button">
           <img src="assets/cartoon/mundo-quick-match-v4.png" alt="식칼을 든 문도 VS 물음표로 가려진 정체불명의 상대" width="240" height="160" />
           <span class="mode-name">빠른 대전</span>
           <span class="mode-description">새로운 상대와 바로 한 판</span>
@@ -148,10 +147,11 @@
           </div>
         </div>
       </div>
-      <section id="quick-match-notice" class="quick-match-notice hidden" role="alert">
+      <section id="quick-match-notice" class="quick-match-notice hidden" role="status" aria-live="polite" data-state="searching">
         <img class="net-portrait" src="assets/cartoon/portrait-hud-v3.png" alt="" width="256" height="256" />
-        <h2>열심히 준비 중이에요</h2>
-        <button id="quick-match-back-btn" type="button">뒤로가기</button>
+        <h2 id="quick-match-title">상대를 찾는 중…</h2>
+        <p id="quick-match-elapsed" class="quick-match-elapsed" aria-hidden="true">0:00</p>
+        <button id="quick-match-back-btn" type="button">취소</button>
       </section>
       <section id="practice-select" class="hidden" aria-labelledby="select-title">
       <div id="opt-diff" role="group" aria-labelledby="difficulty-label">

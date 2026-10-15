@@ -120,16 +120,17 @@ export const HUD = {
   },
 
   // 대인전 결과: win | lose | left(상대가 나감)
-  onlineResult(kind) {
+  // quick: 빠른 대전은 재대결 대신 새로운 상대를 찾는다 (상대가 나갔어도)
+  onlineResult(kind, { quick = false } = {}) {
     resultVersion += 1;
     shareData = null;
     this.show(false);
     this.clearFeeds();
     this.banner(null);
     $('share-btn').classList.add('hidden');
-    $('again-btn').classList.toggle('hidden', kind === 'left');
+    $('again-btn').classList.toggle('hidden', kind === 'left' && !quick);
     $('again-btn').disabled = false;
-    $('again-btn').textContent = kind === 'win' ? '다시 한 수 가르쳐주기' : '다시 한 수 배우기';
+    $('again-btn').textContent = quick ? '새로운 상대 찾기' : kind === 'win' ? '다시 한 수 가르쳐주기' : '다시 한 수 배우기';
     $('menu-btn').textContent = '뒤로가기';
     $('share-status').textContent = '';
     $('result').dataset.outcome = kind === 'win' ? 'win' : 'lose';
