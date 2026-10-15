@@ -11,7 +11,7 @@ const AIM_DEAD = 15;   // 이보다 짧게 끌면 탭으로 본다
 const Q_BASE = 60, Q_SENS = 0.6;
 const LOOKAHEAD = 2;   // 조이스틱 방향으로 이만큼 앞을 이동 목표로 찍는다
 const REPEAT = 0.08;   // 이동 목표 갱신 주기 (클릭 이동 반복과 같다)
-const AIM_COLOR = 0x5ff4ff, CANCEL_COLOR = 0xff5050;
+const AIM_COLOR = 0x5ff4ff;
 
 const $ = (id) => document.getElementById(id);
 
@@ -29,7 +29,7 @@ export function setupTouchControls(scene, { sx, sy, depth }) {
   document.body.classList.add('touch');
   const g = scene.add.graphics().setDepth(depth);
   const joy = { id: null, ox: 0, oy: 0, dir: null, t: 0 };
-  let aim = null; // { key, id, el, ox, oy, dx, dy, left, cancel }
+  let aim = null; // { key, id, el, ox, oy, dx, dy }
 
   // ---------- 조이스틱 ----------
   const zone = $('joy-zone'), base = $('joy-base'), knob = $('joy-knob');
@@ -89,22 +89,18 @@ export function setupTouchControls(scene, { sx, sy, depth }) {
       }
       el.setPointerCapture(e.pointerId);
       el.classList.add('aiming');
-      aim = { key, id: e.pointerId, el, ox: e.clientX, oy: e.clientY, dx: 0, dy: 0, left: false, cancel: false };
+      aim = { key, id: e.pointerId, el, ox: e.clientX, oy: e.clientY, dx: 0, dy: 0 };
       aim.base = qBase();
     });
     el.addEventListener('pointermove', (e) => {
       if (!aim || e.pointerId !== aim.id) return;
       aim.dx = e.clientX - aim.ox; aim.dy = e.clientY - aim.oy;
-      const r = el.getBoundingClientRect();
-      const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
-      if (!inside) aim.left = true;
-      aim.cancel = aim.left && inside; // 밖으로 끌었다가 버튼 위로 되돌아오면 취소
     });
     el.addEventListener('pointerup', (e) => {
       if (!aim || e.pointerId !== aim.id) return;
       const a = aim;
       endAim();
-      if (a.cancel || !scene.canControl()) return;
+      if (!scene.canControl()) return;
       const t = aimTarget(a);
       scene.useSkill(a.key, t.x, t.z);
     });
@@ -145,7 +141,6 @@ export function setupTouchControls(scene, { sx, sy, depth }) {
     g.clear();
     const p = scene.player;
     if (!aim || !p?.alive) return;
-    const color = aim.cancel ? CANCEL_COLOR : AIM_COLOR;
     const dir = qDir(aim);
     const w = RULES.q.width, len = RULES.q.range;
     const nx = -dir.z * w, nz = dir.x * w;
@@ -154,8 +149,8 @@ export function setupTouchControls(scene, { sx, sy, depth }) {
       { x: sx(p.x + nx), y: sy(p.z + nz) }, { x: sx(ex + nx), y: sy(ez + nz) },
       { x: sx(ex - nx), y: sy(ez - nz) }, { x: sx(p.x - nx), y: sy(p.z - nz) },
     ];
-    g.fillStyle(color, 0.22).fillPoints(pts, true);
-    g.lineStyle(3, color, 0.9).strokePoints(pts, true);
+    g.fillStyle(AIM_COLOR, 0.22).fillPoints(pts, true);
+    g.lineStyle(3, AIM_COLOR, 0.9).strokePoints(pts, true);
   }
 
   return {
