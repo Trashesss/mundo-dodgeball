@@ -86,6 +86,7 @@ export function setupTouchControls(scene, { sx, sy, depth }) {
       el.setPointerCapture(e.pointerId);
       el.classList.add('aiming');
       aim = { key, id: e.pointerId, el, ox: e.clientX, oy: e.clientY, dx: 0, dy: 0, left: false, cancel: false };
+      if (key === 'q') aim.base = qBase();
     });
     el.addEventListener('pointermove', (e) => {
       if (!aim || e.pointerId !== aim.id) return;
@@ -111,13 +112,18 @@ export function setupTouchControls(scene, { sx, sy, depth }) {
     g.clear();
   }
 
-  // Q 방향(지면 단위벡터): 기본은 가장 가까운 적(없으면 바라보는 방향), 끌면 그쪽으로 천천히 돈다
-  function qDir(a) {
+  // Q 기본 방향: 누른 순간 가장 가까운 적 쪽(없으면 바라보는 방향). 누른 뒤 적이 움직여도 따라가지 않는다.
+  function qBase() {
     const p = scene.player;
     const foe = scene.enemies.filter(e => e.alive)
       .sort((m, n) => Math.hypot(m.x - p.x, m.z - p.z) - Math.hypot(n.x - p.x, n.z - p.z))[0];
-    let bx = Math.cos(p.facing), bz = Math.sin(p.facing);
-    if (foe && Math.hypot(foe.x - p.x, foe.z - p.z) > 0.01) { bx = foe.x - p.x; bz = foe.z - p.z; }
+    if (foe && Math.hypot(foe.x - p.x, foe.z - p.z) > 0.01) return { x: foe.x - p.x, z: foe.z - p.z };
+    return { x: Math.cos(p.facing), z: Math.sin(p.facing) };
+  }
+
+  // Q 방향(지면 단위벡터): 누를 때 정한 기본 방향에서, 끌면 그쪽으로 천천히 돈다
+  function qDir(a) {
+    const { x: bx, z: bz } = a.base;
     // 화면 기준으로 더해야 손가락 방향과 맞는다 (지면 z 는 화면에서 SIN 만큼 눌려 보인다)
     const sl = Math.hypot(bx, bz * SIN);
     const drag = Math.hypot(a.dx, a.dy) > AIM_DEAD ? Q_SENS : 0;

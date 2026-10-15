@@ -66,6 +66,19 @@ try {
   assert.ok(Math.abs(sTap.facing - toEnemy) < 0.05, `q tap aims at enemy (${sTap.facing} vs ${toEnemy})`);
   await page.evaluate(() => { const p = window.__game.scene.getScene('game').player; p.qCd = 0; p.castT = 0; });
 
+  // 누른 순간의 적 방향으로 고정된다: 누른 채 적이 움직여도 조준이 따라가지 않는다
+  const toEnemyHeld = await enemyDir();
+  await page.touchscreen.touchStart(q.x, q.y);
+  await wait(50);
+  await page.evaluate(() => { const s = window.__game.scene.getScene('game'); s.enemy.z += 4; });
+  await wait(50);
+  await page.touchscreen.touchEnd();
+  await wait(50);
+  const sHeld = await state();
+  assert.ok(sHeld.qCd > 0, 'q cast after hold');
+  assert.ok(Math.abs(sHeld.facing - toEnemyHeld) < 0.05, `q aim stays where enemy was on press (${sHeld.facing} vs ${toEnemyHeld})`);
+  await page.evaluate(() => { const s = window.__game.scene.getScene('game'), p = s.player; s.enemy.z -= 4; p.qCd = 0; p.castT = 0; });
+
   // 위로 조금 끌면 적 방향에서 위쪽으로 일부만 돈다 (감도 완화)
   const toEnemy2 = await enemyDir();
   await page.touchscreen.touchStart(q.x, q.y);
