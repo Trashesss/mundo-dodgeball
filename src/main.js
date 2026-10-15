@@ -589,7 +589,13 @@ class GameScene extends Phaser.Scene {
   vol(c) {
     const p = this.player;
     if (!p || c === p) return 1;
-    return clamp(1.1 - Math.hypot(c.x - p.x, c.z - p.z) / 25, 0.25, 0.8);
+    return this.volAt(c.x, c.z);
+  }
+
+  volAt(x, z) {
+    const p = this.player;
+    if (!p) return 1;
+    return clamp(1.1 - Math.hypot(x - p.x, z - p.z) / 25, 0.25, 0.8);
   }
 
   flushFeed() {
@@ -664,7 +670,7 @@ class GameScene extends Phaser.Scene {
       case 'cleaverEnd': {
         if (remote) this.removeCleaver(e.id);
         this.fx.trail.explode(6, sx(e.x), sy(e.z, RULES.q.height));
-        if (Math.hypot(e.x, e.z) < ARENA.ROCK_R) this.fx.splash.explode(8, sx(e.x), sy(e.z));
+        this.missFx(e.x, e.z, Math.hypot(e.x, e.z) >= ARENA.ROCK_R);
         return;
       }
       case 'kill': {
@@ -1162,6 +1168,20 @@ class GameScene extends Phaser.Scene {
     p.view.img.rotation += dt * 24 * (p.dx >= 0 ? 1 : -1);
     p.view.sync(p);
     this.fx.trail.emitParticleAt(sx(p.x), sy(p.z, RULES.q.height), 1);
+  }
+
+  // 빗나간 식칼: 사거리 끝에서 물보라와 물결(암벽이면 불꽃)과 소리만 낸다
+  missFx(x, z, rock) {
+    const X = sx(x), Y = sy(z), vol = this.volAt(x, z);
+    if (rock) {
+      this.fx.spark.explode(10, X, Y);
+      Sound.clank(vol);
+      return;
+    }
+    this.fx.splash.explode(14, X, Y);
+    this.ripple(x, z);
+    this.time.delayedCall(140, () => this.ripple(x, z));
+    Sound.splash(vol);
   }
 
   ripple(x, z) {

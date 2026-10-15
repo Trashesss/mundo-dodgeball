@@ -126,6 +126,18 @@ export const Sound = {
     swell({ attack: 0.002, hold: 0.04, release: 0.22, f0: 700, f1: 250, q: 0.8, gain: 0.45, vol });
     swell({ attack: 0.002, hold: 0.05, release: 0.22, f0: 3600, f1: 2000, q: 0.5, gain: 0.22, vol });
   }),
+  // 빗나간 식칼이 물에 꽂히는 "첨벙": 적중보다 가볍게, 음정 있는 톤 없이 낮게 깔리는 물 튀는 노이즈 + 작은 둔탁음
+  splash: play((vol) => {
+    swell({ attack: 0.004, hold: 0.03, release: 0.26, type: 'lowpass', f0: 1200, f1: 300, q: 0.7, gain: 0.4, vol });
+    swell({ attack: 0.01, hold: 0.02, release: 0.3, f0: 900, f1: 400, q: 0.6, gain: 0.12, vol });
+    tone({ dur: 0.12, type: 'sine', f0: 140, f1: 70, gain: 0.18, vol });
+  }),
+  // 암벽에 꽂히는 "툭": 울림 없이 짧게 끝나는 바위 부딪힘
+  clank: play((vol) => {
+    swell({ attack: 0.001, release: 0.05, f0: 1400, f1: 700, q: 0.8, gain: 0.3, vol });
+    swell({ attack: 0.002, release: 0.12, type: 'lowpass', f0: 700, f1: 250, q: 0.7, gain: 0.3, vol });
+    tone({ dur: 0.1, type: 'sine', f0: 160, f1: 80, gain: 0.22, vol });
+  }),
   death: play((vol) => { tone({ dur: 0.7, type: 'sawtooth', f0: 260, f1: 60, gain: 0.12, vol }); }),
   // 점멸 "탕—": 전 대역이 한 번에 터지는 크랙 + 뒤따르는 깊은 붐 + 메아리처럼 남는 노이즈 꼬리
   flash: play((vol) => {
