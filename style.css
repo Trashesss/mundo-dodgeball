@@ -823,3 +823,90 @@ body.touch .skill.aiming { border-color: #fff; box-shadow: 0 0 14px #5ff4ff; }
   #joy-base { left: calc(16px + 52px + env(safe-area-inset-left)); top: calc(100% - 71px - env(safe-area-inset-bottom)); width: 104px; height: 104px; margin: -52px 0 0 -52px; }
   #joy-knob { width: 46px; height: 46px; margin: -23px 0 0 -23px; }
 }
+
+/* ---------- 모바일 홈: 게임 로비처럼 단순하게 ---------- */
+@media (max-width: 600px) {
+  #menu:not(.practice-view):not(.quick-match-view) { padding: 16px; }
+  #menu:not(.practice-view):not(.quick-match-view) .match-setup {
+    display: flex; flex-direction: column; min-height: 100%; width: min(420px, 100%);
+  }
+  /* 마우스·키보드 안내와 '게임 모드 선택' 제목은 터치 화면에서 소음일 뿐이다 */
+  #menu:not(.practice-view):not(.quick-match-view) :is(.setup-controls, .setup-arena-tip) { display: none; }
+  #menu:not(.practice-view):not(.quick-match-view) :is(#select-title, #difficulty-label) {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+
+  /* 로고 히어로 */
+  #menu:not(.practice-view):not(.quick-match-view) .setup-intro {
+    flex-direction: column; gap: 0; margin: auto 0 20px;
+  }
+  #menu:not(.practice-view):not(.quick-match-view) .setup-portrait {
+    display: block; width: clamp(96px, 22dvh, 168px); height: clamp(96px, 22dvh, 168px);
+    margin-bottom: -10px; animation: home-bob 2.6s ease-in-out infinite;
+  }
+  #menu:not(.practice-view):not(.quick-match-view) .setup-intro-copy { text-align: center; }
+  #menu:not(.practice-view):not(.quick-match-view) .setup-brand {
+    margin: 0; font-size: clamp(48px, 15vw, 64px); letter-spacing: -2px; text-shadow: 0 5px #08171f;
+  }
+  #menu:not(.practice-view):not(.quick-match-view) .setup-description {
+    margin-top: 6px; color: var(--entry-muted); font-size: 14px;
+  }
+
+  /* 큰 플레이 버튼 + 보조 타일 두 개 */
+  #menu:not(.practice-view):not(.quick-match-view) .mode-select {
+    grid-template-columns: 1fr 1fr; gap: 12px;
+  }
+  #menu:not(.practice-view):not(.quick-match-view) .mode-card {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    padding: 12px 8px 10px; border: 3px solid var(--entry-ink); border-radius: 18px;
+    background: #33444d; text-align: center;
+    box-shadow: inset 0 3px #ffffff1c;
+    transition: transform .08s;
+  }
+  #menu:not(.practice-view):not(.quick-match-view) .mode-card:active { transform: scale(.97); }
+  #menu:not(.practice-view):not(.quick-match-view) .mode-card img {
+    width: 100%; max-width: none; height: clamp(56px, 11dvh, 88px); object-fit: contain;
+  }
+  #menu:not(.practice-view):not(.quick-match-view) .mode-name { align-self: center; font-size: 18px; line-height: 1.2; }
+  #menu:not(.practice-view):not(.quick-match-view) .mode-description { display: none; }
+  #menu:not(.practice-view):not(.quick-match-view) #practice-btn { background: #2f4d57; }
+  #menu:not(.practice-view):not(.quick-match-view) #online-btn { background: #3d3a55; }
+
+  #menu:not(.practice-view):not(.quick-match-view) #quick-match-btn {
+    grid-column: 1 / -1; padding: 14px 12px 16px;
+    background: linear-gradient(#ffe38f, #f0bf4c); color: #3a2a0c;
+    box-shadow: inset 0 4px #fff6cf, 0 0 28px #f4d47d55;
+    animation: home-pulse 1.8s ease-in-out infinite;
+  }
+  #menu:not(.practice-view):not(.quick-match-view) #quick-match-btn:active { animation: none; }
+  #menu:not(.practice-view):not(.quick-match-view) #quick-match-btn img { height: clamp(80px, 15dvh, 128px); }
+  #menu:not(.practice-view):not(.quick-match-view) #quick-match-btn .mode-name {
+    font-size: 32px; letter-spacing: -1px; text-shadow: 0 2px #fff3c4;
+  }
+
+  /* 장난 버튼과 고지문은 눈에 덜 띄게 */
+  #menu:not(.practice-view):not(.quick-match-view) .flash-prank { margin-top: 6px; }
+  #menu:not(.practice-view):not(.quick-match-view) #flash-swap-btn {
+    min-width: 0; border: 0; background: none; color: #8fa7aa; font-size: 13px;
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+  #menu:not(.practice-view):not(.quick-match-view) .riot-disclaimer {
+    margin: auto 0 0; padding-top: 12px; font-size: 10px; line-height: 1.6; opacity: .6;
+  }
+}
+@media (max-width: 600px) and (max-height: 700px) {
+  #menu:not(.practice-view):not(.quick-match-view) .setup-intro { margin-bottom: 12px; }
+  #menu:not(.practice-view):not(.quick-match-view) .setup-portrait { width: 96px; height: 96px; }
+  #menu:not(.practice-view):not(.quick-match-view) .setup-brand { font-size: 44px; }
+  #menu:not(.practice-view):not(.quick-match-view) .mode-select { gap: 10px; }
+  #menu:not(.practice-view):not(.quick-match-view) #quick-match-btn { padding-block: 10px 12px; }
+  #menu:not(.practice-view):not(.quick-match-view) #quick-match-btn img { height: 72px; }
+  #menu:not(.practice-view):not(.quick-match-view) #quick-match-btn .mode-name { font-size: 28px; }
+  #menu:not(.practice-view):not(.quick-match-view) .mode-card img { height: 52px; }
+  #menu:not(.practice-view):not(.quick-match-view) .flash-prank { margin-top: 2px; }
+}
+@keyframes home-bob { 50% { transform: translateY(-6px) rotate(-2deg); } }
+@keyframes home-pulse { 50% { transform: scale(1.025); } }
+@media (prefers-reduced-motion: reduce) {
+  #menu .setup-portrait, #menu #quick-match-btn { animation: none !important; }
+}
