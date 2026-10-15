@@ -95,16 +95,18 @@ try {
   const turned = toEnemy2 - s2.facing; // 위쪽(z-)으로 돌수록 각도가 줄어든다
   assert.ok(turned > 0.2 && turned < 1.2, `q drag turns partway (enemy ${toEnemy2}, thrown ${s2.facing})`);
 
-  // 점멸: 왼쪽으로 반만 끌면 최대 거리의 절반쯤 이동
+  // 점멸: 탭하면 바라보는 방향으로 최대 거리 (끌어도 방향·거리는 그대로)
+  await page.evaluate(() => { const p = window.__game.scene.getScene('game').player; p.x = -3; p.z = -2; p.facing = Math.PI / 2; p.moveTarget = null; });
+  const flashDist = 4; // RULES.flash.dist
   const d = await center('#sk-d');
   const before = await state();
   await page.touchscreen.touchStart(d.x, d.y);
-  await page.touchscreen.touchMove(d.x - 45, d.y);
+  await page.touchscreen.touchMove(d.x + 45, d.y + 45);
   await page.touchscreen.touchEnd();
   await wait(50);
   const s3 = await state();
   assert.ok(s3.flashCd > 0, 'flash cast');
-  assert.ok(Math.abs((before.x - s3.x) - 2) < 0.3, `flash half distance (${before.x - s3.x})`);
+  assert.ok(Math.abs((s3.z - before.z) - flashDist) < 0.1 && Math.abs(s3.x - before.x) < 0.1, `flash max distance facing (${s3.x - before.x}, ${s3.z - before.z})`);
 
   // 유체화: 탭
   await page.tap('#sk-f');

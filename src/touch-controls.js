@@ -1,11 +1,10 @@
-// 모바일 조작: 왼쪽 조이스틱으로 이동, 스킬 버튼을 누른 채 끌어 조준하고 떼면 시전
+// 모바일 조작: 왼쪽 조이스틱으로 이동, Q 는 누른 채 끌어 조준하고 떼면 시전, D·F 는 탭
 import { PROJ } from './config.js';
 import { RULES } from './rules.js';
 
-const { PPU, SIN } = PROJ;
+const { SIN } = PROJ;
 const JOY_R = 0.4;     // 노브가 움직일 수 있는 반경 (조이스틱 판 지름 대비, 화면 크기별로 판 크기가 다르다)
 const JOY_DEAD = 10;   // 이 안쪽은 정지
-const AIM_R = 90;      // 이만큼 끌면 점멸 최대 거리
 const AIM_DEAD = 15;   // 이보다 짧게 끌면 탭으로 본다
 // Q 조준: 가장 가까운 적 쪽(Q_BASE px 길이)에서 시작해, 끈 거리를 Q_SENS 배로 줄여 더한다.
 // 옆으로 60px 끌면 약 30도 돌아가서 손가락을 조금 움직여도 조준이 크게 튀지 않는다.
@@ -83,10 +82,15 @@ export function setupTouchControls(scene, { sx, sy, depth }) {
       const p = scene.player;
       if (aim || !p || !scene.canControl() || p[cdOf[key]] > 0) return;
       if (key === 'f') { scene.useSkill('f'); return; }
+      if (key === 'd') { // 바라보는 방향으로 항상 최대 사거리
+        const d = RULES.flash.dist;
+        scene.useSkill('d', p.x + Math.cos(p.facing) * d, p.z + Math.sin(p.facing) * d);
+        return;
+      }
       el.setPointerCapture(e.pointerId);
       el.classList.add('aiming');
       aim = { key, id: e.pointerId, el, ox: e.clientX, oy: e.clientY, dx: 0, dy: 0, left: false, cancel: false };
-      if (key === 'q') aim.base = qBase();
+      aim.base = qBase();
     });
     el.addEventListener('pointermove', (e) => {
       if (!aim || e.pointerId !== aim.id) return;
@@ -133,16 +137,8 @@ export function setupTouchControls(scene, { sx, sy, depth }) {
 
   // 조준 중인 목표 지점 (지면 좌표)
   function aimTarget(a) {
-    const p = scene.player;
-    if (a.key === 'q') {
-      const dir = qDir(a);
-      return { x: p.x + dir.x, z: p.z + dir.z };
-    }
-    const l = Math.hypot(a.dx, a.dy);
-    const dir = l > AIM_DEAD ? groundDir(a.dx, a.dy) : null;
-    if (!dir) return { x: p.x, z: p.z }; // 점멸 탭: 바라보는 방향으로 최대 거리
-    const d = Math.min(1, l / AIM_R) * RULES.flash.dist;
-    return { x: p.x + dir.x * d, z: p.z + dir.z * d };
+    const p = scene.player, dir = qDir(a);
+    return { x: p.x + dir.x, z: p.z + dir.z };
   }
 
   function drawAim() {
@@ -150,26 +146,16 @@ export function setupTouchControls(scene, { sx, sy, depth }) {
     const p = scene.player;
     if (!aim || !p?.alive) return;
     const color = aim.cancel ? CANCEL_COLOR : AIM_COLOR;
-    const l = Math.hypot(aim.dx, aim.dy);
-    if (aim.key === 'q') {
-      const dir = qDir(aim);
-      const w = RULES.q.width, len = RULES.q.range;
-      const nx = -dir.z * w, nz = dir.x * w;
-      const ex = p.x + dir.x * len, ez = p.z + dir.z * len;
-      const pts = [
-        { x: sx(p.x + nx), y: sy(p.z + nz) }, { x: sx(ex + nx), y: sy(ez + nz) },
-        { x: sx(ex - nx), y: sy(ez - nz) }, { x: sx(p.x - nx), y: sy(p.z - nz) },
-      ];
-      g.fillStyle(color, 0.22).fillPoints(pts, true);
-      g.lineStyle(3, color, 0.9).strokePoints(pts, true);
-      return;
-    }
-    const r = RULES.flash.dist * PPU;
-    g.lineStyle(2, color, 0.5).strokeEllipse(sx(p.x), sy(p.z), r * 2, r * 2 * SIN);
-    const t = scene.constrain(aimTarget(aim), p);
-    if (l <= AIM_DEAD) return;
-    g.fillStyle(color, 0.35).fillEllipse(sx(t.x), sy(t.z), 1.4 * PPU, 1.4 * PPU * SIN);
-    g.lineStyle(3, color, 0.95).strokeEllipse(sx(t.x), sy(t.z), 1.4 * PPU, 1.4 * PPU * SIN);
+    const dir = qDir(aim);
+    const w = RULES.q.width, len = RULES.q.range;
+    const nx = -dir.z * w, nz = dir.x * w;
+    const ex = p.x + dir.x * len, ez = p.z + dir.z * len;
+    const pts = [
+      { x: sx(p.x + nx), y: sy(p.z + nz) }, { x: sx(ex + nx), y: sy(ez + nz) },
+      { x: sx(ex - nx), y: sy(ez - nz) }, { x: sx(p.x - nx), y: sy(p.z - nz) },
+    ];
+    g.fillStyle(color, 0.22).fillPoints(pts, true);
+    g.lineStyle(3, color, 0.9).strokePoints(pts, true);
   }
 
   return {
