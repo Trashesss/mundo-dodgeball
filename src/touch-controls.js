@@ -7,6 +7,9 @@ const JOY_R = 0.4;     // 노브가 움직일 수 있는 반경 (조이스틱 �
 const JOY_DEAD = 10;   // 이 안쪽은 정지
 const AIM_R = 90;      // 이만큼 끌면 점멸 최대 거리
 const AIM_DEAD = 15;   // 이보다 짧게 끌면 탭으로 본다
+// Q 조준: 가장 가까운 적 쪽(Q_BASE px 길이)에서 시작해, 끈 거리를 Q_SENS 배로 줄여 더한다.
+// 옆으로 60px 끌면 약 30도 돌아가서 손가락을 조금 움직여도 조준이 크게 튀지 않는다.
+const Q_BASE = 60, Q_SENS = 0.6;
 const LOOKAHEAD = 2;   // 조이스틱 방향으로 이만큼 앞을 이동 목표로 찍는다
 const REPEAT = 0.08;   // 이동 목표 갱신 주기 (클릭 이동 반복과 같다)
 const AIM_COLOR = 0x5ff4ff, CANCEL_COLOR = 0xff5050;
@@ -108,18 +111,29 @@ export function setupTouchControls(scene, { sx, sy, depth }) {
     g.clear();
   }
 
+  // Q 방향(지면 단위벡터): 기본은 가장 가까운 적(없으면 바라보는 방향), 끌면 그쪽으로 천천히 돈다
+  function qDir(a) {
+    const p = scene.player;
+    const foe = scene.enemies.filter(e => e.alive)
+      .sort((m, n) => Math.hypot(m.x - p.x, m.z - p.z) - Math.hypot(n.x - p.x, n.z - p.z))[0];
+    let bx = Math.cos(p.facing), bz = Math.sin(p.facing);
+    if (foe && Math.hypot(foe.x - p.x, foe.z - p.z) > 0.01) { bx = foe.x - p.x; bz = foe.z - p.z; }
+    // 화면 기준으로 더해야 손가락 방향과 맞는다 (지면 z 는 화면에서 SIN 만큼 눌려 보인다)
+    const sl = Math.hypot(bx, bz * SIN);
+    const drag = Math.hypot(a.dx, a.dy) > AIM_DEAD ? Q_SENS : 0;
+    return groundDir(bx / sl * Q_BASE + a.dx * drag, bz * SIN / sl * Q_BASE + a.dy * drag)
+      || { x: bx / Math.hypot(bx, bz), z: bz / Math.hypot(bx, bz) };
+  }
+
   // 조준 중인 목표 지점 (지면 좌표)
   function aimTarget(a) {
     const p = scene.player;
+    if (a.key === 'q') {
+      const dir = qDir(a);
+      return { x: p.x + dir.x, z: p.z + dir.z };
+    }
     const l = Math.hypot(a.dx, a.dy);
     const dir = l > AIM_DEAD ? groundDir(a.dx, a.dy) : null;
-    if (a.key === 'q') {
-      if (dir) return { x: p.x + dir.x, z: p.z + dir.z };
-      // 탭: 가장 가까운 적에게, 없으면 바라보는 방향
-      const foe = scene.enemies.filter(e => e.alive)
-        .sort((m, n) => Math.hypot(m.x - p.x, m.z - p.z) - Math.hypot(n.x - p.x, n.z - p.z))[0];
-      return foe ? { x: foe.x, z: foe.z } : { x: p.x, z: p.z };
-    }
     if (!dir) return { x: p.x, z: p.z }; // 점멸 탭: 바라보는 방향으로 최대 거리
     const d = Math.min(1, l / AIM_R) * RULES.flash.dist;
     return { x: p.x + dir.x * d, z: p.z + dir.z * d };
@@ -132,8 +146,7 @@ export function setupTouchControls(scene, { sx, sy, depth }) {
     const color = aim.cancel ? CANCEL_COLOR : AIM_COLOR;
     const l = Math.hypot(aim.dx, aim.dy);
     if (aim.key === 'q') {
-      if (l <= AIM_DEAD) return;
-      const dir = groundDir(aim.dx, aim.dy);
+      const dir = qDir(aim);
       const w = RULES.q.width, len = RULES.q.range;
       const nx = -dir.z * w, nz = dir.x * w;
       const ex = p.x + dir.x * len, ez = p.z + dir.z * len;

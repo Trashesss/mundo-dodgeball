@@ -51,10 +51,25 @@ try {
   await wait(50);
   assert.equal((await state()).target, null, 'release stops');
 
-  // Q 버튼을 위로 끌면 조준선이 보이고, 떼면 위쪽(z-)으로 던진다
+  // Q 버튼을 누르기만 하면 적 방향으로 조준되고, 떼면 적에게 던진다
   const q = await center('#sk-q');
+  const enemyDir = () => page.evaluate(() => {
+    const s = window.__game.scene.getScene('game'), p = s.player, e = s.enemy;
+    return Math.atan2(e.z - p.z, e.x - p.x);
+  });
+  const toEnemy = await enemyDir();
   await page.touchscreen.touchStart(q.x, q.y);
-  await page.touchscreen.touchMove(q.x, q.y - 120);
+  await page.touchscreen.touchEnd();
+  await wait(50);
+  const sTap = await state();
+  assert.ok(sTap.qCd > 0, 'q cast on tap');
+  assert.ok(Math.abs(sTap.facing - toEnemy) < 0.05, `q tap aims at enemy (${sTap.facing} vs ${toEnemy})`);
+  await page.evaluate(() => { const p = window.__game.scene.getScene('game').player; p.qCd = 0; p.castT = 0; });
+
+  // 위로 조금 끌면 적 방향에서 위쪽으로 일부만 돈다 (감도 완화)
+  const toEnemy2 = await enemyDir();
+  await page.touchscreen.touchStart(q.x, q.y);
+  await page.touchscreen.touchMove(q.x, q.y - 60);
   await wait(50);
   await page.screenshot({ path: 'output/touch-aim.png' }).catch(() => {});
   const row = await page.evaluate(() => [document.getElementById('joy-base'), document.getElementById('sk-q'), document.querySelector('#hud .skills')].map(el => { const r = el.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, left: r.left, right: r.right }; }));
@@ -64,7 +79,8 @@ try {
   await wait(50);
   const s2 = await state();
   assert.ok(s2.qCd > 0, 'q cast on release');
-  assert.ok(Math.abs(s2.facing + Math.PI / 2) < 0.05, `q thrown upward (facing ${s2.facing})`);
+  const turned = toEnemy2 - s2.facing; // 위쪽(z-)으로 돌수록 각도가 줄어든다
+  assert.ok(turned > 0.2 && turned < 1.2, `q drag turns partway (enemy ${toEnemy2}, thrown ${s2.facing})`);
 
   // 점멸: 왼쪽으로 반만 끌면 최대 거리의 절반쯤 이동
   const d = await center('#sk-d');
