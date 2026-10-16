@@ -56,7 +56,7 @@ function startAnalytics() {
       person_profiles: 'identified_only',
       autocapture: false,
       capture_pageview: false,
-      capture_pageleave: false,
+      capture_pageleave: true,
       disable_session_recording: true,
       opt_out_capturing_by_default: true,
     });
