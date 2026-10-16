@@ -1318,20 +1318,6 @@ $('practice-btn').addEventListener('click', () => {
   selectMenuView('practice');
   $('opt-diff').querySelector('button.on').focus();
 });
-// 웹에서는 아이폰·안드로이드 모두 화면 방향을 확실히 바꿀 수 없으니, 돌려 달라고 안내만 한다
-const landscapeQuery = matchMedia('(orientation: landscape)');
-const closeRotateHint = () => {
-  if ($('rotate-hint').classList.contains('hidden')) return;
-  $('rotate-hint').classList.add('hidden');
-  $('landscape-btn').focus();
-};
-$('landscape-btn').addEventListener('click', () => {
-  track('landscape_hint_opened');
-  $('rotate-hint').classList.remove('hidden');
-  $('rotate-hint-close').focus();
-});
-$('rotate-hint-close').addEventListener('click', closeRotateHint);
-landscapeQuery.addEventListener('change', (e) => { if (e.matches) closeRotateHint(); });
 $('mode-back-btn').addEventListener('click', () => {
   selectMenuView();
   $('practice-btn').focus();
