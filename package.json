@@ -12,7 +12,6 @@
     "start": "node tools/serve.mjs",
     "check:sim": "node tools/check-sim.mjs",
     "check:online": "node tools/check-online.mjs",
-    "check:quick": "node tools/check-quick.mjs",
     "check:touch": "node tools/check-touch.mjs",
     "server": "node server/index.mjs"
   },

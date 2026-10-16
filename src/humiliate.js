@@ -1,4 +1,4 @@
-// 사용자 지정 게임 승자의 굴욕 공유: 상대 이름을 넣은 문구와 짤 미리보기 링크를 복사한다
+// 친구와 1대1 승자의 굴욕 공유: 상대 이름을 넣은 문구와 짤 미리보기 링크를 복사한다
 import { track, createTrackingId } from './analytics.js';
 import { HUMILIATE_PATH, humiliateText } from './share.js';
 

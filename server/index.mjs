@@ -22,7 +22,6 @@ const ORIGINS = [
 
 const rooms = new Map();
 const connsByIp = new Map();
-let waiting = null; // 빠른 대전: 상대를 기다리는 연결 하나
 
 // nginx 뒤에서는 접속 주소가 항상 127.0.0.1 이므로, 로컬 프록시가 붙인 X-Forwarded-For 의 마지막 값을 쓴다
 function clientIp(req) {
@@ -68,14 +67,12 @@ wss.on('connection', (ws, req) => {
   let windowStart = Date.now();
   const conn = { ws, room: null, slot: -1 };
   const send = (msg) => ws.readyState === 1 && ws.send(JSON.stringify(msg));
-  const unqueue = () => { if (waiting === conn) waiting = null; };
   const detach = () => {
-    unqueue();
     if (conn.room && conn.slot >= 0) conn.room.leave(conn.slot, 'left');
     conn.room = null; conn.slot = -1;
   };
-  const openRoom = (quick = false) => {
-    const room = new Room(newCode(), { onEmpty: (r) => rooms.delete(r.code), quick });
+  const openRoom = () => {
+    const room = new Room(newCode(), { onEmpty: (r) => rooms.delete(r.code) });
     rooms.set(room.code, room);
     return room;
   };
@@ -95,23 +92,6 @@ wss.on('connection', (ws, req) => {
       conn.slot = conn.room.add(ws);
       return;
     }
-    if (msg.type === 'queue') {
-      if (waiting === conn) return;
-      detach();
-      const other = waiting;
-      if (!other || other.ws.readyState !== 1) {
-        waiting = conn;
-        send({ type: 'queued' });
-        return;
-      }
-      if (rooms.size >= MAX_ROOMS) { send({ type: 'error', code: 'busy' }); return; }
-      waiting = null;
-      const room = openRoom(true);
-      for (const c of [other, conn]) { c.room = room; c.slot = room.add(c.ws); }
-      room.startMatch();
-      return;
-    }
-    if (msg.type === 'unqueue') { unqueue(); return; }
     if (msg.type === 'join') {
       const target = isRoomCode(msg.room) ? rooms.get(msg.room) : null;
       if (!target) {
@@ -138,7 +118,6 @@ wss.on('connection', (ws, req) => {
   });
 
   ws.on('close', () => {
-    unqueue();
     const left = (connsByIp.get(ip) || 1) - 1;
     if (left > 0) connsByIp.set(ip, left); else connsByIp.delete(ip);
     if (conn.room && conn.slot >= 0) conn.room.disconnect(conn.slot, ws);

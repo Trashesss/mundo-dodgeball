@@ -12,9 +12,8 @@ const LIMIT = RULES.arenaR * 3; // 입력 좌표 허용 범위
 const num = (v) => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= LIMIT;
 
 export class Room {
-  constructor(code, { onEmpty, quick = false, now = () => performance.now() }) {
+  constructor(code, { onEmpty, now = () => performance.now() }) {
     this.code = code;
-    this.quick = quick; // 빠른 대전: 준비 단계 없이 바로 시작, 재대결 없음
     this.onEmpty = onEmpty;
     this.now = now;
     this.slots = [null, null];
@@ -103,7 +102,7 @@ export class Room {
         return;
       case 'input': return this.input(slot, msg);
       case 'rematch':
-        if (this.quick || this.phase !== 'over' || !this.slots.every(Boolean)) return;
+        if (this.phase !== 'over' || !this.slots.every(Boolean)) return;
         s.rematch = true;
         this.broadcastRematch();
         if (this.slots.every(x => x.rematch)) this.startMatch();
@@ -250,7 +249,7 @@ export class Room {
 
   welcome(slot) {
     const s = this.slots[slot];
-    this.send(slot, { type: 'joined', room: this.code, slot, token: s.token, quick: this.quick, phase: this.phase, round: this.round ?? 0, paused: this.paused });
+    this.send(slot, { type: 'joined', room: this.code, slot, token: s.token, phase: this.phase, round: this.round ?? 0, paused: this.paused });
   }
 
   lobbyState() {

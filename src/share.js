@@ -9,7 +9,7 @@ export function shareContent(difficulty, win) {
   return { heading, description: GAME_DESCRIPTION, title: `[문도 피구] ${heading}`, text: `[문도 피구] ${heading}` };
 }
 
-// 사용자 지정 게임 승자가 보내는 굴욕 공유. 미리보기는 고정 짤, 상대 이름은 복사 문구에만 들어간다.
+// 친구와 1대1 승자가 보내는 굴욕 공유. 미리보기는 고정 짤, 상대 이름은 복사 문구에만 들어간다.
 export const HUMILIATE_PATH = 'share/humiliate.html';
 export const HUMILIATE_TITLE = '넌 발로해도 이긴다 ㅋ';
 export const HUMILIATE_NAME_MAX = 12;

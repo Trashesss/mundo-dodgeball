@@ -897,7 +897,7 @@ class GameScene extends Phaser.Scene {
     HUD.clearFeeds();
     HUD.show(true, false, { mySlot: slot });
     this.analyticsMatch = {
-      match_id: createTrackingId(), difficulty: 'online', mode: Online.quick ? 'quick' : 'online', room: Online.room, source, ...referralContext,
+      match_id: createTrackingId(), difficulty: 'online', mode: 'online', room: Online.room, source, ...referralContext,
     };
   }
 
@@ -934,7 +934,7 @@ class GameScene extends Phaser.Scene {
     if (this.mode !== 'online' || this.state === 'over') return;
     this.state = 'over';
     const win = winner === this.mySlot;
-    HUD.onlineResult(win ? 'win' : 'lose', { quick: Online.quick, room: Online.room });
+    HUD.onlineResult(win ? 'win' : 'lose', { room: Online.room });
     this.trackFinished(win);
   }
 
@@ -942,13 +942,11 @@ class GameScene extends Phaser.Scene {
   onlineOpponentLeft() {
     if (this.mode !== 'online') return;
     const wasOver = this.state === 'over';
-    // 빠른 대전은 경기가 끝나면 서로 새 상대를 찾아 떠나므로 결과 화면을 그대로 둔다
-    if (wasOver && Online.quick) return;
     this.state = 'over';
     this.netPaused = false;
     HUD.banner(null);
     HUD.countdown(0);
-    HUD.onlineResult('left', { quick: Online.quick, room: Online.room });
+    HUD.onlineResult('left', { room: Online.room });
     if (!wasOver) track('online_opponent_left', this.analyticsMatch);
   }
 
@@ -1273,47 +1271,13 @@ document.getElementById('start-btn').addEventListener('click', async (event) => 
 const $ = (id) => document.getElementById(id);
 function selectMenuView(view = 'modes') {
   const practice = view === 'practice';
-  if (view !== 'quick-match') stopQuickSearch();
   $('menu').classList.toggle('practice-view', practice);
-  $('menu').classList.toggle('quick-match-view', view === 'quick-match');
   $('practice-heading').classList.toggle('hidden', !practice);
   $('mode-select').classList.toggle('hidden', view !== 'modes');
   $('practice-select').classList.toggle('hidden', !practice);
-  $('quick-match-notice').classList.toggle('hidden', view !== 'quick-match');
   $('select-title').textContent = practice ? '인공지능 상대 연습' : '게임 모드 선택';
   $('difficulty-label').textContent = practice ? '시간이 지날수록 경기장이 좁아집니다.' : '어떤 모드를 플레이할까요?';
 }
-// ---------- 빠른 대전 ----------
-let quickSearchTimer = null;
-const stopQuickSearch = () => clearInterval(quickSearchTimer);
-function startQuickSearch() {
-  Sound.unlock();
-  stopQuickSearch();
-  selectMenuView('quick-match');
-  $('quick-match-notice').dataset.state = 'searching';
-  $('quick-match-title').textContent = '상대를 찾는 중…';
-  $('quick-match-back-btn').textContent = '취소';
-  const start = performance.now();
-  const tick = () => {
-    const sec = Math.floor((performance.now() - start) / 1000);
-    $('quick-match-elapsed').textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
-  };
-  tick();
-  quickSearchTimer = setInterval(tick, 250);
-  $('quick-match-back-btn').focus();
-  Online.quickMatch();
-}
-$('quick-match-btn').addEventListener('click', () => {
-  track('quick_match_clicked', referralContext);
-  startQuickSearch();
-});
-$('quick-match-back-btn').addEventListener('click', () => {
-  if ($('quick-match-notice').dataset.state === 'searching') track('quick_match_cancelled', referralContext);
-  stopQuickSearch();
-  Online.cancelQueue();
-  selectMenuView();
-  $('quick-match-btn').focus();
-});
 $('practice-btn').addEventListener('click', () => {
   selectMenuView('practice');
   $('opt-diff').querySelector('button.on').focus();
@@ -1329,15 +1293,6 @@ const rematchStatus = (kind) => {
   return won ? '상대방이 배우러 오길 기다리는 중…' : '상대방이 가르쳐주길 기다리는 중…';
 };
 $('again-btn').addEventListener('click', () => {
-  if (scene().mode === 'online' && Online.quick) {
-    track('quick_match_next', scene().analyticsMatch);
-    Online.leave();
-    $('result').classList.add('hidden');
-    $('menu').classList.remove('hidden');
-    scene().backToMenu();
-    startQuickSearch();
-    return;
-  }
   if (scene().mode === 'online') {
     track('online_rematch_clicked', scene().analyticsMatch);
     $('again-btn').disabled = true;
@@ -1379,23 +1334,15 @@ Online.hooks = {
     if (scene().mode === 'online') scene().backToMenu();
     $('menu').classList.add('hidden');
   },
-  onQuickError: (text) => {
-    stopQuickSearch();
-    $('quick-match-notice').dataset.state = 'error';
-    $('quick-match-title').textContent = text;
-    $('quick-match-back-btn').textContent = '뒤로가기';
-  },
   onStart: (msg) => {
-    stopQuickSearch();
     const s = scene();
     $('menu').classList.add('hidden');
     $('result').classList.add('hidden');
-    if (s.mode !== 'online' || msg.round === 1) s.setupOnlineMatch(Online.slot, Online.quick ? 'quick' : s.mode === 'online' ? 'rematch' : 'online');
+    if (s.mode !== 'online' || msg.round === 1) s.setupOnlineMatch(Online.slot, s.mode === 'online' ? 'rematch' : 'online');
     s.startOnlineRound(msg);
   },
   // 새로고침·재연결로 진행 중인 경기에 다시 들어옴
   onResume: (msg) => {
-    stopQuickSearch();
     const s = scene();
     $('menu').classList.add('hidden');
     HUD.banner(null);

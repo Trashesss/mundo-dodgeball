@@ -140,20 +140,15 @@
         <p class="setup-subtitle" id="difficulty-label">어떤 모드를 플레이할까요?</p>
       </header>
       <div id="mode-select" class="mode-select">
-        <button id="quick-match-btn" class="mode-card" type="button">
-          <img src="assets/cartoon/mundo-quick-match-v4.png" alt="식칼을 든 문도 VS 물음표로 가려진 정체불명의 상대" width="240" height="160" />
-          <span class="mode-name">빠른 대전</span>
-          <span class="mode-description">새로운 상대와 바로 한 판</span>
+        <button id="online-btn" class="mode-card" type="button">
+          <img src="assets/cartoon/mundo-friends-v4.png" alt="집중해서 게임하는 문도와 발로 마우스를 누르며 웃는 문도" width="320" height="160" />
+          <span class="mode-name">친구와 1대1</span>
+          <span class="mode-description">상대방과 플레이</span>
         </button>
         <button id="practice-btn" class="mode-card" type="button">
           <img src="assets/cartoon/mundo-bot-v6.png" alt="" width="160" height="160" />
           <span class="mode-name">인공지능 상대 연습</span>
           <span class="mode-description">난이도를 골라 문도 봇과 한 판</span>
-        </button>
-        <button id="online-btn" class="mode-card" type="button">
-          <img src="assets/cartoon/mundo-friends-v4.png" alt="집중해서 게임하는 문도와 발로 마우스를 누르며 웃는 문도" width="320" height="160" />
-          <span class="mode-name">사용자 지정 게임</span>
-          <span class="mode-description">상대방과 플레이</span>
         </button>
         <div class="flash-prank" id="flash-prank">
           <button id="flash-swap-btn" type="button">점멸을 F로 바꾸기</button>
@@ -163,12 +158,6 @@
           </div>
         </div>
       </div>
-      <section id="quick-match-notice" class="quick-match-notice hidden" role="status" aria-live="polite" data-state="searching">
-        <img class="net-portrait" src="assets/cartoon/portrait-hud-v3.png" alt="" width="256" height="256" />
-        <h2 id="quick-match-title">상대를 찾는 중…</h2>
-        <p id="quick-match-elapsed" class="quick-match-elapsed" aria-hidden="true">0:00</p>
-        <button id="quick-match-back-btn" type="button">취소</button>
-      </section>
       <section id="practice-select" class="hidden" aria-labelledby="select-title">
       <div id="opt-diff" role="group" aria-labelledby="difficulty-label">
         <button type="button" data-v="easy" aria-pressed="false">
@@ -217,7 +206,7 @@
     <main class="lobby-card">
       <header class="lobby-heading">
         <p class="setup-brand">문도 <span>피구</span></p>
-        <h1 id="lobby-title">사용자 지정 게임</h1>
+        <h1 id="lobby-title">친구와 1대1</h1>
         <img class="lobby-brand-image" src="assets/cartoon/mundo-friends-v4.png" alt="" width="320" height="160" />
       </header>
       <p id="lobby-status" class="lobby-status" role="status">서버에 연결하는 중…</p>
