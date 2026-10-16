@@ -80,6 +80,7 @@ try {
   assert.equal(await text(b, 'result-title'), '승리!');
   assert.equal(await text(a, 'result-title'), '패배');
   for (const page of [a, b]) assert.equal(await text(page, 'again-btn'), '새로운 상대 찾기');
+  assert.ok(await b.$eval('#humiliate-btn', (el) => el.classList.contains('hidden')), 'quick match winner has no humiliate button');
 
   step('재대결 메시지는 무시됨');
   await a.evaluate(() => window.__mundoOnline.send({ type: 'rematch' }));

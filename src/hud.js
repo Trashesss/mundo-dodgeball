@@ -2,6 +2,7 @@
 import { RULES } from './rules.js';
 import { track, createTrackingId } from './analytics.js';
 import { DIFFICULTY_NAMES, shareContent } from './share.js';
+import { setHumiliateAvailable } from './humiliate.js';
 
 const $ = (id) => document.getElementById(id);
 let shareData;
@@ -127,13 +128,14 @@ export const HUD = {
 
   // 대인전 결과: win | lose | left(상대가 나감)
   // quick: 빠른 대전은 재대결 대신 새로운 상대를 찾는다 (상대가 나갔어도)
-  onlineResult(kind, { quick = false } = {}) {
+  onlineResult(kind, { quick = false, room } = {}) {
     resultVersion += 1;
     shareData = null;
     this.show(false);
     this.clearFeeds();
     this.banner(null);
     $('share-btn').classList.add('hidden');
+    setHumiliateAvailable(kind === 'win' && !quick, { mode: 'online', room });
     $('again-btn').classList.toggle('hidden', kind === 'left' && !quick);
     $('again-btn').disabled = false;
     $('again-btn').textContent = quick ? '새로운 상대 찾기' : kind === 'win' ? '다시 한 수 가르쳐주기' : '다시 한 수 배우기';
@@ -218,6 +220,7 @@ export const HUD = {
     $('share-btn').disabled = false;
     $('share-btn').classList.remove('hidden');
     $('share-btn').textContent = win ? '자랑하기' : '공유하기';
+    setHumiliateAvailable(false);
     $('again-btn').classList.remove('hidden');
     $('again-btn').disabled = false;
     $('again-btn').textContent = '다시 하기';

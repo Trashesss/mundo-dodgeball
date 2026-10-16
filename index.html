@@ -271,6 +271,7 @@
       <p id="result-subtitle" class="hidden"></p>
       <div class="result-actions">
         <button id="share-btn" type="button">자랑하기</button>
+        <button id="humiliate-btn" class="hidden" type="button" aria-haspopup="dialog">굴욕 선사하기</button>
         <button id="again-btn" type="button">다시 하기</button>
         <button id="menu-btn" type="button">뒤로가기</button>
       </div>
@@ -279,6 +280,23 @@
   </div>
 
   <div id="copy-snackbar" role="status" aria-live="polite" aria-atomic="true"></div>
+  <dialog id="humiliate-dialog" class="analytics-consent humiliate-dialog" aria-labelledby="humiliate-title">
+    <form id="humiliate-form" method="dialog">
+      <div class="consent-summary">
+        <h2 id="humiliate-title" tabindex="-1">굴욕 선사하기</h2>
+      </div>
+      <img class="humiliate-meme" src="assets/cartoon/mundo-victory-taunt-meme-v2.png" alt="쓰러진 문도 옆에서 다른 문도가 의자에 기대 발로 마우스를 조작하는 짤. 넌 발로해도 이긴다 ㅋ." width="1536" height="1024" loading="lazy" />
+      <label for="humiliate-name">상대 이름</label>
+      <input id="humiliate-name" type="text" maxlength="12" autocomplete="off" enterkeyhint="done" placeholder="비우면 '넌'으로 보내요" />
+      <p class="humiliate-preview-label">보낼 문구</p>
+      <p id="humiliate-preview" class="humiliate-preview" aria-live="polite"></p>
+      <p id="humiliate-status" class="humiliate-status" role="status"></p>
+      <div class="consent-actions">
+        <button id="humiliate-close" type="button">닫기</button>
+        <button id="humiliate-copy" type="submit">링크 복사하기</button>
+      </div>
+    </form>
+  </dialog>
   <dialog id="analytics-consent" class="analytics-consent" aria-labelledby="analytics-consent-title" aria-describedby="analytics-consent-description">
     <div class="consent-summary">
       <h2 id="analytics-consent-title" tabindex="-1" autofocus>개인정보 수집·이용 동의 <span>(선택)</span></h2>

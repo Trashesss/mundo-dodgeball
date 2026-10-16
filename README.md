@@ -34,10 +34,13 @@ localhost 에서 열면 게임은 `ws://localhost:3000/ws` 에 붙는다. 배포
 - 승리 결과에서는 `자랑하기`, 패배 결과에서는 `공유하기` 버튼을 표시한다. 공유 메시지에는 난이도와 결과를 표시하고, 승패 모두 `날아오는 식칼을 피하고, 상대 문도를 쓰러뜨리는 피구 게임` 설명을 사용한다.
 - `share/`의 난이도·승패별 정적 페이지가 메신저용 OG/Twitter 문구와 이미지를 제공하고, 방문자는 추적 쿼리를 유지한 채 게임으로 이동한다. 문구 또는 디자인 수정 후 `node tools/render-share-preview.mjs`로 페이지와 이미지를 함께 다시 생성한다.
 
+- 사용자 지정 게임에서 이긴 쪽에는 `굴욕 선사하기` 버튼을 표시한다(빠른 대전·패배·봇전에는 없음). 모달에서 상대 이름(최대 12자, 비워도 됨)을 넣으면 `{이름}? 발로 해도 이긴다 ㅋ`(비우면 `넌 발로 해도 이긴다 ㅋ`)와 `share/humiliate.html` 링크를 함께 복사한다. 링크 미리보기는 고정 짤(`assets/cartoon/share-preview-humiliate.png`)과 제목 `넌 발로해도 이긴다 ㅋ`이고, 이름은 복사 문구에만 들어간다.
+
 - `share_clicked`: 공유 버튼 클릭마다 새 무작위 UUID `share_id` 생성. `match_id`, `difficulty`, `result` 포함
 - `share_completed`: 네이티브 공유 API 성공 (`method: native`) 또는 클립보드 복사 성공 (`method: clipboard`). 실제 친구에게 전달·열람되었다는 뜻은 아니다.
 - `share_cancelled`: 네이티브 공유창 취소
 - `share_failed`: 자동 복사 실패. 복사 완료로 집계하지 않는다.
+- `humiliate_clicked`: 굴욕 모달 열기 (`mode: online`, `room`). 복사 결과는 `share_completed` / `share_failed`에 `kind: humiliate`, `share_id`, `room`을 붙여 보내며, 입력한 이름은 보내지 않는다. 링크는 `utm_medium=humiliate`.
 - 공유 URL에 `share_id`, `utm_source=friend`, `utm_medium=share`를 붙인다. 기존 쿼리·해시는 전달하지 않는다. 사용자 ID나 이메일을 링크에 넣지 않는다.
 - `invite_opened`: 유효한 UUID v4 `share_id`가 있는 페이지 방문. 새로고침도 이벤트가 발생하므로 유입 성과는 고유 사용자로 집계한다. 자기 링크 방문이나 전달된 링크의 재공유도 포함될 수 있어 실제 친구 수와 같지는 않다.
 - `game_started`, `game_finished`에는 `entry_source` (`share` / `direct`)를 추가하고 공유 유입이면 `referral_share_id`도 붙인다. 이 귀속은 현재 페이지와 그 안의 재도전 동안 유지되며, 추적 파라미터 없는 새 방문에는 이어지지 않는다. `source` (`menu` / `replay`)는 게임 시작 방식으로 별도 유지한다.

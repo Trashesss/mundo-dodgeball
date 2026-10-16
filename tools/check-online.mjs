@@ -103,6 +103,30 @@ try {
   assert.ok(await host.$eval('#share-btn', (el) => el.classList.contains('hidden')));
   await guest.screenshot({ path: 'output/online-result-guest.png' });
 
+  // 굴욕 선사하기: 승자에게만 버튼, 상대 이름을 넣은 문구와 짤 미리보기 링크를 복사
+  step('굴욕 선사하기');
+  assert.ok(await guest.$eval('#humiliate-btn', (el) => el.classList.contains('hidden')), 'loser has no humiliate button');
+  assert.ok(await host.$eval('#humiliate-btn', (el) => !el.classList.contains('hidden')), 'winner has humiliate button');
+  await host.browser().defaultBrowserContext().overridePermissions(new URL(base).origin, ['clipboard-read', 'clipboard-write', 'clipboard-sanitized-write']);
+  await host.click('#humiliate-btn');
+  await host.waitForFunction(() => document.getElementById('humiliate-dialog').open);
+  assert.equal(await host.$eval('#humiliate-preview', (el) => el.textContent), '넌 발로 해도 이긴다 ㅋ');
+  await host.type('#humiliate-name', '철수');
+  assert.equal(await host.$eval('#humiliate-preview', (el) => el.textContent), '철수? 발로 해도 이긴다 ㅋ');
+  await host.screenshot({ path: 'output/humiliate-dialog.png' });
+  await host.setViewport({ width: 390, height: 844 });
+  await host.screenshot({ path: 'output/humiliate-dialog-mobile.png' });
+  await host.setViewport({ width: 1200, height: 800 });
+  await host.click('#humiliate-copy');
+  await host.waitForFunction(() => !document.getElementById('humiliate-dialog').open);
+  const copied = await host.evaluate(() => navigator.clipboard.readText());
+  assert.match(copied, /^철수\? 발로 해도 이긴다 ㅋ\nhttp:\/\/localhost:\d+\/share\/humiliate\.html\?share_id=[0-9a-f-]{36}&utm_source=friend&utm_medium=humiliate$/);
+  assert.match(await host.$eval('#copy-snackbar', (el) => el.textContent), /굴욕 링크 복사 완료/);
+  await host.click('#humiliate-btn');
+  await host.waitForFunction(() => document.getElementById('humiliate-dialog').open);
+  await host.click('#humiliate-close');
+  await host.waitForFunction(() => !document.getElementById('humiliate-dialog').open);
+
   // 재대결: 한쪽이 누르면 상대에게 안내, 둘 다 누르면 다시 시작
   step('재대결: 한쪽이 누르면 상대에게 안내, 둘 다 누르면 다시 시작');
   await host.click('#again-btn');
@@ -148,7 +172,7 @@ try {
 
   fs.mkdirSync('output', { recursive: true });
   assert.deepEqual(errors, []);
-  console.log('Online: room link, lobby ready, countdown, movement sync, server hit + both emotes, KO result, rematch, refresh rejoin, opponent-left notice and missing room passed.');
+  console.log('Online: room link, lobby ready, countdown, movement sync, server hit + both emotes, KO result, humiliate share, rematch, refresh rejoin, opponent-left notice and missing room passed.');
 } finally {
   await Promise.all(browsers.map((b) => b.close()));
   web.close();

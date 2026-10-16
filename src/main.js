@@ -934,7 +934,7 @@ class GameScene extends Phaser.Scene {
     if (this.mode !== 'online' || this.state === 'over') return;
     this.state = 'over';
     const win = winner === this.mySlot;
-    HUD.onlineResult(win ? 'win' : 'lose', { quick: Online.quick });
+    HUD.onlineResult(win ? 'win' : 'lose', { quick: Online.quick, room: Online.room });
     this.trackFinished(win);
   }
 
@@ -948,7 +948,7 @@ class GameScene extends Phaser.Scene {
     this.netPaused = false;
     HUD.banner(null);
     HUD.countdown(0);
-    HUD.onlineResult('left', { quick: Online.quick });
+    HUD.onlineResult('left', { quick: Online.quick, room: Online.room });
     if (!wasOver) track('online_opponent_left', this.analyticsMatch);
   }
 
