@@ -873,7 +873,7 @@ body.touch .skill.aiming { border-color: #fff; box-shadow: 0 0 14px #5ff4ff; }
     margin-top: 6px; color: var(--entry-muted); font-size: 14px;
   }
 
-  /* 큰 플레이 버튼 + 보조 타일 두 개 */
+  /* 사용자 지정 게임이 주 버튼, 빠른 대전·연습은 보조 타일 */
   #menu:not(.practice-view):not(.quick-match-view) .mode-select {
     grid-template-columns: 1fr 1fr; gap: 12px;
   }
@@ -891,16 +891,16 @@ body.touch .skill.aiming { border-color: #fff; box-shadow: 0 0 14px #5ff4ff; }
   #menu:not(.practice-view):not(.quick-match-view) .mode-name { align-self: center; font-size: 18px; line-height: 1.2; }
   #menu:not(.practice-view):not(.quick-match-view) .mode-description { display: none; }
   #menu:not(.practice-view):not(.quick-match-view) #practice-btn { background: #2f4d57; }
-  #menu:not(.practice-view):not(.quick-match-view) #online-btn { background: #3d3a55; }
+  #menu:not(.practice-view):not(.quick-match-view) #quick-match-btn { grid-column: auto; background: #3d3a55; }
 
-  #menu:not(.practice-view):not(.quick-match-view) #quick-match-btn {
-    grid-column: 1 / -1; padding: 14px 12px 16px;
+  #menu:not(.practice-view):not(.quick-match-view) #online-btn {
+    order: -1; grid-column: 1 / -1; gap: 2px; padding: 10px 12px 12px;
     background: linear-gradient(#ffe38f, #f0bf4c); color: #3a2a0c;
     box-shadow: inset 0 4px #fff6cf, 0 0 28px #f4d47d55;
   }
-  #menu:not(.practice-view):not(.quick-match-view) #quick-match-btn img { height: clamp(80px, 15dvh, 128px); }
-  #menu:not(.practice-view):not(.quick-match-view) #quick-match-btn .mode-name {
-    font-size: 32px; letter-spacing: -1px; text-shadow: 0 2px #fff3c4;
+  #menu:not(.practice-view):not(.quick-match-view) #online-btn img { height: clamp(60px, 10dvh, 84px); }
+  #menu:not(.practice-view):not(.quick-match-view) #online-btn .mode-name {
+    font-size: 24px; letter-spacing: -1px; text-shadow: 0 2px #fff3c4;
   }
 
   /* 장난 버튼과 고지문은 눈에 덜 띄게 */
@@ -918,9 +918,9 @@ body.touch .skill.aiming { border-color: #fff; box-shadow: 0 0 14px #5ff4ff; }
   #menu:not(.practice-view):not(.quick-match-view) .setup-portrait { width: 96px; height: 96px; }
   #menu:not(.practice-view):not(.quick-match-view) .setup-brand { font-size: 44px; }
   #menu:not(.practice-view):not(.quick-match-view) .mode-select { gap: 10px; }
-  #menu:not(.practice-view):not(.quick-match-view) #quick-match-btn { padding-block: 10px 12px; }
-  #menu:not(.practice-view):not(.quick-match-view) #quick-match-btn img { height: 72px; }
-  #menu:not(.practice-view):not(.quick-match-view) #quick-match-btn .mode-name { font-size: 28px; }
   #menu:not(.practice-view):not(.quick-match-view) .mode-card img { height: 52px; }
+  #menu:not(.practice-view):not(.quick-match-view) #online-btn { padding-block: 8px 10px; }
+  #menu:not(.practice-view):not(.quick-match-view) #online-btn img { height: 52px; }
+  #menu:not(.practice-view):not(.quick-match-view) #online-btn .mode-name { font-size: 21px; }
   #menu:not(.practice-view):not(.quick-match-view) .flash-prank { margin-top: 2px; }
 }
