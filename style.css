@@ -605,23 +605,44 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
   .practice-view #mode-back-btn:hover { background: #43555c; color: var(--entry-text); }
 }
 #lobby button:active { transform: translateY(1px); }
+/* 모바일 사용자 지정 게임: 상자 두 개 대신 큰 버튼 하나와 코드 입력 한 줄 */
 @media (max-width: 600px) {
-  #lobby { padding: 16px; }
-  .lobby-heading { grid-template-columns: 1fr 128px; gap: 6px 8px; margin-bottom: 12px; }
+  #lobby { align-items: stretch; padding: 16px 16px max(16px, env(safe-area-inset-bottom)); }
+  .lobby-card { display: flex; flex-direction: column; width: min(420px, 100%); min-height: 100%; }
+  .lobby-heading { grid-template-columns: 1fr; grid-template-areas: 'art' 'brand' 'title'; justify-items: center; gap: 0; margin: auto 0 28px; text-align: center; }
+  .lobby-brand-image { justify-self: center; width: min(240px, 64vw); height: auto; aspect-ratio: 2 / 1; margin-bottom: 10px; }
   .lobby-card .setup-brand { font-size: 18px; }
-  #lobby-title { font-size: 25px; }
-  .lobby-brand-image { width: 128px; height: 58px; }
-  .lobby-status { font-size: 14px; margin-bottom: 10px; }
+  #lobby-title { font-size: 32px; text-shadow: 0 4px #08171f; }
+  .lobby-status { font-size: 14px; margin-bottom: 10px; text-align: center; }
   .lobby-entry, .lobby-room { grid-template-columns: 1fr; gap: 12px; }
+
+  .lobby-entry { gap: 0; }
+  .lobby-entry .lobby-panel { padding: 0; border: 0; background: none; }
+  .lobby-create-panel h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .lobby-create-panel p { order: 1; align-items: center; min-height: 0; margin: 10px 0 0; font-size: 13px; text-align: center; }
+  .lobby-create-panel p span:first-child { display: none; }
+  #lobby-create { min-height: 64px; border-width: 3px; border-radius: 16px; font-size: 24px; box-shadow: inset 0 4px #ffffff55, 0 0 24px #b9e39e33; }
+
+  #lobby-join-form { display: grid; grid-template-columns: 1fr auto; column-gap: 8px; }
+  #lobby-join-form::before {
+    content: '또는'; grid-column: 1 / -1; margin: 24px 0 18px; color: var(--entry-muted); font-size: 14px; text-align: center;
+    background: linear-gradient(#52676d, #52676d) left center / calc(50% - 32px) 1px no-repeat,
+                linear-gradient(#52676d, #52676d) right center / calc(50% - 32px) 1px no-repeat;
+  }
+  #lobby-join-form label { grid-column: 1 / -1; margin-bottom: 8px; color: var(--entry-muted); font-size: 15px; }
+  #lobby-join-code { min-height: 56px; font-size: 20px; text-align: center; letter-spacing: 4px; }
+  #lobby-join { width: auto; min-height: 56px; margin: 0; padding: 0 20px; }
+  #lobby-join-status { grid-column: 1 / -1; grid-row: 4; min-height: 21px; margin: 8px 0 0; font-size: 13px; text-align: center; }
+
   .lobby-panel { padding: 16px; }
-  .lobby-panel h2, #lobby-join-form label { margin-bottom: 12px; font-size: 18px; }
-  .lobby-create-panel p { font-size: 14px; }
-  #lobby-join-status { min-height: 3em; }
+  .lobby-panel h2 { margin-bottom: 12px; font-size: 18px; }
   .lobby-code { min-height: 60px; padding-block: 8px; margin-bottom: 12px; }
   .lobby-code strong { font-size: 30px; letter-spacing: 3px; }
   .lobby-players { min-height: 60px; margin-bottom: 12px; }
   .lobby-players li { padding: 12px 4px; gap: 6px; }
-  .lobby-actions { margin-top: 10px; }
+
+  .lobby-actions { margin-top: auto; padding-top: 24px; }
+}
 }
 @media (max-height: 600px) {
   #lobby { padding: 12px 16px; }
