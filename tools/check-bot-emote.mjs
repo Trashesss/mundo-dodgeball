@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import puppeteer from 'puppeteer-core';
 import { serve } from './serve.mjs';
+import { skipConsent } from './skip-consent.mjs';
 
 const server = await serve(0);
 const browser = await puppeteer.launch({
@@ -13,6 +14,7 @@ try {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.setViewport({ width: 1440, height: 1000 });
+  await skipConsent(page);
   await page.goto(`http://localhost:${server.address().port}/`);
   await page.waitForFunction(() => window.__game?.scene.getScene('game').state === 'menu');
   await page.click('#practice-btn');

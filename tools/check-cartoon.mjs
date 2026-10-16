@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import puppeteer from 'puppeteer-core';
 import { serve } from './serve.mjs';
+import { skipConsent } from './skip-consent.mjs';
 import { THROW, throwPose } from '../src/throw-motion.js';
 import { RULES } from '../src/rules.js';
 
@@ -37,6 +38,7 @@ try {
   await page.setViewport({ width: 1440, height: 1000 });
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
+  await skipConsent(page);
   await page.goto(`http://localhost:${server.address().port}/`);
   await page.waitForFunction(() => window.__game?.scene.getScene('game').state === 'menu');
   await page.click('#practice-btn');

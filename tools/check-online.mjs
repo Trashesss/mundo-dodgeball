@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import { spawn } from 'node:child_process';
 import puppeteer from 'puppeteer-core';
 import { serve } from './serve.mjs';
+import { skipConsent } from './skip-consent.mjs';
 
 const WS_PORT = 3100 + Math.floor(Math.random() * 500);
 const gameServer = spawn(process.execPath, ['server/index.mjs'], {
@@ -32,6 +33,7 @@ const open = async (url) => {
   const [page] = await browser.pages();
   page.on('pageerror', (error) => errors.push(error.message));
   await page.setViewport({ width: 1200, height: 800 });
+  await skipConsent(page);
   await page.goto(url);
   return page;
 };

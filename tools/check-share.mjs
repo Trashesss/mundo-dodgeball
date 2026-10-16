@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import puppeteer from 'puppeteer-core';
 import { serve } from './serve.mjs';
+import { skipConsent } from './skip-consent.mjs';
 import { DIFFICULTY_NAMES, shareContent } from '../src/share.js';
 
 const server = await serve(0);
@@ -13,6 +14,7 @@ try {
   const page = await browser.newPage();
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
+  await skipConsent(page);
   await page.goto(`http://localhost:${server.address().port}/?test=1#result`);
   await page.waitForFunction(() => window.__game?.scene.getScene('game').state === 'menu');
   await page.evaluate(async () => {
@@ -55,14 +57,18 @@ try {
   });
   await page.click('#share-btn');
   await page.waitForFunction(() => !document.getElementById('share-btn').disabled);
-  assert.equal(await page.$eval('#share-status', el => el.textContent), '');
+  assert.match(await page.$eval('#share-status', el => el.textContent), /^복사하지 못했어요/, 'Clipboard failure explains what to do');
   await page.evaluate(() => {
     window.showResult();
     Object.defineProperty(navigator, 'share', { configurable: true, value: async () => { throw new DOMException('Canceled', 'AbortError'); } });
+    // 공유 시트는 터치 기기에서만 연다
+    window.realMatchMedia = window.matchMedia;
+    window.matchMedia = (query) => query === '(pointer: coarse)' ? { matches: true } : window.realMatchMedia(query);
   });
   await page.click('#share-btn');
   await page.waitForFunction(() => !document.getElementById('share-btn').disabled);
-  assert.equal(await page.$eval('#share-status', el => el.textContent), '');
+  assert.equal(await page.$eval('#share-status', el => el.textContent), '', 'Cancelling the share sheet stays quiet');
+  await page.evaluate(() => { window.matchMedia = window.realMatchMedia; });
   fs.mkdirSync('output', { recursive: true });
   for (const [width, height] of [[1440, 1000], [390, 844], [667, 375]]) {
     await page.setViewport({ width, height });
@@ -75,6 +81,7 @@ try {
   }
   assert.deepEqual(errors, []);
   const crawler = await browser.newPage();
+  await skipConsent(crawler);
   await crawler.setJavaScriptEnabled(false);
   for (const difficulty of Object.keys(DIFFICULTY_NAMES)) {
     for (const result of ['win', 'loss']) {

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import puppeteer from 'puppeteer-core';
 import { serve } from './serve.mjs';
+import { skipConsent } from './skip-consent.mjs';
 
 const server = await serve(0);
 const browser = await puppeteer.launch({
@@ -15,6 +16,7 @@ try {
     viewport: { width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
     userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148',
   });
+  await skipConsent(page);
   await page.goto(`http://localhost:${server.address().port}/`);
   await page.waitForFunction(() => window.__game?.scene.getScene('game').state === 'menu');
   await page.tap('#practice-btn');
