@@ -254,6 +254,42 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 .riot-disclaimer p { margin: 0; }
 .creator-contact a { color: var(--entry-text); text-underline-offset: 3px; }
 .creator-contact a:focus-visible { outline: 2px solid var(--entry-green); outline-offset: 4px; }
+.analytics-consent {
+  margin: auto; padding: 24px; width: min(560px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain;
+  border: 1px solid #668786; border-radius: 16px; background: #142b33;
+  color: var(--entry-text); text-align: left; font: 13px/1.65 sans-serif;
+  word-break: keep-all; overflow-wrap: anywhere;
+}
+.analytics-consent::backdrop { background: #030c13b8; backdrop-filter: blur(5px); }
+.consent-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.consent-summary h2 { margin: 0; font: 18px/1.4 'Jua', sans-serif; }
+.consent-summary h2:focus { outline: none; }
+.consent-summary h2 span { color: var(--entry-green); white-space: nowrap; }
+.analytics-consent p { margin: 10px 0 0; color: var(--entry-muted); }
+.analytics-consent details { margin-top: 10px; }
+.analytics-consent summary { cursor: pointer; text-underline-offset: 3px; }
+.analytics-consent a { color: var(--entry-green); text-underline-offset: 3px; }
+.analytics-consent button { min-height: 44px; padding: 10px 16px; border: 1px solid #668786; border-radius: 10px; background: #263f48; color: var(--entry-text); font: 16px/1.2 'Jua', sans-serif; cursor: pointer; }
+#analytics-settings {
+  position: fixed; top: max(20px, env(safe-area-inset-top)); right: max(24px, env(safe-area-inset-right));
+  z-index: 1; display: grid; place-items: center; width: 44px; height: 44px; padding: 0;
+  border: 1px solid #668786; border-radius: 12px; background: #142b33; color: var(--entry-muted); cursor: pointer;
+}
+#analytics-settings svg { display: block; }
+#analytics-settings:active { background: #304c53; }
+#menu:is(.practice-view, .quick-match-view) #analytics-settings { display: none; }
+@media (hover: hover) {
+  #analytics-settings:hover { background: #263f48; color: var(--entry-text); }
+}
+.consent-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+.consent-actions #analytics-accept { background: var(--entry-green); border-color: var(--entry-green); color: #172c26; }
+@media (max-width: 600px) {
+  #analytics-settings { top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); }
+  .analytics-consent { padding: 18px; font-size: 13px; }
+  .consent-summary h2 { font-size: 16px; }
+  .consent-actions button { flex: 1; padding-inline: 8px; }
+}
 #menu:is(.practice-view, .quick-match-view) .riot-disclaimer { display: none; }
 .setup-heading { text-align: center; }
 .setup-intro { display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 18px; }

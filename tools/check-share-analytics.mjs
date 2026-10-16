@@ -10,6 +10,7 @@ const browser = await puppeteer.launch({
 });
 try {
   const page = await browser.newPage();
+  await page.setViewport({ width: 1100, height: 900, hasTouch: true });
   const errors = [];
   const posthogRequests = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -27,6 +28,7 @@ try {
     return request.continue();
   });
   await page.evaluateOnNewDocument(() => {
+    localStorage.setItem('mundo-analytics-consent-v1', 'accepted');
     window.events = [];
     window.posthog = { init() {}, capture(name, properties) { window.events.push({ name, properties }); } };
   });
@@ -46,6 +48,7 @@ try {
   await page.click('#share-btn');
   await page.waitForFunction(() => !document.getElementById('share-btn').disabled);
   let events = await page.evaluate(() => window.events);
+  events = events.filter(event => event.name !== '$pageview');
   assert.deepEqual(events.map(event => event.name), ['invite_opened', 'game_started', 'game_finished', 'share_clicked', 'share_completed']);
   assert.equal(events[0].properties.share_id, incomingId);
   for (const event of events.slice(1, 3)) {
@@ -109,7 +112,7 @@ try {
     await page.goto(baseUrl + suffix);
     await page.waitForFunction(() => window.__game?.scene.getScene('game').state === 'menu');
     await page.evaluate(() => window.__game.scene.getScene('game').startMatch({ diff: 'normal' }));
-    events = await page.evaluate(() => window.events);
+    events = await page.evaluate(() => window.events.filter(event => event.name !== '$pageview'));
     assert.deepEqual(events.map(event => event.name), ['game_started']);
     assert.equal(events[0].properties.entry_source, 'direct');
     assert.equal(events[0].properties.referral_share_id, undefined);

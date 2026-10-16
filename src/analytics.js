@@ -4,6 +4,16 @@ const API_HOST = 'https://us.i.posthog.com';
 const localHost = ['localhost', '127.0.0.1', '[::1]', '::1'].includes(window.location.hostname);
 const enabled = !localHost && /^https?:$/.test(window.location.protocol)
   && !window.location.pathname.startsWith('/tools/');
+export const CONSENT_KEY = 'mundo-analytics-consent-v1';
+function readConsent() {
+  try {
+    const value = localStorage.getItem(CONSENT_KEY);
+    return value === 'accepted' || value === 'declined' ? value : null;
+  } catch { return null; }
+}
+let consent = readConsent();
+let initialized = false;
+export const getAnalyticsConsent = () => consent;
 
 // Keep attribution for this page visit, including rematches. Direct visits start fresh.
 const incomingShareId = new URLSearchParams(window.location.search).get('share_id');
@@ -21,7 +31,8 @@ export function createTrackingId() {
     });
 }
 
-if (enabled) {
+function startAnalytics() {
+  if (!enabled || consent !== 'accepted' || initialized) return;
   try {
     // Queue initialization and captures while the async SDK loads.
     if (!window.posthog) {
@@ -29,7 +40,9 @@ if (enabled) {
       posthog._i = [];
       posthog.__SV = 1;
       posthog.init = (token, options) => posthog._i.push([token, options, 'posthog']);
-      posthog.capture = (...args) => posthog.push(['capture', ...args]);
+      for (const method of ['capture', 'opt_in_capturing', 'opt_out_capturing']) {
+        posthog[method] = (...args) => posthog.push([method, ...args]);
+      }
       window.posthog = posthog;
       const script = document.createElement('script');
       script.async = true;
@@ -42,16 +55,22 @@ if (enabled) {
       defaults: '2026-05-30',
       person_profiles: 'identified_only',
       autocapture: false,
-      capture_pageview: true,
+      capture_pageview: false,
+      capture_pageleave: false,
       disable_session_recording: true,
+      opt_out_capturing_by_default: true,
     });
+    initialized = true;
+    window.posthog.opt_in_capturing?.();
+    track('$pageview');
+    if (referralShareId) track('invite_opened', { share_id: referralShareId, ...referralContext });
   } catch {
     // Analytics must never prevent the game from starting.
   }
 }
 
 export function track(event, properties = {}) {
-  if (!enabled) return;
+  if (!enabled || consent !== 'accepted') return;
   try {
     window.posthog?.capture(event, properties);
   } catch {
@@ -59,4 +78,25 @@ export function track(event, properties = {}) {
   }
 }
 
-if (referralShareId) track('invite_opened', { share_id: referralShareId, ...referralContext });
+function applyConsent(value) {
+  const previous = consent;
+  consent = value;
+  if (consent === 'accepted') {
+    if (!initialized) startAnalytics();
+    else if (previous !== 'accepted') window.posthog?.opt_in_capturing?.();
+  } else if (initialized) {
+    window.posthog?.opt_out_capturing?.({ clear_persistence: true });
+  }
+  window.dispatchEvent(new Event('analytics-consent-change'));
+}
+
+export function setAnalyticsConsent(value) {
+  if (value !== 'accepted' && value !== 'declined') return;
+  try { localStorage.setItem(CONSENT_KEY, value); } catch { /* Keep this visit's choice. */ }
+  applyConsent(value);
+}
+
+window.addEventListener('storage', event => {
+  if (event.key === CONSENT_KEY || event.key === null) applyConsent(readConsent());
+});
+startAnalytics();
