@@ -781,30 +781,56 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
   .practice-view .difficulty-name { font-size: 21px; }
   .practice-view .difficulty-description { font-size: 11px; margin-top: 6px; }
 }
+/* 모바일 연습: 사용자 지정 게임처럼 로고를 가운데에, 난이도는 두 줄 카드로 */
 @media (max-width: 600px) {
-  .practice-view .match-setup { max-width: 520px; grid-template-columns: 1fr; gap: 20px; }
-  .practice-view .setup-heading { grid-template-areas: 'brand art' 'title art' 'subtitle art'; grid-template-columns: 1fr 112px; column-gap: 12px; align-items: center; }
-  .practice-view .practice-heading .setup-brand { font-size: 20px; margin-bottom: 12px; }
-  .practice-view #select-title { font-size: 27px; margin-bottom: 8px; }
-  .practice-view #difficulty-label { font-size: 12px; max-width: 230px; }
-  .practice-art { width: 112px; height: 130px; margin: 0; }
-  .practice-view #opt-diff { gap: 8px; }
-  .practice-view #opt-diff { grid-template-columns: 1fr; }
-  .practice-view #opt-diff button { display: grid; grid-template-columns: 58px 64px 1fr; gap: 8px; align-items: center; min-height: 64px; padding: 10px 34px 10px 12px; }
-  .practice-view .difficulty-top { width: auto; }
-  .practice-view .difficulty-meter { display: none; }
-  .practice-view .difficulty-name { font-size: 21px; }
-  .practice-view .difficulty-description { font-size: 12px; margin: 0; }
-  .practice-view .difficulty-check { position: absolute; right: 10px; top: calc(50% - 10px); }
-  .practice-view .setup-actions { margin-top: 14px; }
+  /* 화면은 고정하고 난이도 목록만 스크롤한다 */
+  #menu.practice-view { align-items: stretch; overflow: hidden; padding: 16px 16px max(16px, env(safe-area-inset-bottom)); }
+  .practice-view .match-setup { display: flex; flex-direction: column; align-items: stretch; gap: 0; width: min(420px, 100%); height: 100%; }
+  .practice-view :is(#practice-select, .setup-actions) { display: contents; }
+  .practice-view .setup-heading { grid-template-areas: 'art' 'brand' 'title' 'subtitle'; grid-template-columns: 1fr; justify-items: center; margin: auto 0 20px; text-align: center; }
+  .practice-art { width: clamp(96px, 18dvh, 150px); height: clamp(96px, 18dvh, 150px); margin: 0 0 6px; transform: none; }
+  .practice-view .practice-heading .setup-brand { margin: 0; font-size: 18px; }
+  .practice-view #select-title { margin: 0 0 6px; font-size: 32px; text-shadow: 0 4px #08171f; }
+  .practice-view #difficulty-label { color: var(--entry-muted); font-size: 13px; }
+
+  .practice-view #opt-diff { flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; grid-template-columns: 1fr; gap: 8px; padding: 2px; margin: -2px -2px 18px; }
+  .practice-view #opt-diff button {
+    display: grid; grid-template-columns: 44px 1fr; grid-template-areas: 'meter name' 'meter desc';
+    column-gap: 14px; align-items: center; min-height: 60px; padding: 10px 14px; text-align: left;
+  }
+  .practice-view .difficulty-top { display: none; }
+  .practice-view .difficulty-meter { grid-area: meter; justify-self: center; gap: 4px; height: 26px; margin: 0; }
+  .practice-view .difficulty-meter i { width: 7px; height: 10px; }
+  .practice-view .difficulty-meter i:nth-child(2) { height: 16px; }
+  .practice-view .difficulty-meter i:nth-child(3) { height: 21px; }
+  .practice-view .difficulty-meter i:nth-child(4) { height: 26px; }
+  .practice-view .difficulty-name { grid-area: name; align-self: end; font-size: 21px; line-height: 1.15; }
+  .practice-view .difficulty-description { grid-area: desc; align-self: start; margin: 2px 0 0; font-size: 12px; }
+
+  /* 쌍둥이는 난이도가 아니라 다른 방식이라 따로 뗀다 */
+  .practice-view #opt-diff::after {
+    content: '특수 모드'; order: 1; margin-top: 8px; color: var(--entry-muted); font-size: 13px; text-align: center;
+    background: linear-gradient(#52676d, #52676d) left center / calc(50% - 44px) 1px no-repeat,
+                linear-gradient(#52676d, #52676d) right center / calc(50% - 44px) 1px no-repeat;
+  }
+  .practice-view #opt-diff button[data-v='twins'] { order: 2; }
+  .practice-view #opt-diff button[data-v='twins'] .difficulty-meter { display: none; }
+  .practice-view #opt-diff button[data-v='twins'] .difficulty-top { display: block; grid-area: meter; text-align: center; }
+  .practice-view #opt-diff button[data-v='twins'] .difficulty-check { display: none; }
+
+  .practice-view .setup-actions #start-btn { min-height: 64px; margin: auto 0 10px; border-radius: 16px; font-size: 24px; box-shadow: inset 0 4px #ffffff55, 0 0 24px #b9e39e33; }
 }
-@media (max-width: 600px) and (max-height: 650px) {
-  .practice-view .match-setup { gap: 12px; }
-  .practice-view .practice-heading .setup-brand { margin-bottom: 6px; font-size: 18px; }
-  .practice-view #select-title { font-size: 24px; }
-  .practice-art { height: 100px; }
-  .practice-view #opt-diff button { min-height: 54px; padding-block: 6px; }
-  .practice-view .setup-actions #start-btn, .practice-view #mode-back-btn { min-height: 46px; padding: 8px; }
+@media (max-width: 600px) and (max-height: 700px) {
+  .practice-view .setup-heading { margin-bottom: 12px; }
+  .practice-art { width: 72px; height: 72px; margin-bottom: 2px; }
+  .practice-view #select-title { margin-bottom: 2px; font-size: 26px; }
+  .practice-view #difficulty-label { font-size: 12px; }
+  .practice-view #opt-diff { gap: 6px; margin-bottom: 10px; }
+  .practice-view #opt-diff::after { margin-top: 2px; font-size: 12px; }
+  .practice-view #opt-diff button { min-height: 48px; padding-block: 5px; }
+  .practice-view .difficulty-name { font-size: 19px; }
+  .practice-view .setup-actions #start-btn { min-height: 52px; margin-bottom: 8px; font-size: 22px; }
+  .practice-view .setup-actions #mode-back-btn { min-height: 48px; padding: 8px; }
 }
 
 /* ---------- 모바일 조작 (조이스틱 + 드래그 조준 스킬) ---------- */
