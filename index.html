@@ -141,6 +141,7 @@
           <span class="mode-name">사용자 지정 게임</span>
           <span class="mode-description">상대방과 플레이</span>
         </button>
+        <button id="landscape-btn" type="button"><span class="rotate-icon" aria-hidden="true"></span>가로 모드로 플레이</button>
         <div class="flash-prank" id="flash-prank">
           <button id="flash-swap-btn" type="button">점멸을 F로 바꾸기</button>
           <div class="flash-prank-reply" role="status" aria-live="polite" aria-atomic="true">
@@ -261,6 +262,15 @@
         <button id="menu-btn" type="button">뒤로가기</button>
       </div>
       <p id="share-status" class="share-status" role="status"></p>
+    </div>
+  </div>
+
+  <div id="rotate-hint" class="screen hidden" role="dialog" aria-modal="true" aria-labelledby="rotate-hint-title">
+    <div class="rotate-hint-card">
+      <div class="rotate-phone" aria-hidden="true"><i></i></div>
+      <h2 id="rotate-hint-title">폰을 가로로 돌려주세요</h2>
+      <p>화면 회전 잠금이 켜져 있다면 먼저 꺼 주세요.</p>
+      <button id="rotate-hint-close" type="button">세로로 계속하기</button>
     </div>
   </div>
 

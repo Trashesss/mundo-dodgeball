@@ -1206,7 +1206,9 @@ class GameScene extends Phaser.Scene {
   updateCamera(dt = 0) {
     // 경기장 전체(암벽 + 캐릭터 머리 높이)가 상단바·하단 HUD를 피해 한 화면에 들어오도록 고정
     const cam = this.cameras.main;
-    const padTop = 110 * DPR, padBot = 120 * DPR;
+    // 터치 가로 화면은 상단바·조이스틱·스킬이 양옆 구석에 있으니 위아래를 거의 비우지 않는다
+    const landscape = this.touchMode && cam.width > cam.height;
+    const padTop = (landscape ? 8 : 110) * DPR, padBot = (landscape ? 22 : 120) * DPR;
     const halfW = (ARENA.ROCK_R + 1) * PPU;
     const top = sy(-ARENA.ROCK_R, 3.2), bot = sy(ARENA.ROCK_R) + 0.5 * PPU;
     const zoom = Math.min(cam.width / (halfW * 2), (cam.height - padTop - padBot) / (bot - top));
@@ -1316,6 +1318,20 @@ $('practice-btn').addEventListener('click', () => {
   selectMenuView('practice');
   $('opt-diff').querySelector('button.on').focus();
 });
+// 웹에서는 아이폰·안드로이드 모두 화면 방향을 확실히 바꿀 수 없으니, 돌려 달라고 안내만 한다
+const landscapeQuery = matchMedia('(orientation: landscape)');
+const closeRotateHint = () => {
+  if ($('rotate-hint').classList.contains('hidden')) return;
+  $('rotate-hint').classList.add('hidden');
+  $('landscape-btn').focus();
+};
+$('landscape-btn').addEventListener('click', () => {
+  track('landscape_hint_opened');
+  $('rotate-hint').classList.remove('hidden');
+  $('rotate-hint-close').focus();
+});
+$('rotate-hint-close').addEventListener('click', closeRotateHint);
+landscapeQuery.addEventListener('change', (e) => { if (e.matches) closeRotateHint(); });
 $('mode-back-btn').addEventListener('click', () => {
   selectMenuView();
   $('practice-btn').focus();

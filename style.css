@@ -950,3 +950,96 @@ body.touch .skill.aiming { border-color: #fff; box-shadow: 0 0 14px #5ff4ff; }
   #menu:not(.practice-view):not(.quick-match-view) #online-btn .mode-name { font-size: 21px; }
   #menu:not(.practice-view):not(.quick-match-view) .flash-prank { margin-top: 2px; }
 }
+
+/* ---------- 가로 모드 안내 ---------- */
+#landscape-btn { display: none; }
+@media (pointer: coarse) and (orientation: portrait) {
+  #landscape-btn {
+    grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 44px; padding: 6px 12px; border: 3px solid var(--entry-ink); border-radius: 14px;
+    background: #24373f; color: var(--entry-text); font: 400 17px 'Jua', sans-serif; cursor: pointer;
+    box-shadow: inset 0 3px #ffffff12;
+  }
+  #landscape-btn:active { transform: scale(.98); }
+}
+.rotate-icon {
+  /* 가로로 누운 폰 */
+  position: relative; width: 26px; height: 16px; border: 2px solid currentColor; border-radius: 4px;
+}
+.rotate-icon::after {
+  content: ''; position: absolute; right: 2px; top: 50%; width: 2px; height: 6px; margin-top: -3px;
+  border-radius: 1px; background: currentColor;
+}
+#rotate-hint {
+  z-index: 20; flex-direction: column; text-align: center; color: var(--entry-text);
+  background: radial-gradient(ellipse at 50% 38%, #28434a, #14252d 48%, #0c171f 90%);
+}
+@media (orientation: landscape) { #rotate-hint { display: none !important; } }
+.rotate-hint-card { display: flex; flex-direction: column; align-items: center; width: min(320px, 100%); word-break: keep-all; }
+.rotate-phone {
+  position: relative; width: 64px; height: 108px; margin: 12px 0 36px;
+  border: 5px solid var(--entry-text); border-radius: 14px; box-shadow: 0 5px #08171f;
+  animation: rotate-phone 2.4s ease-in-out infinite;
+}
+.rotate-phone i {
+  position: absolute; left: 50%; bottom: 6px; width: 16px; height: 4px; margin-left: -8px;
+  border-radius: 2px; background: var(--entry-text);
+}
+@keyframes rotate-phone {
+  0%, 20% { transform: rotate(0); }
+  50%, 80% { transform: rotate(-90deg); }
+  100% { transform: rotate(0); }
+}
+#rotate-hint h2 { margin: 0; font-size: 30px; font-weight: 400; letter-spacing: -1px; text-shadow: 0 4px #08171f; }
+#rotate-hint p { margin: 10px 0 0; color: var(--entry-muted); font-size: 15px; line-height: 1.5; }
+#rotate-hint-close {
+  width: 100%; min-height: 52px; margin-top: 32px; padding: 10px;
+  border: 3px solid var(--entry-ink); border-radius: 14px; background: #35434b;
+  color: var(--entry-muted); font: 400 19px 'Jua', sans-serif; cursor: pointer;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rotate-phone { animation: none; transform: rotate(-90deg); }
+}
+
+/* ---------- 모바일 가로 화면 ---------- */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 600px) {
+  /* 경기장이 화면 높이를 거의 다 쓰므로, 체력바는 양쪽 위 구석에 작게 둔다 */
+  #topbar {
+    top: 8px; width: calc(100% - 24px); height: auto; gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, min(240px, 27vw))); justify-content: space-between;
+  }
+  .fighter { gap: 4px; }
+  .fight-portrait { flex-basis: 44px; height: 50px; margin-top: 0; }
+  .fighter-info { padding-top: 2px; }
+  .fighter-name { margin: 0 2px 3px; font-size: 13px; }
+  .fighter-name small { display: none; }
+  .health-track { height: 20px; border-width: 2px; }
+  .health-value { font-size: 11px; }
+  .twins .red .health-track { height: 13px; }
+  .twins .red .health-track + .health-track { margin-top: 3px; }
+  .twins .red .health-value { font-size: 9px; }
+  #chat { bottom: 120px; width: min(300px, 30vw); font-size: 12px; }
+
+  /* 스킬·조이스틱도 구석에 들어가게 작게 (바닥 14px + 이름 14px + 간격 5px + 반지름 28px) */
+  body.touch #hud { bottom: calc(14px + env(safe-area-inset-bottom)); }
+  body.touch .skills { gap: 8px; }
+  body.touch .skill { width: 56px; height: 56px; }
+  body.touch .skill .cdtext { font-size: 19px; }
+  body.touch .spell-name { font-size: 12px; }
+  #joy-base { left: calc(16px + 46px + env(safe-area-inset-left)); top: calc(100% - 61px - env(safe-area-inset-bottom)); width: 92px; height: 92px; margin: -46px 0 0 -46px; }
+  #joy-knob { width: 40px; height: 40px; margin: -20px 0 0 -20px; }
+
+  /* 홈: 터치에는 마우스·키보드 안내가 필요 없다 */
+  #menu:not(.practice-view):not(.quick-match-view) :is(.setup-controls, .setup-arena-tip) { display: none; }
+  #menu:not(.practice-view):not(.quick-match-view) :is(#select-title, #difficulty-label) {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+  #menu:not(.practice-view):not(.quick-match-view) .setup-intro { margin-bottom: 14px; }
+  #menu:not(.practice-view):not(.quick-match-view) .setup-portrait { width: clamp(56px, 18dvh, 96px); height: clamp(56px, 18dvh, 96px); }
+  #menu:not(.practice-view):not(.quick-match-view) .setup-brand { font-size: clamp(32px, 11dvh, 48px); }
+  #menu:not(.practice-view):not(.quick-match-view) .setup-description { font-size: 15px; }
+  #menu:not(.practice-view):not(.quick-match-view) .mode-card { padding: 10px; gap: 6px; }
+  #menu:not(.practice-view):not(.quick-match-view) .mode-card img { width: 100%; height: clamp(48px, 18dvh, 96px); }
+  #menu:not(.practice-view):not(.quick-match-view) .mode-name { font-size: 22px; }
+  #menu:not(.practice-view):not(.quick-match-view) .mode-description { font-size: 13px; }
+}
