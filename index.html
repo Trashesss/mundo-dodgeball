@@ -108,7 +108,7 @@
   </div>
 
   <div id="menu" class="screen hidden">
-    <button id="analytics-settings" type="button" aria-label="개인정보 동의 설정" title="개인정보 동의 설정" aria-haspopup="dialog" aria-expanded="false" aria-controls="analytics-consent">
+    <button id="analytics-settings" type="button" aria-label="플레이 통계 설정" title="플레이 통계 설정" aria-haspopup="dialog" aria-expanded="false" aria-controls="analytics-consent">
       <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true" focusable="false">
         <path d="M21.88 10.44L21.88 13.56L19.49 13.80L18.57 16.02L20.09 17.88L17.88 20.09L16.02 18.57L13.80 19.49L13.56 21.88L10.44 21.88L10.20 19.49L7.98 18.57L6.12 20.09L3.91 17.88L5.43 16.02L4.51 13.80L2.12 13.56L2.12 10.44L4.51 10.20L5.43 7.98L3.91 6.12L6.12 3.91L7.98 5.43L10.20 4.51L10.44 2.12L13.56 2.12L13.80 4.51L16.02 5.43L17.88 3.91L20.09 6.12L18.57 7.98L19.49 10.20Z" />
         <circle cx="12" cy="12" r="3" />
@@ -288,13 +288,13 @@
   </dialog>
   <dialog id="analytics-consent" class="analytics-consent" aria-labelledby="analytics-consent-title" aria-describedby="analytics-consent-description">
     <div class="consent-summary">
-      <h2 id="analytics-consent-title" tabindex="-1" autofocus>개인정보 수집·이용 동의 <span>(선택)</span></h2>
+      <h2 id="analytics-consent-title" tabindex="-1" autofocus>문도 피구 개선을 도와주실래요? <span>(선택)</span></h2>
     </div>
-    <p id="analytics-consent-description">더 나은 게임을 위해 PostHog로 방문·플레이 기록과 브라우저·기기 정보, 쿠키·로컬 저장소의 분석 식별자를 수집합니다. 데이터는 PostHog 미국 리전으로 전송됩니다.</p>
-    <p>동의한 뒤부터 수집하며, 동의하지 않아도 게임을 즐길 수 있어요. 메인 화면 오른쪽 위의 설정 버튼에서 언제든 변경하거나 철회할 수 있습니다.</p>
+    <p id="analytics-consent-description">어떤 모드가 재밌는지, 어디서 너무 어려운지 알면 게임을 더 재밌게 다듬을 수 있어요. 플레이 통계를 보내 주시면 큰 도움이 됩니다.</p>
+    <p>동의한 뒤부터 수집하며, 동의하지 않아도 게임은 똑같이 즐길 수 있어요. 메인 화면 오른쪽 위 설정 버튼에서 언제든 바꿀 수 있습니다.</p>
     <details>
-      <summary>수집 내용 자세히 보기</summary>
-      <p>수집 목적: 게임 이용 현황 분석과 서비스 개선.<br />수집 항목: 페이지 주소·유입 경로, 게임 모드·난이도·승패·플레이 시간·전투 통계, 공유·재도전 기록, IP 주소 및 브라우저·기기 정보, 분석 식별자.<br />자동 클릭 수집과 세션 녹화는 사용하지 않습니다. 동의 철회 시 이후 수집이 중단되며, 이미 전송된 데이터가 자동 삭제되지는 않습니다.</p>
+      <summary>어떤 정보를 보내나요?</summary>
+      <p>분석 도구 PostHog의 미국 서버로 전송되며, 쿠키·로컬 저장소에 분석 식별자를 저장합니다.<br />수집 목적: 게임 이용 현황 분석과 서비스 개선.<br />수집 항목: 페이지 주소·유입 경로, 게임 모드·난이도·승패·플레이 시간·전투 통계, 공유·재도전 기록, IP 주소 및 브라우저·기기 정보, 분석 식별자.<br />자동 클릭 수집과 세션 녹화는 사용하지 않습니다. 동의 철회 시 이후 수집이 중단되며, 이미 전송된 데이터가 자동 삭제되지는 않습니다.</p>
       <a href="https://posthog.com/privacy" target="_blank" rel="noopener noreferrer">PostHog 개인정보 처리방침</a>
     </details>
     <div class="consent-actions">
