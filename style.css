@@ -697,11 +697,11 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 }
 
 #copy-snackbar {
-  word-break: keep-all;
+  word-break: keep-all; text-wrap: balance;
   position: fixed; bottom: max(24px, env(safe-area-inset-bottom)); left: 50%; z-index: 30;
-  max-width: calc(100% - 32px); padding: 14px 24px; border: 1px solid #52676d; border-radius: 12px;
+  width: max-content; max-width: calc(100% - 32px); padding: 18px 32px; border: 1px solid #52676d; border-radius: 12px;
   background: #10212b; color: var(--entry-text); box-shadow: 0 6px 24px #0005;
-  font-size: 16px; text-align: center; pointer-events: none;
+  font-size: 20px; text-align: center; pointer-events: none;
   opacity: 0; visibility: hidden; transform: translate(-50%, 8px);
   transition: opacity .15s, transform .15s, visibility .15s;
 }
