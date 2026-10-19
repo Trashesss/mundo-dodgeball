@@ -100,6 +100,21 @@ const run = (w, seconds) => { for (let t = 0; t < seconds; t += 1 / 60) Sim.step
   assert.equal(Math.abs(p2.x), Math.abs(q2.x));
 }
 
+// 페이커는 시작부터 양쪽 모두 최종 축소 크기이며 시간이 지나도 같다.
+{
+  const radius = RULES.arenaR * RULES.shrink.minScale;
+  const w = world({ shrinkTeam: 0, fixedArenaR: radius });
+  for (const time of [0, 30, 70]) {
+    w.roundTime = time;
+    Sim.updateArena(w);
+    assert.equal(w.arenaR, radius);
+    const left = Sim.constrain(w, { x: -40, z: 0 }, w.champs[0]);
+    const right = Sim.constrain(w, { x: 40, z: 0 }, w.champs[1]);
+    assert.equal(Math.abs(left.x), radius - RULES.champR * 0.5);
+    assert.equal(Math.abs(left.x), Math.abs(right.x));
+  }
+}
+
 // judge=false (온라인 클라이언트 예측)는 식칼을 만들지 않는다
 {
   const w = world({ judge: false });

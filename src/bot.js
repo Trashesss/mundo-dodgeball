@@ -5,7 +5,7 @@ export const DIFFICULTY = {
   easy:   { react: 0.6, dodgeChance: 0.25, aimErr: 3.0, lead: 0.15, hesitate: [1.2, 3.0], flashChance: 0.0, ghostChance: 0.0 },
   normal: { react: 0.42, dodgeChance: 0.45, aimErr: 2.0, lead: 0.35, hesitate: [0.8, 2.2], flashChance: 0.0,  ghostChance: 0.1 },
   hard:   { react: 0.26, dodgeChance: 0.75, aimErr: 1.4, lead: 0.75, hesitate: [0.25, 1.1], flashChance: 0.35, ghostChance: 0.3 },
-  faker:  { react: 0.14, dodgeChance: 0.93, aimErr: 0.55, lead: 1.0, hesitate: [0.05, 0.5], flashChance: 0.75, ghostChance: 0.6 },
+  faker:  { react: 0.07, dodgeChance: 0.99, aimErr: 0.18, lead: 1.0, hesitate: [0.02, 0.12], flashChance: 1.0, ghostChance: 1.0, tactical: true },
 };
 
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -16,7 +16,7 @@ export function initBot(c, diffKey, lane = 0) {
   c.ai = {
     diff: DIFFICULTY[diffKey],
     wanderT: 0,
-    aimT: rand(0.6, 1.6),
+    aimT: DIFFICULTY[diffKey].tactical ? rand(0.1, 0.25) : rand(0.6, 1.6),
     seen: new Map(),       // cleaver -> 피할지 여부
     dodgeT: 0,
     ghostUsed: false,
@@ -72,15 +72,20 @@ function dodge(c, game, threat) {
     return { target, off };
   };
   let a = trySide(nx, nz);
-  if (a.off < hitR + 0.2) {
+  if (c.ai.diff.tactical || a.off < hitR + 0.2) {
     const b = trySide(-nx, -nz);
     if (b.off > a.off) a = b;
   }
   c.moveTarget = a.target;
-  c.ai.dodgeT = 0.35;
+  c.ai.dodgeT = c.ai.diff.tactical ? 0.1 : 0.35;
 
   // 걸어서는 못 피하면 점멸
-  const moveTime = Math.max(0, hitR - perp + 0.1) / c.speed();
+  let moveTime = (c.ai.diff.tactical ? Math.max(0, c.castT) : 0) + Math.max(0, hitR - perp + 0.1) / c.speed();
+  // 페이커는 위험할 때 유체화를 재사용하고, 그래도 늦으면 점멸한다.
+  if (c.ai.diff.tactical && moveTime + 0.08 > t && c.ghostCd <= 0) {
+    game.castGhost(c);
+    moveTime = Math.max(0, c.castT) + Math.max(0, hitR - perp + 0.1) / c.speed();
+  }
   if (moveTime > t && c.flashCd <= 0 && Math.random() < c.ai.diff.flashChance) {
     const dx = a.target.x - c.x, dz = a.target.z - c.z;
     const l = Math.hypot(dx, dz) || 1;
@@ -97,6 +102,20 @@ function aim(c, game) {
   const t = dist / RULES.q.speed + RULES.q.windup;
   let ax = target.x + target.vx * t * d.lead;
   let az = target.z + target.vz * t * d.lead;
+  if (d.tactical) {
+    // 탄속과 시전 시간을 함께 풀고, 이동 목표나 경기장 끝을 지나 예측하지 않는다.
+    let flightTime = t;
+    for (let i = 0; i < 4; i++) {
+      let travelTime = flightTime;
+      const speed = Math.hypot(target.vx, target.vz);
+      if (target.moveTarget && speed > 0) {
+        travelTime = Math.min(travelTime, Math.hypot(target.moveTarget.x - target.x, target.moveTarget.z - target.z) / speed);
+      }
+      const predicted = game.constrain({ x: target.x + target.vx * travelTime, z: target.z + target.vz * travelTime }, target);
+      ax = predicted.x; az = predicted.z;
+      flightTime = Math.max(0, Math.hypot(ax - c.x, az - c.z) - 0.6) / RULES.q.speed + RULES.q.windup;
+    }
+  }
   const err = d.aimErr * (0.4 + dist / RULES.q.range);
   ax += gauss() * err; az += gauss() * err;
   game.castQ(c, ax, az);
@@ -122,7 +141,8 @@ export function updateBot(c, game, dt) {
     if (Math.random() < ai.diff.ghostChance) game.castGhost(c);
   }
 
-  if (c.qCd <= 0 && c.castT <= 0) {
+  // 회피 중 투척으로 발이 묶이지 않게 한다.
+  if (c.qCd <= 0 && c.castT <= 0 && !(ai.diff.tactical && threat)) {
     ai.aimT -= dt;
     if (ai.aimT <= 0) {
       aim(c, game);

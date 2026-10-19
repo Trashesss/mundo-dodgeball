@@ -751,6 +751,7 @@ class GameScene extends Phaser.Scene {
   // 봇전: 로컬 판정 + 플레이어 쪽 축소. 대인전: 서버 판정 + 양쪽 같은 경기장.
   setMode(mode) {
     this.mode = mode;
+    this.fixedArenaR = null;
     this.shrinkTeam = mode === 'bot' ? 0 : null;
     this.judge = mode === 'bot';
     this.netPaused = false;
@@ -781,6 +782,8 @@ class GameScene extends Phaser.Scene {
     this.setMode('bot');
     this.twins = diff === 'twins';
     this.diff = this.twins ? 'normal' : diff;
+    this.fixedArenaR = diff === 'faker' ? RULES.arenaR * RULES.shrink.minScale : null;
+    this.water.setUniform('uLeftOnly.value', diff === 'faker' ? 0 : 1);
     this.player = new Champ(this, { team: 0, isPlayer: true });
     this.enemies = Array.from({ length: this.twins ? 2 : 1 }, () => new Champ(this, { team: 1, isPlayer: false }));
     this.enemies.forEach((e, i) => { e.hudSlot = i + 1; });
@@ -1251,6 +1254,7 @@ for (const [id, key, parse] of [['opt-diff', 'diff', String]]) {
       x.setAttribute('aria-pressed', String(x === b));
     });
     opts[key] = parse(b.dataset.v);
+    $('difficulty-label').textContent = practiceDescription();
   });
 }
 const scene = () => game.scene.getScene('game');
@@ -1269,6 +1273,11 @@ document.getElementById('start-btn').addEventListener('click', async (event) => 
   button.disabled = false;
 });
 const $ = (id) => document.getElementById(id);
+function practiceDescription() {
+  return opts.diff === 'faker'
+    ? '양쪽 모두 가장 좁은 경기장에서 시작합니다. 크기는 고정됩니다.'
+    : '시간이 지날수록 경기장이 좁아집니다.';
+}
 function selectMenuView(view = 'modes') {
   const practice = view === 'practice';
   $('menu').classList.toggle('practice-view', practice);
@@ -1276,7 +1285,7 @@ function selectMenuView(view = 'modes') {
   $('mode-select').classList.toggle('hidden', view !== 'modes');
   $('practice-select').classList.toggle('hidden', !practice);
   $('select-title').textContent = practice ? '인공지능 상대 연습' : '게임 모드 선택';
-  $('difficulty-label').textContent = practice ? '시간이 지날수록 경기장이 좁아집니다.' : '어떤 모드를 플레이할까요?';
+  $('difficulty-label').textContent = practice ? practiceDescription() : '어떤 모드를 플레이할까요?';
 }
 $('practice-btn').addEventListener('click', () => {
   selectMenuView('practice');

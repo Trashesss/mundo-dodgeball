@@ -1,6 +1,7 @@
 // 게임 계산 (Phaser·DOM 없음). 브라우저 봇전과 온라인 서버가 같이 쓴다.
 // world: { champs, cleavers, state, arenaR, roundTime, shrinkTeam, judge, nextCleaverId, feed }
 //   shrinkTeam: 경기장 축소가 적용되는 팀 (봇전은 0, 대인전은 null)
+//   fixedArenaR: 양 팀의 경기장을 같은 반경으로 고정 (페이커)
 //   judge: 식칼 발사·충돌·피격을 여기서 판정할지 (온라인 클라이언트는 false, 서버가 판정)
 // 화면 효과는 직접 그리지 않고 world.feed 에 쌓는다. 챔피언은 world.champs 의 번호(ci)로 가리킨다.
 import { RULES } from './rules.js';
@@ -9,10 +10,10 @@ import { THROW } from './throw-motion.js';
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-export function createWorld({ shrinkTeam = null, judge = true } = {}) {
+export function createWorld({ shrinkTeam = null, judge = true, fixedArenaR = null } = {}) {
   return {
     champs: [], cleavers: [], state: 'play', arenaR: RULES.arenaR, roundTime: 0,
-    shrinkTeam, judge, nextCleaverId: 1, feed: [],
+    shrinkTeam, judge, fixedArenaR, nextCleaverId: 1, feed: [],
   };
 }
 
@@ -37,6 +38,7 @@ const emit = (world, event) => world.feed.push(event);
 const ci = (world, c) => world.champs.indexOf(c);
 
 export function updateArena(world) {
+  if (world.fixedArenaR != null) { world.arenaR = world.fixedArenaR; return; }
   if (world.shrinkTeam == null) { world.arenaR = RULES.arenaR; return; }
   const { delay, duration, minScale } = RULES.shrink;
   const progress = clamp((world.roundTime - delay) / duration, 0, 1);
@@ -46,7 +48,7 @@ export function updateArena(world) {
 export function constrain(world, p, champ) {
   const s = champ.side;
   const minX = RULES.midGap + RULES.champR;
-  const maxR = (champ.team === world.shrinkTeam ? world.arenaR : RULES.arenaR) - RULES.champR * 0.5;
+  const maxR = (world.fixedArenaR != null || champ.team === world.shrinkTeam ? world.arenaR : RULES.arenaR) - RULES.champR * 0.5;
   if (p.x * s < minX) p.x = s * minX;
   const r = Math.hypot(p.x, p.z);
   if (r > maxR) { p.x *= maxR / r; p.z *= maxR / r; }
