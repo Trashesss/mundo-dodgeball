@@ -777,7 +777,7 @@ class GameScene extends Phaser.Scene {
 
   // diff: easy | normal | hard | faker | twins(보통 봇 둘)
   startMatch({ diff }, source = 'menu') {
-    Sound.unlock();
+    Sound.startMusic();
     this.clearMatch();
     this.setMode('bot');
     this.twins = diff === 'twins';
@@ -862,6 +862,7 @@ class GameScene extends Phaser.Scene {
   }
 
   backToMenu() {
+    Sound.stopMusic();
     this.clearMatch();
     this.player = null; this.enemy = null; this.enemies = [];
     HUD.show(false);
@@ -877,7 +878,7 @@ class GameScene extends Phaser.Scene {
 
   // ---------- 온라인 1대1 (서버 판정) ----------
   setupOnlineMatch(slot, source = 'online') {
-    Sound.unlock();
+    Sound.startMusic();
     this.clearMatch();
     this.setMode('online');
     this.mySlot = slot;

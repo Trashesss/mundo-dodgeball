@@ -11,6 +11,7 @@ const TYPES = {
   '.mjs': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.ttf': 'font/ttf',
+  '.mp3': 'audio/mpeg',
   '.json': 'application/json',
   '.png': 'image/png',
   '.svg': 'image/svg+xml',

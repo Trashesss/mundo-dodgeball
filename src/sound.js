@@ -2,6 +2,25 @@
 let ctx = null;
 let master = null;
 let muted = false;
+let musicStarted = false;
+const music = document.getElementById('bgm');
+music.volume = 0.22;
+
+function syncMusic() {
+  music.muted = muted;
+  if (!musicStarted || document.hidden || muted) music.pause();
+  else if (music.paused) music.play().catch(() => {}); // 다음 사용자 입력에서 재시도
+}
+
+function unlock() {
+  ensure();
+  syncMusic();
+}
+
+// 입력은 오디오 잠금만 해제한다. 음악은 경기 진입 시 별도로 시작한다.
+document.addEventListener('pointerdown', unlock);
+document.addEventListener('keydown', unlock);
+document.addEventListener('visibilitychange', syncMusic);
 
 function ensure() {
   if (!ctx) {
@@ -107,8 +126,24 @@ function tone({ dur = 0.2, type = 'sine', f0 = 440, f1 = 440, gain = 0.2, vol = 
 const play = (fn) => (vol = 1) => { if (muted) return; ensure(); fn(vol); };
 
 export const Sound = {
-  unlock: () => ensure(),
-  toggleMute: () => (muted = !muted),
+  unlock,
+  startMusic: () => {
+    musicStarted = true;
+    document.querySelector('.music-credit').classList.remove('hidden');
+    unlock();
+  },
+  stopMusic: () => {
+    musicStarted = false;
+    syncMusic();
+    music.currentTime = 0;
+    document.querySelector('.music-credit').classList.add('hidden');
+  },
+  toggleMute: () => {
+    muted = !muted;
+    if (master) master.gain.value = muted ? 0 : 0.5;
+    syncMusic();
+    return muted;
+  },
   get muted() { return muted; },
   // 칼날이 공기를 가르는 "슈우욱": 40ms에 차오르고 높은 대역에서 아래로 미끄러지며 빠진다
   // 무거운 칼날이 공기를 가르는 "후우웅": 바람 소리를 낮추고 저역 휘두름을 깔았다
