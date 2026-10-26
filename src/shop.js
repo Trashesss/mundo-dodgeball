@@ -15,6 +15,20 @@ export function initShop(scene) {
   let category = 'maps';
   const catalog = () => CATEGORIES[category].items;
   const currentItem = () => catalog().find(item => item.id === selected);
+  let snackbarTimer;
+  const snackbar = (text, tone) => {
+    clearTimeout(snackbarTimer);
+    const el = $('shop-status');
+    el.textContent = text;
+    el.dataset.tone = tone;
+    el.classList.add('visible');
+    snackbarTimer = setTimeout(hideSnackbar, 2400);
+  };
+  const hideSnackbar = () => {
+    clearTimeout(snackbarTimer);
+    $('shop-status').classList.remove('visible');
+    $('shop-status').textContent = '';
+  };
 
   function render() {
     const state = getShopState(), map = currentItem();
@@ -68,32 +82,29 @@ export function initShop(scene) {
     button.type = 'button'; button.className = 'shop-map-card'; button.dataset[config.data] = map.id;
     // Catalog values are static, never user-provided.
     button.innerHTML = `<span class="shop-card-art"><img src="${map.image}" alt="" width="180" height="160"><span class="shop-card-badge"></span><span class="shop-map-check" aria-hidden="true"></span></span><span class="shop-card-info"><strong>${map.name}</strong><small></small></span>`;
-    button.addEventListener('click', () => { selected = map.id; $('shop-status').textContent = ''; render(); });
+    button.addEventListener('click', () => { selected = map.id; render(); });
     $(config.list).append(button);
   }
   for (const button of document.querySelectorAll('[data-shop-category]')) {
     button.addEventListener('click', () => {
       category = button.dataset.shopCategory;
       selected = CATEGORIES[category].initial;
-      $('shop-status').textContent = '';
       render();
     });
   }
   $('shop-open').addEventListener('click', () => {
-    $('shop-status').textContent = '';
+    hideSnackbar();
     render(); dialog.showModal(); dialog.scrollTop = 0;
   });
   $('shop-close').addEventListener('click', () => dialog.close());
-  dialog.addEventListener('close', () => $('shop-open').focus({ preventScroll: true }));
+  dialog.addEventListener('close', () => { hideSnackbar(); $('shop-open').focus({ preventScroll: true }); });
   $('shop-action').addEventListener('click', () => {
     const map = currentItem(), config = CATEGORIES[category];
     const state = getShopState();
     if (!state[config.inventory].includes(map.id)) {
       const result = config.buy(map.id);
-      $('shop-status').textContent = result.ok ? '' : result.reason;
-    } else if (config.equip(map.id)) {
-      $('shop-status').textContent = '';
-    }
+      snackbar(result.ok ? `${map.name} 구매 완료!` : result.reason, result.ok ? 'success' : 'error');
+    } else config.equip(map.id);
     render();
   });
   window.addEventListener('mundo-shop-change', render);

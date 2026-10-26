@@ -34,6 +34,9 @@ try {
   await page.click('#shop-action');
   assert.equal(await page.$eval('#shop-coins', el => el.textContent), '100');
   assert.match(await page.$eval('#shop-status', el => el.textContent), /1400 코인이 더 필요/);
+  assert.deepEqual(await page.$eval('#shop-status', el => [el.dataset.tone, el.parentElement.id, el.classList.contains('visible')]), ['error', 'shop-dialog', true]);
+  await page.waitForFunction(() => getComputedStyle(document.getElementById('shop-status')).opacity === '1');
+  await page.screenshot({ path: 'output/shop/shop-snackbar-error.png' });
   await page.evaluate(async () => {
     const shop = await import('/src/shop-state.js');
     for (let i = 0; i < 16; i++) shop.awardMatch(`test-win-${i}`, true);
@@ -41,6 +44,7 @@ try {
   assert.equal(await page.$eval('#shop-coins', el => el.textContent), '1,700');
   await page.click('#shop-action');
   assert.equal(await page.$eval('#shop-coins', el => el.textContent), '200');
+  assert.deepEqual(await page.$eval('#shop-status', el => [el.textContent, el.dataset.tone]), ['문도 콜로세움 구매 완료!', 'success']);
   assert.deepEqual(await shopBounds(), desktopBounds, 'purchase messages must not resize or move the shop');
   assert.equal(await page.evaluate(async () => (await import('/src/shop-state.js')).buyMap('colosseum').ok), false);
   assert.equal(await page.$eval('#shop-coins', el => el.textContent), '200');

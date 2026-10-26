@@ -383,10 +383,10 @@
           <p id="shop-map-description" class="shop-description"></p>
           <div class="shop-purchase"><p id="shop-ownership"></p><button id="shop-action" type="button"></button><p id="shop-price-note" class="shop-price-note">온라인에서는 내 화면에만 적용돼요.</p></div>
         </div>
-        <p id="shop-status" role="status" aria-live="polite"></p>
       </section>
     </div>
     <footer class="shop-footer"><p><span class="coin-icon" aria-hidden="true">C</span> 승리 <b id="shop-reward-win">+100</b> · 패배 <b id="shop-reward-loss">+30</b></p><p id="shop-storage-note">코인과 구매 내역은 이 브라우저에 저장돼요.</p></footer>
+    <div id="shop-status" role="status" aria-live="polite" aria-atomic="true"></div>
   </dialog>
   <script type="module" src="src/consent.js"></script>
   <script type="module" src="src/settings.js"></script>
