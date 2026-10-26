@@ -3,8 +3,8 @@ import { MAPS, WEAPONS, SKINS, COIN_REWARDS, getShopState, buyMap, equipMap, buy
 const $ = id => document.getElementById(id);
 const CATEGORIES = {
   maps: { items: MAPS, noun: '경기장', inventory: 'owned', equipped: 'equipped', list: 'shop-map-list', data: 'map', initial: 'colosseum', buy: buyMap, equip: equipMap, action: '이 맵 적용하기', active: '적용 중인 경기장', intro: '오늘은 어디서 한 판?', note: '온라인에서는 내 화면에만 적용돼요.' },
-  weapons: { items: WEAPONS, noun: '투척 무기', inventory: 'ownedWeapons', equipped: 'equippedWeapon', list: 'shop-weapon-list', data: 'weapon', initial: 'soccer', buy: buyWeapon, equip: equipWeapon, action: '이 무기 장착하기', active: '장착 중인 무기', intro: '오늘은 뭘 던져볼까?', note: '내 문도와 투척물에 적용돼요. 온라인에서는 내 화면에만 보여요.' },
-  skins: { items: SKINS, noun: '스킨', inventory: 'ownedSkins', equipped: 'equippedSkin', list: 'shop-skin-list', data: 'skin', initial: 'ronaldo', buy: buySkin, equip: equipSkin, action: '이 스킨 장착하기', active: '장착 중인 스킨', intro: '오늘은 어떤 문도로 뛰어볼까?', note: '내 문도의 모습이 바뀌어요. 온라인에서는 내 화면에만 보여요.' },
+  weapons: { items: WEAPONS, noun: '투척 무기', inventory: 'ownedWeapons', equipped: 'equippedWeapon', list: 'shop-weapon-list', data: 'weapon', initial: 'soccer', buy: buyWeapon, equip: equipWeapon, action: '이 무기 장착하기', active: '장착 중인 무기', intro: '오늘은 뭘 던져볼까?' },
+  skins: { items: SKINS, noun: '스킨', inventory: 'ownedSkins', equipped: 'equippedSkin', list: 'shop-skin-list', data: 'skin', initial: 'ronaldo', buy: buySkin, equip: equipSkin, action: '이 스킨 장착하기', active: '장착 중인 스킨', intro: '오늘은 어떤 문도로 뛰어볼까?' },
 };
 
 export function initShop(scene) {
@@ -45,7 +45,8 @@ export function initShop(scene) {
     $('shop-action').disabled = equipped;
     $('shop-action').textContent = equipped ? config.active : owned ? config.action : `${map.price.toLocaleString('ko-KR')} 코인으로 구매`;
     $('shop-owned-count').textContent = `${inventory.length} / ${catalog().length} 보유`;
-    $('shop-price-note').textContent = config.note;
+    $('shop-price-note').textContent = config.note ?? '';
+    $('shop-price-note').hidden = !config.note;
     $('shop-storage-note').textContent = state.persistent ? '코인과 구매 내역은 이 브라우저에 저장돼요.' : '브라우저 저장을 사용할 수 없어 이번 방문에만 유지돼요.';
     for (const button of $(config.list).children) {
       const item = catalog().find(item => item.id === button.dataset[config.data]);
