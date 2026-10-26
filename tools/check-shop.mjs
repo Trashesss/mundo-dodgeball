@@ -37,6 +37,15 @@ try {
   assert.deepEqual(await page.$eval('#shop-status', el => [el.dataset.tone, el.parentElement.id, el.classList.contains('visible')]), ['error', 'shop-dialog', true]);
   await page.waitForFunction(() => getComputedStyle(document.getElementById('shop-status')).opacity === '1');
   await page.screenshot({ path: 'output/shop/shop-snackbar-error.png' });
+  const snackbarInside = async (target) => target.evaluate(() => {
+    const bar = document.getElementById('shop-status').getBoundingClientRect();
+    const box = document.getElementById('shop-dialog').getBoundingClientRect();
+    const footer = document.querySelector('.shop-footer').getBoundingClientRect();
+    const button = document.getElementById('shop-action').getBoundingClientRect();
+    const clearOfButton = innerWidth < 700 || bar.right <= button.left || bar.left >= button.right || bar.bottom <= button.top || bar.top >= button.bottom;
+    return bar.left >= box.left && bar.right <= box.right && bar.top >= box.top && footer.top - bar.bottom >= 16 && clearOfButton;
+  });
+  assert.ok(await snackbarInside(page), 'snackbar sits inside the shop, above the footer with spacing');
   await page.evaluate(async () => {
     const shop = await import('/src/shop-state.js');
     for (let i = 0; i < 16; i++) shop.awardMatch(`test-win-${i}`, true);
@@ -140,6 +149,11 @@ try {
   await poor.goto(url); await ready(poor);
   await poor.click('#shop-open'); await poor.click('#shop-action');
   assert.match(await poor.$eval('#shop-status', el => el.textContent), /1480 코인/);
+  await poor.setViewport({ width: 390, height: 844 });
+  await poor.click('#shop-action');
+  await poor.waitForFunction(() => getComputedStyle(document.getElementById('shop-status')).opacity === '1');
+  assert.ok(await snackbarInside(poor), 'mobile snackbar sits inside the shop, above the footer with spacing');
+  await poor.screenshot({ path: 'output/shop/shop-snackbar-mobile.png' });
   assert.equal(await poor.$eval('#shop-coins', el => el.textContent), '20');
   await context.close();
   const blockedContext = await browser.createBrowserContext();

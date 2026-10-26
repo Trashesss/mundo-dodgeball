@@ -75,11 +75,11 @@
 #shop-action { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; padding: 10px; border: 1px solid #e3c88c; border-radius: 6px; background: #d5bc83; color: #29322d; box-shadow: inset 0 1px #fff4ce80, 0 3px 0 #77653e; font-size: 17px; }
 #shop-action:disabled { cursor: default; border-color: #738c70; background: #2c473f; color: #bfd7ad; box-shadow: inset 0 1px #ffffff0d; }
 .shop-price-note { margin: 10px 0 0; text-align: center; color: #6f8e92; font-size: 10px; }
-/* 구매 결과 스낵바: 모달 위(top layer)에 보이도록 대화상자 안에 둔다 */
+/* 구매 결과 스낵바: 상점 창 안, 하단 안내줄 위에 띄운다 (bottom 은 shop.js 가 안내줄 높이에 맞춘다) */
 #shop-status {
   word-break: keep-all; text-wrap: balance;
-  position: fixed; bottom: max(24px, env(safe-area-inset-bottom)); left: 50%; z-index: 30;
-  width: max-content; max-width: calc(100% - 32px); padding: 16px 28px; border: 1px solid #52676d; border-radius: 12px;
+  position: absolute; bottom: 72px; left: 50%; z-index: 30;
+  width: max-content; max-width: calc(100% - 48px); padding: 16px 28px; border: 1px solid #52676d; border-radius: 12px;
   background: #10212b; color: var(--entry-text); box-shadow: 0 6px 24px #0005;
   font-size: 18px; text-align: center; pointer-events: none;
   opacity: 0; visibility: hidden; transform: translate(-50%, 8px);

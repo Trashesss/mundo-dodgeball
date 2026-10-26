@@ -21,6 +21,14 @@ export function initShop(scene) {
     const el = $('shop-status');
     el.textContent = text;
     el.dataset.tone = tone;
+    // 넓은 화면에서는 구매 버튼과 겹치지 않게 상품 목록 가운데에, 좁은 화면에서는 창 가운데에 띄운다
+    const box = dialog.getBoundingClientRect();
+    const catalog = dialog.querySelector('.shop-catalog').getBoundingClientRect();
+    const feature = dialog.querySelector('.shop-feature').getBoundingClientRect();
+    const sideBySide = feature.left >= catalog.right - 1;
+    el.style.left = `${sideBySide ? catalog.left + catalog.width / 2 - box.left : box.width / 2}px`;
+    el.style.maxWidth = `${(sideBySide ? catalog.width : box.width) - 48}px`;
+    el.style.bottom = `${dialog.querySelector('.shop-footer').offsetHeight + 24}px`;
     el.classList.add('visible');
     snackbarTimer = setTimeout(hideSnackbar, 2400);
   };
