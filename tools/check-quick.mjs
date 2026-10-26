@@ -76,8 +76,12 @@ try {
   await sleep(1300);
   await a.evaluate(() => window.__mundoOnline.send({ type: 'debug', hp: [640, 1] }));
   await throwAt(a);
-  await a.waitForFunction(() => !document.getElementById('result').classList.contains('hidden'), { timeout: 15000 });
-  assert.ok(!(await hidden(a, '#requeue-btn')), 'quick result offers a new opponent');
+  for (const page of [a, b]) {
+    await page.waitForFunction(() => !document.getElementById('result').classList.contains('hidden'), { timeout: 15000 });
+    assert.ok(await hidden(page, '#humiliate-btn'), 'human quick results hide humiliation for both winner and loser');
+    assert.ok(await hidden(page, '#again-btn'), 'human quick results hide rematch for both winner and loser');
+    assert.ok(!(await hidden(page, '#requeue-btn')), 'quick result offers a new opponent');
+  }
   await sleep(2600); // 고스트 저장 디바운스
   const saved = ghosts();
   assert.equal(saved.length, 2, 'both humans recorded as ghosts');

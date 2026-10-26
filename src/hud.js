@@ -128,7 +128,7 @@ export const HUD = {
   },
 
   // 대인전 결과: win | lose | left(상대가 나감)
-  // bot: 상대가 문도봇 (굴욕 선사하기 없음) · quick: 빠른 대전 (새 상대 찾기)
+  // bot: 상대가 문도봇 · quick: 빠른 대전 (굴욕·재대결 없이 새 상대 찾기)
   onlineResult(kind, { room, bot = false, quick = false } = {}) {
     resultVersion += 1;
     shareData = null;
@@ -136,9 +136,9 @@ export const HUD = {
     this.clearFeeds();
     this.banner(null);
     $('share-btn').classList.add('hidden');
-    setHumiliateAvailable(kind === 'win' && !bot, { mode: 'online', room });
-    // 문도봇과는 재대결 없이 새 상대 찾기만
-    $('again-btn').classList.toggle('hidden', kind === 'left' || bot);
+    setHumiliateAvailable(kind === 'win' && !bot && !quick, { mode: 'online', room });
+    // 빠른 대전과 문도봇 경기는 재대결 없이 새 상대 찾기만
+    $('again-btn').classList.toggle('hidden', kind === 'left' || bot || quick);
     $('again-btn').disabled = false;
     $('again-btn').textContent = kind === 'win' ? '다시 한 수 가르쳐주기' : '다시 한 수 배우기';
     $('requeue-btn').classList.toggle('hidden', !quick);
