@@ -266,7 +266,10 @@ class GameScene extends Phaser.Scene {
   preload() {
     this.load.on('progress', (v) => {
       const percent = Math.round(v * 100);
-      document.getElementById('load-fill').style.width = `${v * 100}%`;
+      const fill = document.getElementById('load-fill');
+      // 100%는 transition 없이 바로 채운다. 곧 create()가 메인 스레드를 잡아 애니메이션이 중간에 멈추기 때문
+      if (v >= 1) fill.style.transition = 'none';
+      fill.style.width = `${v * 100}%`;
       document.getElementById('load-percent').textContent = `${percent}%`;
       document.getElementById('load-progress').setAttribute('aria-valuenow', percent);
       document.getElementById('load-text').textContent = percent < 100 ? '경기장 준비하는 중…' : '문도, 준비 끝!';
@@ -289,7 +292,8 @@ class GameScene extends Phaser.Scene {
     if (this.touchMode) this.touch = setupTouchControls(this, { sx, sy, depth: DEPTH.ring + 1 });
     this.spawnMenuMundos();
     this.state = 'menu';
-    document.getElementById('loading').classList.add('hidden');
+    // 꽉 찬 바가 한 번은 그려진 뒤에 로딩 화면을 닫는다
+    this.time.delayedCall(250, () => document.getElementById('loading').classList.add('hidden'));
     this.game.events.emit('mundo-ready');
   }
 
