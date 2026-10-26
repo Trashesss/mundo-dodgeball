@@ -52,7 +52,7 @@ export function buyMap(id) {
   const map = MAPS.find(map => map.id === id);
   if (!map) return { ok: false, reason: '없는 맵이에요.' };
   if (state.owned.includes(id)) return { ok: false, reason: '이미 보유한 맵이에요.' };
-  if (state.coins < map.price) return { ok: false, reason: `${map.price - state.coins} 코인이 더 필요해요. 한 판 플레이하고 돌아오세요!` };
+  if (state.coins < map.price) return { ok: false, reason: `${map.price - state.coins} 코인이 더 필요해요.` };
   state.coins -= map.price;
   state.owned.push(id);
   save();
@@ -70,7 +70,7 @@ export function buyWeapon(id) {
   const weapon = WEAPONS.find(item => item.id === id);
   if (!weapon) return { ok: false, reason: '없는 무기예요.' };
   if (state.ownedWeapons.includes(id)) return { ok: false, reason: '이미 보유한 무기예요.' };
-  if (state.coins < weapon.price) return { ok: false, reason: `${weapon.price - state.coins} 코인이 더 필요해요. 한 판 플레이하고 돌아오세요!` };
+  if (state.coins < weapon.price) return { ok: false, reason: `${weapon.price - state.coins} 코인이 더 필요해요.` };
   state.coins -= weapon.price;
   state.ownedWeapons.push(id);
   save();
@@ -88,7 +88,7 @@ export function buySkin(id) {
   const skin = SKINS.find(item => item.id === id);
   if (!skin) return { ok: false, reason: '없는 스킨이에요.' };
   if (state.ownedSkins.includes(id)) return { ok: false, reason: '이미 보유한 스킨이에요.' };
-  if (state.coins < skin.price) return { ok: false, reason: `${skin.price - state.coins} 코인이 더 필요해요. 한 판 플레이하고 돌아오세요!` };
+  if (state.coins < skin.price) return { ok: false, reason: `${skin.price - state.coins} 코인이 더 필요해요.` };
   state.coins -= skin.price;
   state.ownedSkins.push(id);
   save();

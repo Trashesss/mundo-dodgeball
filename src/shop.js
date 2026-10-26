@@ -26,8 +26,10 @@ export function initShop(scene) {
     const catalog = dialog.querySelector('.shop-catalog').getBoundingClientRect();
     const feature = dialog.querySelector('.shop-feature').getBoundingClientRect();
     const sideBySide = feature.left >= catalog.right - 1;
-    el.style.left = `${sideBySide ? catalog.left + catalog.width / 2 - box.left : box.width / 2}px`;
-    el.style.maxWidth = `${(sideBySide ? catalog.width : box.width) - 48}px`;
+    // 상점 창 기준 % 로 지정해 창 크기가 바뀌어도 창 밖으로 나가지 않게 한다
+    const pct = v => `${(v / box.width * 100).toFixed(2)}%`;
+    el.style.left = sideBySide ? pct(catalog.left + catalog.width / 2 - box.left) : '50%';
+    el.style.maxWidth = `calc(${sideBySide ? pct(catalog.width) : '100%'} - 48px)`;
     el.style.bottom = `${dialog.querySelector('.shop-footer').offsetHeight + 24}px`;
     el.classList.add('visible');
     snackbarTimer = setTimeout(hideSnackbar, 2400);
@@ -36,6 +38,7 @@ export function initShop(scene) {
     clearTimeout(snackbarTimer);
     $('shop-status').classList.remove('visible');
     $('shop-status').textContent = '';
+    $('shop-status').removeAttribute('style');
   };
 
   function render() {
@@ -115,6 +118,8 @@ export function initShop(scene) {
     } else config.equip(map.id);
     render();
   });
+  // 스낵바 위치는 띄울 때의 배치로 계산하므로 창 크기가 바뀌면 닫는다
+  window.addEventListener('resize', hideSnackbar);
   window.addEventListener('mundo-shop-change', render);
   render();
 }
