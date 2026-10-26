@@ -34,3 +34,9 @@ export function unpackChamp(a) {
 
 export const packCleaver = (p) => [p.id, p.team, r2(p.x), r2(p.z), r2(p.dx), r2(p.dz), r2(p.dist)];
 export const unpackCleaver = ([id, team, x, z, dx, dz, dist]) => ({ id, team, x, z, dx, dz, dist });
+
+// 상대 화면에 보일 외형(스킨·투척 무기). 모르는 값은 기본 문도·식칼로 되돌린다.
+export const cleanLook = (look) => ({
+  skin: look?.skin === 'ronaldo' ? 'ronaldo' : 'classic',
+  weapon: look?.weapon === 'soccer' ? 'soccer' : 'cleaver',
+});

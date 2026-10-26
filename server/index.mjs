@@ -100,7 +100,7 @@ wss.on('connection', (ws, req) => {
       detach();
       if (rooms.size >= MAX_ROOMS) { send({ type: 'error', code: 'busy' }); return; }
       conn.room = openRoom();
-      conn.slot = conn.room.add(ws);
+      conn.slot = conn.room.add(ws, msg.look);
       return;
     }
     if (msg.type === 'quick') {
@@ -109,13 +109,13 @@ wss.on('connection', (ws, req) => {
       if (waiting) {
         unqueue(waiting);
         conn.room = waiting;
-        conn.slot = waiting.add(ws);
+        conn.slot = waiting.add(ws, msg.look);
         return;
       }
       if (rooms.size >= MAX_ROOMS) { send({ type: 'error', code: 'busy' }); return; }
       const room = openRoom({ quick: true });
       conn.room = room;
-      conn.slot = room.add(ws);
+      conn.slot = room.add(ws, msg.look);
       quickWaiting.push(room);
       room.quickTimer = setTimeout(() => {
         unqueue(room);
@@ -135,8 +135,8 @@ wss.on('connection', (ws, req) => {
       }
       if (target === conn.room && conn.slot >= 0) return;
       detach();
-      let s = typeof msg.token === 'string' ? target.rejoin(ws, msg.token) : -1;
-      if (s < 0) s = target.add(ws);
+      let s = typeof msg.token === 'string' ? target.rejoin(ws, msg.token, msg.look) : -1;
+      if (s < 0) s = target.add(ws, msg.look);
       if (s < 0) { send({ type: 'error', code: target.phase === 'lobby' ? 'full' : 'started' }); return; }
       conn.room = target; conn.slot = s;
       if (target.phase !== 'lobby') unqueue(target);

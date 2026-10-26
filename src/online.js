@@ -2,6 +2,7 @@
 // 경기 화면 처리는 main.js 가 Online.hooks 로 받는다.
 import { NET, isRoomCode } from './net-protocol.js';
 import { track } from './analytics.js';
+import { getShopState } from './shop-state.js';
 
 const $ = (id) => document.getElementById(id);
 const DEFAULT_SERVER = 'wss://3.37.101.179/ws';
@@ -104,6 +105,12 @@ export const Online = {
     });
   },
 
+  // 상대 화면에 보일 내 외형
+  look() {
+    const shop = getShopState();
+    return { skin: shop.equippedSkin, weapon: shop.equippedWeapon };
+  },
+
   send(msg) {
     if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(msg));
   },
@@ -140,7 +147,7 @@ export const Online = {
       if (!this.room) return;
       try {
         await this.connect();
-        this.send({ type: 'join', room: this.room, token: this.token });
+        this.send({ type: 'join', room: this.room, token: this.token, look: this.look() });
       } catch (error) {
         if (error.message !== 'stale' && !this.ws) this.onClose();
       }
@@ -189,7 +196,7 @@ export const Online = {
     }, 1000);
     try {
       await this.connect();
-      this.send({ type: 'create' });
+      this.send({ type: 'create', look: this.look() });
     } catch (error) {
       if (error.message !== 'stale') this.lobbyError(ERRORS.offline);
     }
@@ -201,7 +208,7 @@ export const Online = {
     this.showLobby('방에 들어가는 중…', code);
     try {
       await this.connect();
-      this.send({ type: 'join', room: code, token: storage.get(TOKEN_KEY(code)) || undefined });
+      this.send({ type: 'join', room: code, token: storage.get(TOKEN_KEY(code)) || undefined, look: this.look() });
     } catch (error) {
       if (error.message !== 'stale') this.lobbyError(ERRORS.offline);
     }
@@ -216,7 +223,7 @@ export const Online = {
     this.showQueue();
     try {
       await this.connect();
-      this.send({ type: 'quick' });
+      this.send({ type: 'quick', look: this.look() });
       track('quick_queue_started');
     } catch (error) {
       if (error.message !== 'stale') this.lobbyError(ERRORS.offline);

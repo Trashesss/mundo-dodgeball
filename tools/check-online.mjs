@@ -28,7 +28,8 @@ const base = `http://localhost:${web.address().port}/?server=${encodeURIComponen
 const browsers = [];
 const step = (name) => process.env.DEBUG && console.log('step:', name);
 const errors = [];
-const open = async (url, map = 'classic') => {
+// 방장은 기본 문도 + 축구공, 친구는 호날두 문도 + 식칼: 서로의 외형이 상대 화면에 그대로 보여야 한다.
+const open = async (url, map = 'classic', skin = 'classic', weapon = 'soccer') => {
   const browser = await puppeteer.launch({
     executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
     headless: true,
@@ -39,14 +40,15 @@ const open = async (url, map = 'classic') => {
   page.on('pageerror', (error) => errors.push(error.message));
   await page.setViewport({ width: 1200, height: 800 });
   await skipConsent(page);
-  await page.evaluateOnNewDocument(id => {
+  await page.evaluateOnNewDocument((id, skin, weapon) => {
     if (localStorage.getItem('mundo-shop-v1') === null) {
       localStorage.setItem('mundo-shop-v1', JSON.stringify({
         coins: 200, owned: ['classic', 'colosseum'], equipped: id, rewarded: [],
-        ownedWeapons: ['cleaver', 'soccer'], equippedWeapon: 'soccer',
+        ownedWeapons: ['cleaver', 'soccer'], equippedWeapon: weapon,
+        ownedSkins: ['classic', 'ronaldo'], equippedSkin: skin,
       }));
     }
-  }, map);
+  }, map, skin, weapon);
   await page.goto(url);
   return page;
 };
@@ -86,7 +88,7 @@ try {
 
   // 초대 링크로 친구 입장 → 메뉴 없이 바로 대기실
   step('초대 링크로 친구 입장 → 메뉴 없이 바로 대기실');
-  const guest = await open(link, maps[1]);
+  const guest = await open(link, maps[1], 'ronaldo', 'cleaver');
   await guest.waitForFunction(() => document.getElementById('lobby-p1').dataset.state === 'joined');
   await host.waitForFunction(() => document.getElementById('lobby-p1').dataset.state === 'joined');
   assert.ok(await guest.$eval('#menu', (el) => el.classList.contains('hidden')));
@@ -103,9 +105,9 @@ try {
   assert.deepEqual(roles[0].slice(0, 4), [0, 0, true, false]);
   assert.deepEqual(roles[1].slice(0, 4), [1, 1, true, false]);
   assert.ok(roles.every((r) => r[4] === 14 && r[5] && r[6]), 'no shrink, both champs have thumbs-up emote');
-  for (const page of [host, guest]) {
-    assert.deepEqual(await evalScene(page, 'return [s.player.sprite.texture.key, s.enemy.sprite.texture.key];'), ['mundo-soccer', 'mundo']);
-  }
+  const looks = 'return s.champs.map(c => [c.skinId, c.weaponId, c.sprite.texture.key]);';
+  const expectedLooks = [['classic', 'soccer', 'mundo-soccer'], ['ronaldo', 'cleaver', 'mundo-ronaldo']];
+  for (const page of [host, guest]) assert.deepEqual(await evalScene(page, looks), expectedLooks);
   assert.equal(await host.$eval('#player-name', (el) => el.textContent), '나');
   assert.equal(await guest.$eval('#player-name', (el) => el.textContent), '상대방');
   for (const [i, page] of [host, guest].entries()) {
@@ -147,7 +149,10 @@ try {
   step('서버 판정 적중: 방장이 친구에게 Q → 양쪽 모두 체력 감소, 방장 문도에 따봉');
   await evalScene(host, 's.player.qCd = 0; s.lastCastSeq = 0; if (s.castQ(s.player, s.enemy.x, s.enemy.z)) s.sendInput({ cast: "q", tx: s.enemy.x, tz: s.enemy.z });');
   await waitScene(host, 's.cleavers.some(cl => cl.team === 0 && cl.view?.img.texture.key === "soccer-ball")');
-  await waitScene(guest, 's.cleavers.some(cl => cl.team === 0 && cl.view?.img.texture.key === "cleaver")');
+  await waitScene(guest, 's.cleavers.some(cl => cl.team === 0 && cl.view?.img.texture.key === "soccer-ball")');
+  await evalScene(guest, 's.player.qCd = 0; s.lastCastSeq = 0; if (s.castQ(s.player, s.enemy.x, s.enemy.z)) s.sendInput({ cast: "q", tx: s.enemy.x, tz: s.enemy.z });');
+  await waitScene(guest, 's.cleavers.some(cl => cl.team === 1 && cl.view?.img.texture.key === "cleaver")');
+  await waitScene(host, 's.cleavers.some(cl => cl.team === 1 && cl.view?.img.texture.key === "cleaver")');
   for (const page of [host, guest]) {
     await waitScene(page, 's.champs[1].hp < 600 && s.champs[0].stats.hits === 1', 4000);
     await waitScene(page, 's.champs[0].emote.visible', 2000);
@@ -203,12 +208,14 @@ try {
   assert.ok(await host.$eval('#result', (el) => el.classList.contains('hidden')));
   for (const page of [host, guest]) await waitScene(page, "s.state === 'play' && s.champs.every(c => c.alive && c.hp > 600)", 5000);
   for (const [i, page] of [host, guest].entries()) await checkMap(page, maps[i]);
+  for (const page of [host, guest]) assert.deepEqual(await evalScene(page, looks), expectedLooks);
 
   // 새로고침 재접속: 잠시 멈췄다가 같은 자리로 복귀
   step('새로고침 재접속: 잠시 멈췄다가 같은 자리로 복귀');
   await guest.reload();
   await waitScene(guest, "s.mode === 'online' && s.mySlot === 1 && s.state === 'play' && !s.netPaused", 10000);
   await waitScene(host, '!s.netPaused');
+  for (const page of [host, guest]) assert.deepEqual(await evalScene(page, looks), expectedLooks);
   for (const [i, page] of [host, guest].entries()) await checkMap(page, maps[i]);
   await host.waitForFunction(() => document.getElementById('net-banner').dataset.state === 'back' && !document.getElementById('net-banner').classList.contains('hidden'));
   assert.equal(await host.$eval('#net-title', (el) => el.textContent), '상대방이 다시 돌아왔어요!');
@@ -240,7 +247,7 @@ try {
 
   fs.mkdirSync('output', { recursive: true });
   assert.deepEqual(errors, []);
-  console.log(`Online (${maps.join(' vs ')}): map persistence, bot-to-online reset, no shrink, click projection, movement limits, flash/ghost sync, room link, lobby ready, countdown, server hit + both emotes, KO rewards, humiliate share, rematch, refresh rejoin, opponent-left notice and missing room passed.`);
+  console.log(`Online (${maps.join(' vs ')}): map persistence, opponent skin/weapon on both screens, bot-to-online reset, no shrink, click projection, movement limits, flash/ghost sync, room link, lobby ready, countdown, server hit + both emotes, KO rewards, humiliate share, rematch, refresh rejoin, opponent-left notice and missing room passed.`);
 } finally {
   await Promise.all(browsers.map((b) => b.close()));
   web.close();

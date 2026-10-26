@@ -10,7 +10,7 @@ import { THROW } from './throw-motion.js';
 import { createBaron } from './baron.js';
 import { track, createTrackingId, referralContext } from './analytics.js';
 import * as Sim from './sim.js';
-import { NET, unpackChamp, unpackCleaver } from './net-protocol.js';
+import { NET, unpackChamp, unpackCleaver, cleanLook } from './net-protocol.js';
 import { Online, roomFromUrl } from './online.js';
 import { isTouchDevice, setupTouchControls } from './touch-controls.js';
 import { initShop } from './shop.js';
@@ -85,12 +85,13 @@ void main() {
 // ---------------------------------------------------------------------------
 class Champ {
   // emote: 적중 시 따봉 표시 (봇전은 봇만, 대인전은 양쪽 모두)
-  constructor(scene, { team, isPlayer, emote = !isPlayer }) {
+  // look: 온라인 상대의 외형. 없으면 내 캐릭터는 장착한 외형, 봇은 기본 외형
+  constructor(scene, { team, isPlayer, emote = !isPlayer, look = null }) {
     Object.assign(this, Sim.createChamp(team)); // team, side, stats
     this.scene = scene;
     this.isPlayer = isPlayer;
-    this.weaponId = isPlayer ? scene.weaponId : 'cleaver';
-    this.skinId = isPlayer ? scene.skinId : 'classic';
+    this.weaponId = look ? look.weapon : isPlayer ? scene.weaponId : 'cleaver';
+    this.skinId = look ? look.skin : isPlayer ? scene.skinId : 'classic';
     this.hudSlot = team; // 상단 체력바 번호 (쌍둥이 모드의 두 번째 적은 2)
     this.color = isPlayer ? 0x5ee05e : 0xff4040;
     this.barColor = isPlayer ? 0x48c848 : 0xd83838;
@@ -237,7 +238,7 @@ class Champ {
 class CleaverView {
   constructor(scene, cl) {
     this.cont = scene.add.container(0, 0);
-    const soccer = scene.weaponId === 'soccer' && scene.player?.team === cl.team;
+    const soccer = scene.champs.find(c => c.team === cl.team)?.weaponId === 'soccer';
     this.img = scene.add.image(0, 0, soccer ? 'soccer-ball' : 'cleaver')
       .setDisplaySize(soccer ? 48 : 72, soccer ? 48 : 43.2)
       .setRotation(Math.atan2(cl.dz * SIN, cl.dx));
@@ -982,7 +983,7 @@ class GameScene extends Phaser.Scene {
   }
 
   // ---------- 온라인 1대1 (서버 판정) ----------
-  setupOnlineMatch(slot, source = 'online') {
+  setupOnlineMatch(slot, source = 'online', looks = []) {
     Sound.startMusic();
     this.applyArena(getShopState().equipped);
     this.applyWeapon(getShopState().equippedWeapon);
@@ -991,7 +992,9 @@ class GameScene extends Phaser.Scene {
     this.setMode('online');
     this.mySlot = slot;
     // 방장(0)은 왼쪽, 친구(1)는 오른쪽. 내 캐릭터만 초록색, 따봉은 양쪽 모두.
-    this.champs = [0, 1].map(team => new Champ(this, { team, isPlayer: team === slot, emote: true }));
+    this.champs = [0, 1].map(team => new Champ(this, {
+      team, isPlayer: team === slot, emote: true, look: team === slot ? null : cleanLook(looks[team]),
+    }));
     this.player = this.champs[slot];
     this.enemy = this.champs[1 - slot];
     this.enemies = [this.enemy];
@@ -1479,7 +1482,7 @@ Online.hooks = {
     const s = scene();
     $('menu').classList.add('hidden');
     $('result').classList.add('hidden');
-    if (s.mode !== 'online' || msg.round === 1) s.setupOnlineMatch(Online.slot, s.mode === 'online' ? 'rematch' : Online.isQuick ? 'quick' : 'online');
+    if (s.mode !== 'online' || msg.round === 1) s.setupOnlineMatch(Online.slot, s.mode === 'online' ? 'rematch' : Online.isQuick ? 'quick' : 'online', msg.looks);
     s.startOnlineRound(msg);
   },
   // 새로고침·재연결로 진행 중인 경기에 다시 들어옴
@@ -1488,7 +1491,7 @@ Online.hooks = {
     $('menu').classList.add('hidden');
     HUD.banner(null);
     if (s.mode !== 'online') {
-      s.setupOnlineMatch(Online.slot, 'resume');
+      s.setupOnlineMatch(Online.slot, 'resume', msg.looks);
       s.champs.forEach((c, i) => c.reset(NET.SPAWN[i].x, NET.SPAWN[i].z));
       s.state = msg.phase === 'over' ? 'roundEnd' : msg.phase;
     }

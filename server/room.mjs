@@ -2,7 +2,7 @@
 // 빠른 대전 방(quick)은 준비 없이 바로 시작하고, 사람이 안 오면 문도봇(고스트)이 한 자리를 채운다.
 import { randomUUID } from 'node:crypto';
 import { RULES } from '../src/rules.js';
-import { NET, packChamp, packCleaver } from '../src/net-protocol.js';
+import { NET, packChamp, packCleaver, cleanLook } from '../src/net-protocol.js';
 import {
   createWorld, createChamp, resetChamp, constrain, castQ, castFlash, castGhost, stepWorld, roundWinner,
 } from '../src/sim.js';
@@ -34,10 +34,10 @@ export class Room {
   }
 
   // ---------- 연결 ----------
-  add(ws) {
+  add(ws, look) {
     const slot = this.slots.findIndex(s => !s);
     if (slot < 0 || this.phase !== 'lobby') return -1;
-    this.slots[slot] = { ws, token: randomUUID(), connected: true, ready: false, rematch: false, ack: 0, grace: null };
+    this.slots[slot] = { ws, look: cleanLook(look), token: randomUUID(), connected: true, ready: false, rematch: false, ack: 0, grace: null };
     this.welcome(slot);
     this.broadcastLobby();
     if (this.quick && this.slots.every(Boolean)) {
@@ -51,7 +51,7 @@ export class Room {
   addBot(diff) {
     const slot = this.slots.findIndex(s => !s);
     if (slot < 0 || this.phase !== 'lobby') return false;
-    this.slots[slot] = { bot: true, diff, token: null, connected: true, ready: true, rematch: true, ack: 0, grace: null };
+    this.slots[slot] = { bot: true, diff, look: cleanLook(), token: null, connected: true, ready: true, rematch: true, ack: 0, grace: null };
     this.broadcast({ type: 'matched', bot: true });
     this.startMatch();
     return true;
@@ -59,13 +59,15 @@ export class Room {
 
   hasBot() { return this.slots.some(s => s?.bot); }
 
-  rejoin(ws, token) {
+  // 재접속 중에 바꾼 외형은 다음 경기부터 반영된다 (진행 중인 경기는 시작 때 외형 유지)
+  rejoin(ws, token, look) {
     const slot = this.slots.findIndex(s => s && s.token === token);
     if (slot < 0) return -1;
     const s = this.slots[slot];
     if (s.ws && s.ws !== ws) s.ws.close(4000, 'replaced');
     clearTimeout(s.grace);
     Object.assign(s, { ws, connected: true, grace: null });
+    if (look && !this.inMatch()) s.look = cleanLook(look);
     this.welcome(slot);
     if (this.inMatch()) {
       this.paused = !this.slots.every(x => x?.connected);
@@ -184,7 +186,7 @@ export class Room {
     w.state = 'countdown';
     this.phase = 'countdown';
     this.countdownLeft = NET.COUNTDOWN_MS / 1000;
-    this.broadcast({ type: 'start', round: this.round, countdownMs: NET.COUNTDOWN_MS, t: this.time() });
+    this.broadcast({ type: 'start', round: this.round, countdownMs: NET.COUNTDOWN_MS, t: this.time(), looks: this.looks() });
     this.sendSnap();
   }
 
@@ -287,9 +289,11 @@ export class Room {
     const s = this.slots[slot];
     this.send(slot, {
       type: 'joined', room: this.code, slot, token: s.token, phase: this.phase, round: this.round ?? 0, paused: this.paused,
-      quick: this.quick, bot: this.hasBot(),
+      quick: this.quick, bot: this.hasBot(), looks: this.looks(),
     });
   }
+
+  looks() { return this.slots.map(s => cleanLook(s?.look)); }
 
   lobbyState() {
     return this.slots.map(s => s && { connected: s.connected, ready: s.ready, bot: !!s.bot });
