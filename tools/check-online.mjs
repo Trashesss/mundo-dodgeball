@@ -159,7 +159,7 @@ try {
   assert.equal(await resultTitle(guest), '패배');
   assert.ok(await host.$eval('#share-btn', (el) => el.classList.contains('hidden')));
   assert.match(await host.$eval('#result-reward', el => el.textContent), /\+100/);
-  assert.match(await guest.$eval('#result-reward', el => el.textContent), /\+40/);
+  assert.match(await guest.$eval('#result-reward', el => el.textContent), /\+30/);
   await guest.screenshot({ path: 'output/online-result-guest.png' });
 
   // 굴욕 선사하기: 승자에게만 버튼, 상대 이름을 넣은 문구와 짤 미리보기 링크를 복사
