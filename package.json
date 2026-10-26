@@ -11,6 +11,8 @@
     "check:arena-quality": "node tools/check-arena-quality.mjs",
     "bake:cartoon": "node tools/bake-cartoon.mjs",
     "bake:soccer": "node tools/bake-cartoon.mjs --soccer",
+    "bake:ronaldo": "node tools/bake-cartoon.mjs --ronaldo && node tools/bake-cartoon.mjs --ronaldo --soccer",
+    "check:skins": "node tools/check-skins.mjs",
     "check:cartoon": "node tools/check-cartoon.mjs",
     "check:hud": "node tools/check-fight-hud.mjs",
     "preview:cartoon": "node tools/preview-cartoon.mjs",

@@ -24,6 +24,13 @@ const BAR_OFF = 154;
 const EMOTE_DELAY = 0.25;
 const EMOTE_DURATION = 1;
 const EMOTE_SIZE = 104;
+const animationPrefix = (skin, weapon) => `${skin === 'ronaldo' ? 'ronaldo-' : ''}${weapon === 'soccer' ? 'soccer-' : ''}`;
+const CHARACTER_ATLASES = [
+  { prefix: '', texture: 'mundo', path: '' },
+  { prefix: 'soccer-', texture: 'mundo-soccer', path: 'soccer/' },
+  { prefix: 'ronaldo-', texture: 'mundo-ronaldo', path: 'ronaldo/' },
+  { prefix: 'ronaldo-soccer-', texture: 'mundo-ronaldo-soccer', path: 'ronaldo/soccer/' },
+];
 const INTERP_MS = 100; // 대인전 상대 표시 지연: 스냅샷 3개 간격 + 도착 흔들림 여유
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -83,6 +90,7 @@ class Champ {
     this.scene = scene;
     this.isPlayer = isPlayer;
     this.weaponId = isPlayer ? scene.weaponId : 'cleaver';
+    this.skinId = isPlayer ? scene.skinId : 'classic';
     this.hudSlot = team; // 상단 체력바 번호 (쌍둥이 모드의 두 번째 적은 2)
     this.color = isPlayer ? 0x5ee05e : 0xff4040;
     this.barColor = isPlayer ? 0x48c848 : 0xd83838;
@@ -148,7 +156,7 @@ class Champ {
   }
 
   setAnim(key, force = false) {
-    const full = `${this.weaponId === 'soccer' ? 'soccer-' : ''}${key}_${this.dirIndex()}`;
+    const full = `${animationPrefix(this.skinId, this.weaponId)}${key}_${this.dirIndex()}`;
     const anims = this.sprite.anims;
     if (!force && anims.currentAnim?.key === full && anims.isPlaying) return;
     if (!force && anims.currentAnim?.key === full && key === 'death') return;
@@ -280,8 +288,9 @@ class GameScene extends Phaser.Scene {
       document.getElementById('load-progress').setAttribute('aria-valuenow', percent);
       document.getElementById('load-text').textContent = percent < 100 ? '경기장 준비하는 중…' : '문도, 준비 끝!';
     });
-    this.load.multiatlas('mundo', 'assets/cartoon/atlas.json', 'assets/cartoon/');
-    this.load.multiatlas('mundo-soccer', 'assets/cartoon/soccer/atlas.json', 'assets/cartoon/soccer/');
+    for (const { texture, path } of CHARACTER_ATLASES) {
+      this.load.multiatlas(texture, `assets/cartoon/${path}atlas.json`, `assets/cartoon/${path}`);
+    }
     this.load.image('soccer-ball', 'assets/cartoon/soccer-ball-v2.png');
     this.load.json('meta', 'assets/cartoon/meta.json');
     this.load.json('arenaMeta', 'assets/cartoon/arena.json');
@@ -300,6 +309,7 @@ class GameScene extends Phaser.Scene {
     this.makeFx();
     this.applyArena(getShopState().equipped);
     this.applyWeapon(getShopState().equippedWeapon);
+    this.applySkin(getShopState().equippedSkin);
     this.setupInput();
     if (this.touchMode) this.touch = setupTouchControls(this, { sx, sy, depth: DEPTH.ring + 1 });
     this.spawnMenuMundos();
@@ -432,12 +442,12 @@ class GameScene extends Phaser.Scene {
   }
 
   makeAnims() {
-    for (const soccer of [false, true]) {
+    for (const { prefix, texture } of CHARACTER_ATLASES) {
       for (const [key, a] of Object.entries(this.meta.anims)) {
         for (let d = 0; d < 8; d++) {
           this.anims.create({
-            key: `${soccer ? 'soccer-' : ''}${key}_${d}`,
-            frames: this.anims.generateFrameNames(soccer ? 'mundo-soccer' : 'mundo', { prefix: `${key}_${d}_`, start: 0, end: a.frames - 1 }),
+            key: `${prefix}${key}_${d}`,
+            frames: this.anims.generateFrameNames(texture, { prefix: `${key}_${d}_`, start: 0, end: a.frames - 1 }),
             frameRate: a.fps,
             repeat: a.loop ? -1 : 0,
           });
@@ -454,8 +464,17 @@ class GameScene extends Phaser.Scene {
     skill.setAttribute('aria-label', `Q ${label}`);
     skill.querySelector('.q-icon').classList.toggle('soccer-icon', soccer);
     skill.parentElement.querySelector('.spell-name').textContent = label;
+    this.updateMenuAppearance();
+  }
+
+  applySkin(id) {
+    this.skinId = id === 'ronaldo' ? 'ronaldo' : 'classic';
+    this.updateMenuAppearance();
+  }
+
+  updateMenuAppearance() {
     if (this.menuMundos) {
-      const key = `${soccer ? 'soccer-' : ''}dance_1`;
+      const key = `${animationPrefix(this.skinId, this.weaponId)}dance_1`;
       if (this.menuMundos[0].anims.currentAnim?.key !== key) this.menuMundos[0].play(key);
     }
   }
@@ -848,7 +867,7 @@ class GameScene extends Phaser.Scene {
   // ---------- 매치 흐름 ----------
   spawnMenuMundos() {
     this.menuMundos = [
-      this.add.sprite(sx(-8.5), sy(1.5), 'mundo').setOrigin(0.5, this.meta.anchor).setScale(this.meta.scale).play(`${this.weaponId === 'soccer' ? 'soccer-' : ''}dance_1`),
+      this.add.sprite(sx(-8.5), sy(1.5), 'mundo').setOrigin(0.5, this.meta.anchor).setScale(this.meta.scale).play(`${animationPrefix(this.skinId, this.weaponId)}dance_1`),
       this.add.sprite(sx(8.5), sy(1.5), 'mundo').setOrigin(0.5, this.meta.anchor).setScale(this.meta.scale).play('dance_3'),
     ];
     this.menuMundos.forEach((s) => s.setDepth(s.y));
@@ -859,6 +878,7 @@ class GameScene extends Phaser.Scene {
     Sound.startMusic();
     this.applyArena(getShopState().equipped);
     this.applyWeapon(getShopState().equippedWeapon);
+    this.applySkin(getShopState().equippedSkin);
     this.clearMatch();
     this.setMode('bot');
     this.twins = diff === 'twins';
@@ -955,6 +975,7 @@ class GameScene extends Phaser.Scene {
     this.roundTime = 0;
     this.updateArena();
     this.applyWeapon(getShopState().equippedWeapon);
+    this.applySkin(getShopState().equippedSkin);
     this.spawnMenuMundos();
     this.state = 'menu';
     this.applyArena(getShopState().equipped);
@@ -965,6 +986,7 @@ class GameScene extends Phaser.Scene {
     Sound.startMusic();
     this.applyArena(getShopState().equipped);
     this.applyWeapon(getShopState().equippedWeapon);
+    this.applySkin(getShopState().equippedSkin);
     this.clearMatch();
     this.setMode('online');
     this.mySlot = slot;

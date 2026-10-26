@@ -4,6 +4,7 @@ import { serve } from './serve.mjs';
 
 // Bake a consistent joint rig for every state into the game's trimmed atlas.
 const soccer = process.argv.includes('--soccer');
+const ronaldo = process.argv.includes('--ronaldo');
 const server = await serve(0);
 const browser = await puppeteer.launch({
   executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -12,7 +13,7 @@ const browser = await puppeteer.launch({
 try {
   const page = await browser.newPage();
   await page.goto(`http://localhost:${server.address().port}/`);
-  const result = await page.evaluate(async (soccer) => {
+  const result = await page.evaluate(async ({ soccer, ronaldo }) => {
     const image = new Image();
     image.src = '/assets/cartoon/source.png';
     await image.decode();
@@ -40,12 +41,19 @@ try {
       gripImage.src = '/assets/cartoon/soccer-parts-v4.png';
       await gripImage.decode();
     }
-    const motion = await loadCartoonMotion({ gripImage });
+    let bodyImage = null;
+    if (ronaldo) {
+      bodyImage = new Image();
+      bodyImage.src = '/assets/cartoon/ronaldo/parts-source-mask-v2.png';
+      await bodyImage.decode();
+    }
+    const motion = await loadCartoonMotion({ gripImage, bodyImage });
+    const webp = soccer || ronaldo;
     const { THROW } = await import('/src/throw-motion.js');
     const bakeScale = 1.25;
     // The ball grip extends higher during the rear-view windup. Extra
     // transparent headroom keeps the same normalized foot anchor and scale.
-    const frameW = 320, frameH = soccer ? 320 : 280, anchor = 0.76;
+    const frameW = 320, frameH = webp ? 320 : 280, anchor = 0.76;
     const anims = {
       idle: { frames: 48, loop: true, fps: 24 },
       run: { frames: 30, loop: true, fps: 60 },
@@ -95,8 +103,8 @@ try {
             spriteSourceSize: { x: it.left, y: it.top, w, h },
             frame: { x: it.x, y: it.y, w, h } };
         });
-        const name = `${key}${index ? `-${index}` : ''}.${soccer ? 'webp' : 'png'}`;
-        images.push({ name, data: soccer ? sheet.toDataURL('image/webp', .92) : sheet.toDataURL() });
+        const name = `${key}${index ? `-${index}` : ''}.${webp ? 'webp' : 'png'}`;
+        images.push({ name, data: webp ? sheet.toDataURL('image/webp', .92) : sheet.toDataURL() });
         textures.push({ image: name, format: 'RGBA8888', size: { w: sheet.width, h: sheet.height }, scale: 1, frames });
       });
     }
@@ -120,16 +128,22 @@ try {
       image, p.x + (p.w - portraitSize) / 2, p.y, portraitSize, portraitSize,
       4, 4, 248, 248,
     );
-    if (!soccer) images.push({ name: 'portrait.png', data: portrait.toDataURL() });
+    if (!soccer && !ronaldo) images.push({ name: 'portrait.png', data: portrait.toDataURL() });
+    if (!soccer) {
+      const shop = canvas(256, 256), g = shop.getContext('2d');
+      g.translate(128, 234); g.scale(1.5, 1.5);
+      motion.draw(g, 'idle', 1, 0, anims.idle.frames);
+      images.push({ name: ronaldo ? 'shop-v5.png' : 'shop-classic-v1.png', data: shop.toDataURL() });
+    }
     return { images, atlas: { textures }, meta: { frameW, frameH, anchor, scale: 1 / bakeScale, anims } };
-  }, soccer);
-  const out = new URL(soccer ? '../assets/cartoon/soccer/' : '../assets/cartoon/', import.meta.url);
+  }, { soccer, ronaldo });
+  const out = new URL(ronaldo ? `../assets/cartoon/ronaldo/${soccer ? 'soccer/' : ''}` : soccer ? '../assets/cartoon/soccer/' : '../assets/cartoon/', import.meta.url);
   fs.mkdirSync(out, { recursive: true });
   for (const image of result.images) fs.writeFileSync(new URL(image.name, out), Buffer.from(image.data.split(',')[1], 'base64'));
   fs.writeFileSync(new URL('atlas.json', out), JSON.stringify(result.atlas));
   fs.writeFileSync(new URL('meta.json', out), JSON.stringify(result.meta, null, 2));
   fs.mkdirSync(new URL('../output/animation/', import.meta.url), { recursive: true });
-  console.log(soccer ? 'Soccer ball character atlas saved.' : 'Cartoon atlas and portrait saved.');
+  console.log(`${ronaldo ? 'Ronaldo skin' : 'Classic Mundo'} ${soccer ? 'soccer ball' : 'cleaver'} atlas saved.`);
 } finally {
   await browser.close();
   server.close();

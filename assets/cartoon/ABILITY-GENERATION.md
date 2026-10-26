@@ -1,6 +1,8 @@
 # Mundo ability icons — 2026-10-13
 
-## Q — cleaver-icon.png
+## Q — cleaver-throw-icon-v1.png
+
+The original action artwork was recovered unchanged from commit `3d14505` and saved under this dedicated skill filename on 2026-10-26. The HUD references it separately from `cleaver-icon.png`, which is the standalone shop item artwork. This keeps shop illustration changes from replacing the skill icon.
 
 Generated with the built-in image_gen tool. The lower HUD now shows Q, D and F together, including the Q cooldown previously displayed below the player's health bar.
 

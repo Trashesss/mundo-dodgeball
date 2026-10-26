@@ -1,0 +1,199 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import puppeteer from 'puppeteer-core';
+import { serve } from './serve.mjs';
+import { skipConsent } from './skip-consent.mjs';
+import { RULES } from '../src/rules.js';
+
+const meta = JSON.parse(fs.readFileSync('assets/cartoon/meta.json'));
+for (const folder of ['ronaldo', 'ronaldo/soccer']) {
+  const atlas = JSON.parse(fs.readFileSync(`assets/cartoon/${folder}/atlas.json`));
+  const frames = new Set(atlas.textures.flatMap(texture => texture.frames.map(frame => frame.filename)));
+  for (const [key, anim] of Object.entries(meta.anims)) for (let d = 0; d < 8; d++) for (let f = 0; f < anim.frames; f++) {
+    assert.ok(frames.has(`${key}_${d}_${f}`), `missing ${folder} ${key}_${d}_${f}`);
+  }
+  for (const texture of atlas.textures) for (const frame of texture.frames) {
+    const s = frame.spriteSourceSize;
+    assert.ok(s.x > 0 && s.y > 0 && s.x + s.w < frame.sourceSize.w && s.y + s.h < frame.sourceSize.h, `${folder} must not clip`);
+  }
+}
+
+const server = await serve(0);
+const browser = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
+const url = `http://localhost:${server.address().port}/`;
+const errors = [];
+const ready = page => page.waitForFunction(() => window.__game?.scene.getScene('game').state === 'menu' && document.querySelector('#shop-skin-list').children.length === 2 && document.querySelector('#loading').classList.contains('hidden'));
+try {
+  fs.mkdirSync('output/skins', { recursive: true });
+  const page = await browser.newPage();
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('response', response => { if (response.status() >= 400 && response.url().startsWith(url)) errors.push(`${response.status()} ${response.url()}`); });
+  await page.setViewport({ width: 1440, height: 1000 });
+  await skipConsent(page);
+  await page.evaluateOnNewDocument(() => {
+    if (localStorage.getItem('mundo-shop-v1') === null) localStorage.setItem('mundo-shop-v1', JSON.stringify({ coins: 100, owned: ['classic', 'colosseum'], equipped: 'colosseum', ownedWeapons: ['cleaver', 'soccer'], equippedWeapon: 'soccer', rewarded: ['old-match'] }));
+  });
+  await page.goto(url); await ready(page);
+  const preserved = await page.evaluate(async () => {
+    const { loadCartoonMotion } = await import('/tools/cartoon-motion.js');
+    const bodyImage = new Image(); bodyImage.src = '/assets/cartoon/ronaldo/parts-source-mask-v2.png'; await bodyImage.decode();
+    const base = await loadCartoonMotion(), skin = await loadCartoonMotion({ bodyImage });
+    const equal = (a, b) => {
+      if (a.width !== b.width || a.height !== b.height) return false;
+      const aa = a.getContext('2d').getImageData(0, 0, a.width, a.height).data;
+      const bb = b.getContext('2d').getImageData(0, 0, b.width, b.height).data;
+      return aa.every((value, i) => value === bb[i]);
+    };
+    return base.views.every((v, i) => {
+      const other = skin.views[i];
+      return Math.abs(v.core.width / 2 - other.core.width * (other.corePivotX ?? .5)) < 1e-9 && v.core.height === other.core.height
+        && ['weapon', 'empty', 'unarmed'].every(key => equal(v[key], other[key]))
+        && v.legs.every((leg, j) => equal(leg, other.legs[j]));
+    });
+  });
+  assert.ok(preserved, 'skin must preserve original body registration, core height and pixel-identical arms, legs and bare feet');
+  const migrated = await page.evaluate(async () => {
+    const shop = await import('/src/shop-state.js');
+    const state = shop.getShopState();
+    state.ownedSkins.push('ronaldo');
+    return { state: shop.getShopState(), locked: shop.equipSkin('ronaldo'), invalid: shop.buySkin('missing').ok };
+  });
+  assert.equal(migrated.locked, false); assert.equal(migrated.invalid, false);
+  assert.deepEqual(migrated.state.ownedSkins, ['classic']);
+  assert.deepEqual(migrated.state.ownedWeapons, ['cleaver', 'soccer']);
+  assert.deepEqual(migrated.state.owned, ['classic', 'colosseum']);
+  await page.click('#shop-open'); await page.click('[data-shop-category="skins"]');
+  assert.equal(await page.$eval('#shop-map-name', el => el.textContent), '호날두 문도');
+  await page.click('#shop-action');
+  assert.match(await page.$eval('#shop-status', el => el.textContent), /677 코인이 더 필요/);
+  assert.equal(await page.$eval('#shop-coins', el => el.textContent), '100');
+  await page.evaluate(async () => {
+    const shop = await import('/src/shop-state.js');
+    for (let i = 0; i < 7; i++) shop.awardMatch(`skin-win-${i}`, true);
+  });
+  await page.click('#shop-action');
+  assert.equal(await page.$eval('#shop-coins', el => el.textContent), '23');
+  assert.equal(await page.evaluate(async () => (await import('/src/shop-state.js')).getShopState().equippedSkin), 'classic');
+  assert.equal(await page.evaluate(async () => (await import('/src/shop-state.js')).buySkin('ronaldo').ok), false);
+  await page.click('#shop-action');
+  assert.ok(await page.$eval('#shop-action', el => el.disabled));
+  assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').menuMundos[0].texture.key), 'mundo-ronaldo-soccer');
+  await page.screenshot({ path: 'output/skins/shop-desktop.png' });
+  for (const [width, height] of [[390, 844], [320, 568], [844, 390]]) {
+    await page.setViewport({ width, height });
+    for (const category of ['maps', 'weapons', 'skins']) {
+      await page.$eval(`[data-shop-category="${category}"]`, el => el.click());
+      assert.ok(await page.$eval('#shop-dialog', el => el.scrollWidth <= el.clientWidth && el.getBoundingClientRect().right <= innerWidth && el.getBoundingClientRect().bottom <= innerHeight), `shop fits ${width}x${height}`);
+    }
+    if (width === 390) await page.screenshot({ path: 'output/skins/shop-mobile.png' });
+  }
+  await page.setViewport({ width: 1440, height: 1000 });
+  await page.click('#shop-close'); await page.reload(); await ready(page);
+  const saved = await page.evaluate(async () => (await import('/src/shop-state.js')).getShopState());
+  assert.equal(saved.equippedSkin, 'ronaldo'); assert.equal(saved.equippedWeapon, 'soccer');
+  assert.equal(saved.equipped, 'colosseum'); assert.equal(saved.coins, 23); assert.equal(saved.rewarded[0], 'old-match');
+
+  for (const weapon of ['cleaver', 'soccer']) {
+    const result = await page.evaluate(async weapon => {
+      (await import('/src/shop-state.js')).equipWeapon(weapon);
+      const s = window.__game.scene.getScene('game');
+      s.startMatch({ diff: 'easy' }); s.scene.pause();
+      const p = s.player, e = s.enemy;
+      const textures = [];
+      for (const key of ['idle', 'run', 'throw', 'dance', 'death']) for (let d = 0; d < 8; d++) {
+        p.facing = d * Math.PI / 4; p.visualDir = null; p.setAnim(key, true);
+        textures.push(p.sprite.texture.key);
+      }
+      p.facing = 0; p.visualDir = null; p.qCd = 0;
+      s.castQ(p, e.x, e.z); s.updateChamp(p, .15);
+      const projectile = s.cleavers[0];
+      const projectileTexture = projectile.view.img.texture.key;
+      for (let i = 0; i < 150 && projectile.alive; i++) s.updateCleaver(projectile, .01);
+      p.actionT = 0; p.setAnim('idle', true); p.sync(); e.sync();
+      document.querySelector('#menu').classList.add('hidden');
+      return { textures, enemy: e.sprite.texture.key, projectileTexture, hits: p.stats.hits, enemyHp: e.hp };
+    }, weapon);
+    assert.ok(result.textures.every(texture => texture === `mundo-ronaldo${weapon === 'soccer' ? '-soccer' : ''}`));
+    assert.equal(result.enemy, 'mundo');
+    assert.equal(result.projectileTexture, weapon === 'soccer' ? 'soccer-ball' : 'cleaver');
+    assert.equal(result.hits, 1); assert.equal(result.enemyHp, RULES.maxHp * (1 - RULES.q.dmgPct));
+    await page.evaluate(() => { const s = window.__game.scene.getScene('game'); s.scene.resume(); });
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await page.screenshot({ path: `output/skins/fight-${weapon}.png` });
+    const closeup = await page.evaluate(() => {
+      const game = window.__game, s = game.scene.getScene('game'), camera = s.cameras.main;
+      const point = camera.matrix.transformPoint(s.player.sprite.x - camera.scrollX, s.player.sprite.y - camera.scrollY);
+      const rect = game.canvas.getBoundingClientRect();
+      const x = rect.left + point.x * rect.width / game.scale.width;
+      const y = rect.top + point.y * rect.height / game.scale.height;
+      return { x: Math.round(x - 90), y: Math.round(y - 140), width: 180, height: 180 };
+    });
+    await page.screenshot({ path: `output/skins/closeup-${weapon}.png`, clip: closeup });
+  }
+  for (const slot of [0, 1]) {
+    const online = await page.evaluate(slot => {
+      const s = window.__game.scene.getScene('game');
+      s.setupOnlineMatch(slot); s.champs.forEach((c, i) => c.reset(i ? 6.5 : -6.5, 0)); s.scene.pause();
+      return { player: s.player.skinId, texture: s.player.sprite.texture.key, enemy: s.enemy.skinId, enemyTexture: s.enemy.sprite.texture.key };
+    }, slot);
+    assert.deepEqual(online, { player: 'ronaldo', texture: 'mundo-ronaldo-soccer', enemy: 'classic', enemyTexture: 'mundo' });
+  }
+  await page.evaluate(() => { const s = window.__game.scene.getScene('game'); s.backToMenu(); s.scene.resume(); document.querySelector('#menu').classList.remove('hidden'); });
+  await page.click('#shop-open'); await page.click('[data-shop-category="skins"]');
+  await page.click('[data-skin="classic"]'); await page.click('#shop-action');
+  assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').menuMundos[0].texture.key), 'mundo-soccer');
+  await page.click('[data-shop-category="weapons"]'); await page.click('[data-weapon="cleaver"]'); await page.click('#shop-action');
+  assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').menuMundos[0].texture.key), 'mundo');
+
+  // A contact sheet uses the actual baked frames, including mirrored numerals.
+  const sheets = await page.evaluate(async () => {
+    const sheets = [];
+    for (const folder of ['ronaldo', 'ronaldo/soccer']) {
+      const atlas = await (await fetch(`/assets/cartoon/${folder}/atlas.json`)).json();
+      const frames = new Map();
+      for (const texture of atlas.textures) {
+        const img = new Image(); img.src = `/assets/cartoon/${folder}/${texture.image}`; await img.decode();
+        for (const f of texture.frames) frames.set(f.filename, { img, ...f });
+      }
+      const c = Object.assign(document.createElement('canvas'), { width: 1600, height: 1100 });
+      const g = c.getContext('2d'); g.fillStyle = '#304e5c'; g.fillRect(0, 0, c.width, c.height);
+      const poses = [['idle', 0], ['run', 7], ['throw', 14], ['dance', 30], ['death', 45]];
+      for (const [row, [key, index]] of poses.entries()) for (let d = 0; d < 8; d++) {
+        const f = frames.get(`${key}_${d}_${index}`), s = f.spriteSourceSize, r = f.frame;
+        g.fillStyle = '#e1dfc7'; g.font = '14px sans-serif'; g.fillText(`${key} / ${d}`, d * 200 + 14, row * 220 + 22);
+        g.drawImage(f.img, r.x, r.y, r.w, r.h, d * 200 + 100 + (s.x - f.sourceSize.w / 2), row * 220 + 192 + s.y - f.sourceSize.h * .76, s.w, s.h);
+      }
+      sheets.push({ name: folder.replace('/', '-'), data: c.toDataURL() });
+    }
+    return sheets;
+  });
+  for (const sheet of sheets) fs.writeFileSync(`output/skins/${sheet.name}-poses.png`, Buffer.from(sheet.data.split(',')[1], 'base64'));
+  for (const blocked of [false, true]) {
+    const context = await browser.createBrowserContext();
+    try {
+      const isolated = await context.newPage(); await skipConsent(isolated);
+      await isolated.evaluateOnNewDocument(blocked => {
+        localStorage.setItem('mundo-shop-v1', JSON.stringify({ coins: 777, owned: ['classic'], equipped: 'classic', ownedSkins: ['missing'], equippedSkin: 'ronaldo' }));
+        if (blocked) {
+          const original = Storage.prototype.setItem;
+          Storage.prototype.setItem = function(key, value) {
+            if (key === 'mundo-shop-v1') throw new DOMException('Storage blocked', 'QuotaExceededError');
+            return original.call(this, key, value);
+          };
+        }
+      }, blocked);
+      await isolated.goto(url); await ready(isolated);
+      const result = await isolated.evaluate(async () => {
+        const shop = await import('/src/shop-state.js');
+        const before = shop.getShopState();
+        const bought = shop.buySkin('ronaldo').ok, equipped = shop.equipSkin('ronaldo');
+        return { before, bought, equipped, after: shop.getShopState() };
+      });
+      assert.deepEqual(result.before.ownedSkins, ['classic']); assert.equal(result.before.equippedSkin, 'classic');
+      assert.ok(result.bought && result.equipped); assert.equal(result.after.coins, 0);
+      assert.equal(result.after.equippedSkin, 'ronaldo'); assert.equal(result.after.persistent, !blocked);
+    } finally { await context.close(); }
+  }
+  assert.deepEqual(errors, []);
+  console.log('Skins: complete unclipped atlases, save migration, locked/invalid/duplicate purchase, purchase/equip/reload, mobile categories, both weapon combinations, all eight directions/states, real hits, both online slots and default restore passed.');
+} finally { await browser.close(); server.close(); }

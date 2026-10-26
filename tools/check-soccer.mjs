@@ -30,7 +30,7 @@ try {
   await skipConsent(page);
   // A pre-existing map-only save must keep its balance and map inventory.
   await page.evaluateOnNewDocument(() => {
-    if (localStorage.getItem('mundo-shop-v1') === null) localStorage.setItem('mundo-shop-v1', JSON.stringify({ coins: 100, owned: ['classic', 'colosseum'], equipped: 'colosseum', rewarded: ['old-match'] }));
+    if (localStorage.getItem('mundo-shop-v1') === null) localStorage.setItem('mundo-shop-v1', JSON.stringify({ coins: 300, owned: ['classic', 'colosseum'], equipped: 'colosseum', rewarded: ['old-match'] }));
   });
   await page.goto(`http://localhost:${server.address().port}/`); await ready(page);
   const initial = await page.evaluate(async () => {
