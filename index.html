@@ -108,7 +108,7 @@
   </div>
 
   <div id="menu" class="screen hidden">
-    <button id="analytics-settings" type="button" aria-label="플레이 통계 설정" title="플레이 통계 설정" aria-haspopup="dialog" aria-expanded="false" aria-controls="analytics-consent">
+    <button id="analytics-settings" type="button" aria-label="설정" title="설정" aria-haspopup="dialog" aria-expanded="false" aria-controls="settings-dialog">
       <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true" focusable="false">
         <path d="M21.88 10.44L21.88 13.56L19.49 13.80L18.57 16.02L20.09 17.88L17.88 20.09L16.02 18.57L13.80 19.49L13.56 21.88L10.44 21.88L10.20 19.49L7.98 18.57L6.12 20.09L3.91 17.88L5.43 16.02L4.51 13.80L2.12 13.56L2.12 10.44L4.51 10.20L5.43 7.98L3.91 6.12L6.12 3.91L7.98 5.43L10.20 4.51L10.44 2.12L13.56 2.12L13.80 4.51L16.02 5.43L17.88 3.91L20.09 6.12L18.57 7.98L19.49 10.20Z" />
         <circle cx="12" cy="12" r="3" />
@@ -302,7 +302,36 @@
       <button id="analytics-accept" type="button">동의하고 계속</button>
     </div>
   </dialog>
+  <dialog id="settings-dialog" class="analytics-consent settings-dialog" aria-labelledby="settings-title">
+    <div class="consent-summary">
+      <h2 id="settings-title" tabindex="-1" autofocus>설정</h2>
+      <button id="settings-close" class="settings-close" type="button" aria-label="닫기" title="닫기">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false">
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
+    </div>
+    <div class="settings-row">
+      <span class="settings-label">
+        <span id="sound-label">소리</span>
+        <small>효과음과 배경음악</small>
+      </span>
+      <button id="sound-toggle" class="settings-switch" type="button" role="switch" aria-checked="true" aria-labelledby="sound-label">
+        <span class="settings-switch-track" aria-hidden="true"></span>
+      </button>
+    </div>
+    <div class="settings-row">
+      <span class="settings-label">
+        <span id="analytics-label">플레이 통계 전송</span>
+        <small id="analytics-help">게임을 더 재밌게 다듬는 데 큰 도움이 돼요</small>
+      </span>
+      <button id="analytics-toggle" class="settings-switch" type="button" role="switch" aria-checked="false" aria-labelledby="analytics-label" aria-describedby="analytics-help">
+        <span class="settings-switch-track" aria-hidden="true"></span>
+      </button>
+    </div>
+  </dialog>
   <script type="module" src="src/consent.js"></script>
+  <script type="module" src="src/settings.js"></script>
   <script type="module" src="src/main.js"></script>
   <footer class="music-credit hidden" aria-label="배경음악 출처">
     <a href="https://www.scottbuckley.com.au/library/path-through-the-mountains/" target="_blank" rel="noopener noreferrer">Path Through The Mountains — Scott Buckley</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>

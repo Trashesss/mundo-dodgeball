@@ -298,6 +298,23 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
   #analytics-settings:hover { background: #263f48; color: var(--entry-text); }
 }
 .consent-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+/* 설정 */
+.settings-dialog { width: min(420px, calc(100% - 32px)); }
+.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid #2c4a52; }
+.consent-summary + .settings-row { margin-top: 8px; border-top: 1px solid #2c4a52; }
+.settings-row:last-child { padding-bottom: 4px; border-bottom: 0; }
+.settings-dialog .consent-summary { margin: -8px -10px 0 0; }
+.analytics-consent .settings-close { display: grid; place-items: center; width: 44px; min-height: 44px; padding: 0; border: 0; background: none; color: var(--entry-muted); }
+@media (hover: hover) { .analytics-consent .settings-close:hover { background: #263f48; color: var(--entry-text); } }
+.settings-label { display: flex; flex-direction: column; gap: 2px; min-width: 0; font: 17px/1.3 'Jua', sans-serif; }
+.settings-label small { color: var(--entry-muted); font: 13px/1.4 sans-serif; }
+.analytics-consent .settings-switch { display: flex; align-items: center; gap: 10px; flex-shrink: 0; padding: 8px 4px; border: 0; background: none; }
+.settings-switch-track { position: relative; width: 40px; height: 22px; border-radius: 11px; background: #4a5d63; transition: background .15s; }
+.settings-switch-track::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--entry-text); transition: transform .15s; }
+.settings-switch[aria-checked="true"] .settings-switch-track { background: var(--entry-green); }
+.settings-switch[aria-checked="true"] .settings-switch-track::after { transform: translateX(18px); background: #172c26; }
+.analytics-consent button:focus-visible { outline: 2px solid var(--entry-green); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .settings-switch-track, .settings-switch-track::after { transition: none; } }
 .humiliate-dialog { width: min(480px, calc(100% - 32px)); }
 .humiliate-meme { display: block; width: 100%; height: auto; margin: 14px 0; border-radius: 12px; }
 .humiliate-dialog label, .humiliate-preview-label { display: block; margin: 0 0 6px; color: var(--entry-muted); font: 14px/1.4 'Jua', sans-serif; }

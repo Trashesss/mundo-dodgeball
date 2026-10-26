@@ -1,7 +1,9 @@
 // 간단한 WebAudio 합성 효과음 (외부 파일 없음)
+const MUTE_KEY = 'mundo-muted-v1'; // 소리 끔을 다음 방문에도 유지 (저장이 막혀 있으면 이번 방문만)
 let ctx = null;
 let master = null;
 let muted = false;
+try { muted = localStorage.getItem(MUTE_KEY) === '1'; } catch { /* 기본값: 소리 켬 */ }
 let musicStarted = false;
 const music = document.getElementById('bgm');
 music.volume = 0.22;
@@ -26,7 +28,7 @@ function ensure() {
   if (!ctx) {
     ctx = new AudioContext();
     master = ctx.createGain();
-    master.gain.value = 0.5;
+    master.gain.value = muted ? 0 : 0.5;
     master.connect(ctx.destination);
   }
   if (ctx.state === 'suspended') ctx.resume();
@@ -138,12 +140,14 @@ export const Sound = {
     music.currentTime = 0;
     document.querySelector('.music-credit').classList.add('hidden');
   },
-  toggleMute: () => {
-    muted = !muted;
+  setMuted: (value) => {
+    muted = !!value;
     if (master) master.gain.value = muted ? 0 : 0.5;
+    try { localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); } catch { /* 이번 방문만 유지 */ }
     syncMusic();
     return muted;
   },
+  toggleMute: () => Sound.setMuted(!muted),
   get muted() { return muted; },
   // 칼날이 공기를 가르는 "슈우욱": 40ms에 차오르고 높은 대역에서 아래로 미끄러지며 빠진다
   // 무거운 칼날이 공기를 가르는 "후우웅": 바람 소리를 낮추고 저역 휘두름을 깔았다

@@ -4,6 +4,20 @@ import puppeteer from 'puppeteer-core';
 import { serve } from './serve.mjs';
 
 const server = await serve(0);
+// 동의 팝업은 아직 고르지 않은 첫 화면에서만 뜬다: 선택을 지우고 새로고침
+const openConsent = async (page) => {
+  await page.evaluate(() => localStorage.removeItem('mundo-analytics-consent-v1'));
+  await page.reload();
+  await page.waitForSelector('#analytics-consent[open]');
+};
+// 톱니바퀴 → 설정 → 플레이 통계 전송 스위치
+const flipAnalytics = async (page) => {
+  await page.click('#analytics-settings');
+  await page.waitForSelector('#settings-dialog[open]');
+  await page.click('#analytics-toggle');
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('#settings-dialog:not([open])');
+};
 const browser = await puppeteer.launch({
   executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   headless: true,
@@ -53,10 +67,9 @@ try {
   await page.waitForSelector('#analytics-consent:not([open])');
   assert.equal(await page.$eval('#analytics-consent', el => el.open), false);
   assert.equal(await page.evaluate(() => localStorage.getItem('mundo-analytics-consent-v1')), null, 'closing does not grant consent');
-  await page.click('#analytics-settings');
-  await page.keyboard.press('Escape');
-  await page.waitForSelector('#analytics-consent:not([open])');
-  await page.click('#analytics-settings');
+  // Escape 는 이번 방문에만: 새로고침하면 다시 묻는다
+  await page.reload();
+  await page.waitForSelector('#analytics-consent[open]');
   await page.click('#analytics-decline');
   await page.reload();
   await page.waitForSelector('#menu:not(.hidden)');
@@ -66,7 +79,7 @@ try {
   await page.$eval('#analytics-settings', el => el.scrollIntoView({ block: 'center' }));
   await page.$eval('#menu', async el => Promise.all(el.getAnimations().map(animation => animation.finished)));
   await page.screenshot({ path: 'output/consent/desktop-settings.png' });
-  await page.click('#analytics-settings');
+  await openConsent(page);
   await page.click('#analytics-consent summary');
   assert.equal(await page.$eval('#analytics-consent details', el => el.open), true);
   await page.screenshot({ path: 'output/consent/desktop-details.png' });
@@ -76,13 +89,11 @@ try {
   assert.equal(requests.length, 1, 'SDK only loads after explicit consent');
   await track();
   assert.deepEqual(await page.evaluate(() => window.captured.map(event => event[0])), ['$pageview', 'consent_test']);
-  await page.click('#analytics-settings');
-  await page.click('#analytics-decline');
+  await flipAnalytics(page);
   await track();
   assert.deepEqual(await page.evaluate(() => window.sdkCalls), ['in', 'out']);
   assert.equal(await page.evaluate(() => window.captured.length), 2, 'withdrawal stops capture');
-  await page.click('#analytics-settings');
-  await page.click('#analytics-accept');
+  await flipAnalytics(page);
   await page.reload();
   await page.waitForFunction(() => window.captured?.length === 1);
   assert.equal(await page.$eval('#analytics-settings', el => el.getAttribute('aria-expanded')), 'false');
@@ -119,7 +130,7 @@ try {
     await page.screenshot({ path: `output/consent/${name}-closed.png` });
     await page.$eval('#analytics-settings', el => el.scrollIntoView({ block: 'center' }));
     await page.screenshot({ path: `output/consent/${name}-settings.png` });
-    await page.tap('#analytics-settings');
+    await openConsent(page);
     await page.tap('#analytics-consent summary');
     assert.equal(await page.$eval('#analytics-consent details', el => el.open), true, `${name}: details expand`);
     await page.$eval('#analytics-consent', el => { el.scrollTop = 0; });
@@ -130,8 +141,48 @@ try {
     await page.tap('#start-btn');
     await page.waitForFunction(() => window.__game.scene.getScene('game').state === 'play');
   }
+  // 설정의 소리 스위치: 켜고 끄기, 새로고침 뒤에도 유지, M 키와 같은 상태
+  await page.setViewport({ width: 1200, height: 800, isMobile: false, hasTouch: false });
+  await page.goto(url);
+  await page.waitForSelector('#menu:not(.hidden)');
+  await page.click('#analytics-settings');
+  await page.waitForSelector('#settings-dialog[open]');
+  assert.equal(await page.$eval('#sound-toggle', el => el.getAttribute('aria-checked')), 'true');
+  await page.click('#sound-toggle');
+  assert.equal(await page.$eval('#sound-toggle', el => el.getAttribute('aria-checked')), 'false');
+  await new Promise(resolve => setTimeout(resolve, 250)); // 스위치 전환 애니메이션
+  await page.screenshot({ path: 'output/consent/desktop-sound-off.png' });
+  await page.click('#settings-close');
+  assert.equal(await page.$eval('#settings-dialog', el => el.open), false);
+  await page.reload();
+  await page.waitForSelector('#menu:not(.hidden)');
+  assert.equal(await page.$eval('#bgm', el => el.muted || el.paused), true);
+  await page.click('#analytics-settings');
+  assert.equal(await page.$eval('#sound-toggle', el => el.getAttribute('aria-checked')), 'false', 'mute persists');
+  await page.click('#sound-toggle');
+  await page.keyboard.press('Escape');
+  assert.equal(await page.evaluate(() => localStorage.getItem('mundo-muted-v1')), '0');
+
+  // 설정의 플레이 통계 전송 스위치: 바로 동의·철회
+  await page.evaluate(() => localStorage.setItem('mundo-analytics-consent-v1', 'declined'));
+  await page.reload();
+  await page.waitForSelector('#menu:not(.hidden)');
+  await page.click('#analytics-settings');
+  assert.equal(await page.$eval('#analytics-toggle', el => el.getAttribute('aria-checked')), 'false');
+  await page.click('#analytics-toggle');
+  assert.equal(await page.evaluate(() => localStorage.getItem('mundo-analytics-consent-v1')), 'accepted');
+  assert.equal(await page.$eval('#analytics-toggle', el => el.getAttribute('aria-checked')), 'true');
+  await page.waitForFunction(() => window.sdkCalls?.includes('in'));
+  await page.click('#analytics-toggle');
+  assert.equal(await page.evaluate(() => localStorage.getItem('mundo-analytics-consent-v1')), 'declined');
+  await page.waitForFunction(() => window.sdkCalls.at(-1) === 'out');
+  assert.equal(await page.$eval('#settings-dialog', el => el.open), true, 'toggling keeps settings open');
+  await new Promise(resolve => setTimeout(resolve, 250));
+  await page.screenshot({ path: 'output/consent/desktop-settings-dialog.png' });
+  await page.keyboard.press('Escape');
+
   assert.deepEqual(errors, []);
-  console.log('Consent: modal focus, Escape, no capture before consent, persistence, acceptance, withdrawal, cross-tab sync, desktop/mobile layouts and gameplay after decline passed. No real data sent.');
+  console.log('Settings sound switch and persistence, analytics switch, consent: modal focus, Escape, no capture before consent, persistence, acceptance, withdrawal, cross-tab sync, desktop/mobile layouts and gameplay after decline passed. No real data sent.');
 } finally {
   await browser.close();
   server.close();
