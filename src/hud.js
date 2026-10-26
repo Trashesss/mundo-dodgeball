@@ -66,16 +66,17 @@ $('share-btn').addEventListener('click', async () => {
 });
 
 export const HUD = {
-  // online: { mySlot } 이면 대인전 이름표 (왼쪽 0번이 방장)
+  // online: { mySlot, bot } 이면 대인전 이름표 (왼쪽 0번이 방장, bot 이면 상대는 문도봇)
   show(on, twins = false, online = null) {
     for (const id of ['topbar', 'hud', 'joy-zone']) $(id).classList.toggle('hidden', !on);
     $('topbar').classList.toggle('twins', twins);
     if (online) {
       const mine = (slot) => slot === online.mySlot;
-      $('player-name').textContent = mine(0) ? '나' : '상대방';
-      $('player-tag').textContent = mine(0) ? 'YOU' : 'FRIEND';
-      $('enemy-name').textContent = mine(1) ? '나' : '상대방';
-      $('enemy-tag').textContent = mine(1) ? 'YOU' : 'FRIEND';
+      const other = online.bot ? ['문도봇', 'BOT'] : ['상대방', 'FRIEND'];
+      $('player-name').textContent = mine(0) ? '나' : other[0];
+      $('player-tag').textContent = mine(0) ? 'YOU' : other[1];
+      $('enemy-name').textContent = mine(1) ? '나' : other[0];
+      $('enemy-tag').textContent = mine(1) ? 'YOU' : other[1];
     } else {
       $('player-name').textContent = '문도 박사';
       $('player-tag').textContent = 'PLAYER 1';
@@ -127,17 +128,21 @@ export const HUD = {
   },
 
   // 대인전 결과: win | lose | left(상대가 나감)
-  onlineResult(kind, { room } = {}) {
+  // bot: 상대가 문도봇 (굴욕 선사하기 없음) · quick: 빠른 대전 (새 상대 찾기)
+  onlineResult(kind, { room, bot = false, quick = false } = {}) {
     resultVersion += 1;
     shareData = null;
     this.show(false);
     this.clearFeeds();
     this.banner(null);
     $('share-btn').classList.add('hidden');
-    setHumiliateAvailable(kind === 'win', { mode: 'online', room });
-    $('again-btn').classList.toggle('hidden', kind === 'left');
+    setHumiliateAvailable(kind === 'win' && !bot, { mode: 'online', room });
+    // 문도봇과는 재대결 없이 새 상대 찾기만
+    $('again-btn').classList.toggle('hidden', kind === 'left' || bot);
     $('again-btn').disabled = false;
     $('again-btn').textContent = kind === 'win' ? '다시 한 수 가르쳐주기' : '다시 한 수 배우기';
+    $('requeue-btn').classList.toggle('hidden', !quick);
+    $('requeue-btn').disabled = false;
     $('menu-btn').textContent = '뒤로가기';
     $('share-status').textContent = '';
     $('result').dataset.outcome = kind === 'win' ? 'win' : 'lose';
@@ -220,6 +225,7 @@ export const HUD = {
     $('share-btn').classList.remove('hidden');
     $('share-btn').textContent = win ? '자랑하기' : '공유하기';
     setHumiliateAvailable(false);
+    $('requeue-btn').classList.add('hidden');
     $('again-btn').classList.remove('hidden');
     $('again-btn').disabled = false;
     $('again-btn').textContent = '다시 하기';

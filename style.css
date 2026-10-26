@@ -476,7 +476,7 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 }
 
 /* ---------- 게임 모드 선택 ---------- */
-.mode-select { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.mode-select { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .mode-card {
   position: relative;
   display: flex; flex-direction: column; align-items: center; gap: 12px;
@@ -490,6 +490,7 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 .mode-description { color: var(--entry-muted); font-size: 16px; word-break: keep-all; }
 #practice-btn { border-color: #9cd9ea; }
 #online-btn { border-color: #c9b2f4; }
+#quick-btn { border-color: var(--entry-green); }
 .mode-card:focus-visible, #mode-back-btn:focus-visible { outline: 3px solid var(--entry-text); outline-offset: 4px; }
 #mode-back-btn {
   border: 3px solid var(--entry-ink); border-radius: 12px; background: #33444d;
@@ -504,6 +505,10 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 @media (max-height: 500px) {
   .mode-card { padding: 10px; gap: 6px; }
   .mode-card img { width: 72px; height: 72px; }
+}
+/* 아주 낮은 창: 농담 한 줄을 빼서 모드 카드까지 한 화면에 */
+@media (min-width: 601px) and (max-height: 540px) {
+  #menu:not(.practice-view) .setup-arena-tip { display: none; }
 }
 
 /* Home keeps room for the attribution and contact on shorter screens. */
@@ -609,6 +614,8 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 .lobby-card .setup-brand { grid-area: brand; margin: 0; font-size: 22px; letter-spacing: -1px; }
 #lobby-title { grid-area: title; margin: 0; font-size: 34px; line-height: 1.2; font-weight: 400; }
 .lobby-brand-image { grid-area: art; justify-self: end; display: block; width: 280px; height: 128px; object-fit: cover; }
+/* 빠른 대전 그림은 정사각형이지만 위아래가 투명 여백이라 3:2로 여백만 잘라낸다 */
+#lobby[data-state="queue"] .lobby-brand-image { width: 192px; }
 .practice-view .setup-intro, .practice-view .setup-controls { display: none; }
 .lobby-status { min-height: 24px; margin: 0 0 14px; color: var(--entry-muted); font-size: 16px; line-height: 1.5; word-break: keep-all; }
 #lobby:is([data-state="entry"], [data-state="creating"]) .lobby-status, .lobby-status:empty { display: none; }
@@ -654,6 +661,15 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 #lobby-ready { width: 100%; margin-top: auto; padding: 12px; background: var(--entry-green); color: #26362c; font-size: 20px; }
 #lobby-ready.on { background: #35434b; color: var(--entry-muted); }
 .lobby-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
+#lobby[data-state="queue"] .lobby-status { display: flex; flex-direction: column; align-items: center; gap: 6px; min-height: 76px; margin: 24px 0 16px; text-align: center; }
+.queue-main { color: var(--entry-text); font-size: clamp(26px, 4vw, 34px); line-height: 1.2; }
+.queue-dots-rest { visibility: hidden; }
+.queue-sub { color: var(--entry-muted); font-size: clamp(15px, 2vw, 18px); line-height: 1.3; }
+/* 설명은 위 안내와 떨어뜨리고 취소 버튼 쪽에 붙인다 */
+.queue-note { margin-top: 22px; color: var(--entry-muted); font-size: 13px; line-height: 1.4; opacity: .75; word-break: keep-all; }
+.queue-sub b { color: var(--entry-green); font-weight: 400; font-variant-numeric: tabular-nums; }
+#lobby[data-state="queue"] .lobby-actions { justify-content: center; }
+#lobby[data-state="queue"] #lobby-leave { width: min(320px, 100%); }
 #lobby #lobby-leave { width: 100%; min-width: 100px; min-height: 58px; padding: 12px; border-width: 3px; border-radius: 16px; background: #35434b; color: var(--entry-muted); font-size: 20px; }
 .practice-view #mode-back-btn { width: 100%; margin-top: 0; padding: 16px 12px; border: 3px solid var(--entry-ink); border-radius: 16px; background: #35434b; color: var(--entry-muted); font-size: 20px; box-shadow: inset 0 3px #ffffff18; transition: transform .15s, background .15s; }
 @media (hover: hover) {
@@ -667,6 +683,7 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
   .lobby-card { display: flex; flex-direction: column; width: min(420px, 100%); min-height: 100%; }
   .lobby-heading { grid-template-columns: 1fr; grid-template-areas: 'art' 'brand' 'title'; justify-items: center; gap: 0; margin: auto 0 28px; text-align: center; }
   .lobby-brand-image { justify-self: center; width: min(240px, 64vw); height: auto; aspect-ratio: 2 / 1; margin-bottom: 10px; }
+  #lobby[data-state="queue"] .lobby-brand-image { width: min(180px, 48vw); aspect-ratio: 3 / 2; }
   .lobby-card .setup-brand { font-size: 18px; }
   #lobby-title { font-size: 32px; text-shadow: 0 4px #08171f; }
   .lobby-status { font-size: 14px; margin-bottom: 10px; text-align: center; }
@@ -699,13 +716,13 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 
   .lobby-actions { margin-top: auto; padding-top: 24px; }
 }
-}
 @media (max-height: 600px) {
   #lobby { padding: 12px 16px; }
   .lobby-card .setup-brand { font-size: 18px; }
   #lobby-title { font-size: 26px; }
   .lobby-heading { margin-bottom: 8px; }
   .lobby-brand-image { width: min(176px, 100%); height: 80px; }
+  #lobby[data-state="queue"] .lobby-brand-image { width: 120px; }
   .lobby-status { margin-bottom: 8px; }
   .lobby-panel { padding: 12px; }
   .lobby-panel h2, #lobby-join-form label { margin-bottom: 8px; }
@@ -956,7 +973,7 @@ body.touch .skill.aiming { border-color: #fff; box-shadow: 0 0 14px #5ff4ff; }
     margin-top: 6px; color: var(--entry-muted); font-size: 14px;
   }
 
-  /* 친구와 1대1이 주 버튼, 연습은 보조 타일 */
+  /* 친구와 1대1이 주 버튼, 빠른 대전·연습은 보조 타일 */
   #menu:not(.practice-view) .mode-select {
     grid-template-columns: 1fr 1fr; gap: 12px;
   }
@@ -973,7 +990,9 @@ body.touch .skill.aiming { border-color: #fff; box-shadow: 0 0 14px #5ff4ff; }
   }
   #menu:not(.practice-view) .mode-name { align-self: center; font-size: 18px; line-height: 1.2; }
   #menu:not(.practice-view) .mode-description { display: none; }
-  #menu:not(.practice-view) #practice-btn { grid-column: 1 / -1; background: #2f4d57; }
+  /* 빠른 대전과 연습은 아래에 반씩 나란히 */
+  #menu:not(.practice-view) #practice-btn { grid-column: auto; background: #2f4d57; }
+  #menu:not(.practice-view) #quick-btn { grid-column: auto; border-color: var(--entry-green); }
 
   #menu:not(.practice-view) #online-btn {
     order: -1; grid-column: 1 / -1; gap: 2px; padding: 10px 12px 12px;

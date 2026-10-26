@@ -11,17 +11,19 @@ export const DIFFICULTY = {
 const rand = (a, b) => a + Math.random() * (b - a);
 const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
 
+// diff: DIFFICULTY 키 또는 같은 모양의 수치 객체 (빠른 대전의 고스트 문도봇)
 // lane: 쌍둥이 모드에서 위(-1)/아래(1)로 나눠 서서 겹치지 않게 한다. 0이면 진영 전체.
-export function initBot(c, diffKey, lane = 0) {
+export function initBot(c, diff, lane = 0) {
+  const d = typeof diff === 'string' ? DIFFICULTY[diff] : diff;
   c.ai = {
-    diff: DIFFICULTY[diffKey],
+    diff: d,
     wanderT: 0,
-    aimT: DIFFICULTY[diffKey].tactical ? rand(0.1, 0.25) : rand(0.6, 1.6),
+    aimT: d.tactical ? rand(0.1, 0.25) : rand(0.6, 1.6),
     seen: new Map(),       // cleaver -> 피할지 여부
     dodgeT: 0,
     ghostUsed: false,
     ghostAt: rand(3, 25),
-    style: rand(0, 1),     // 0: 뒤에서 버티는 타입, 1: 선 가까이 붙는 타입
+    style: d.style ?? rand(0, 1), // 0: 뒤에서 버티는 타입, 1: 선 가까이 붙는 타입
     lane,
   };
 }

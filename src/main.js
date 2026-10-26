@@ -899,9 +899,10 @@ class GameScene extends Phaser.Scene {
     this.correction = null;
     this.moveHeld = false;
     HUD.clearFeeds();
-    HUD.show(true, false, { mySlot: slot });
+    HUD.show(true, false, { mySlot: slot, bot: Online.opponentBot });
     this.analyticsMatch = {
-      match_id: createTrackingId(), difficulty: 'online', mode: 'online', room: Online.room, source, ...referralContext,
+      match_id: createTrackingId(), difficulty: 'online', mode: 'online', room: Online.room, source,
+      match_type: Online.isQuick ? 'quick' : 'invite', opponent: Online.opponentBot ? 'bot' : 'human', ...referralContext,
     };
   }
 
@@ -938,7 +939,7 @@ class GameScene extends Phaser.Scene {
     if (this.mode !== 'online' || this.state === 'over') return;
     this.state = 'over';
     const win = winner === this.mySlot;
-    HUD.onlineResult(win ? 'win' : 'lose', { room: Online.room });
+    HUD.onlineResult(win ? 'win' : 'lose', { room: Online.room, bot: Online.opponentBot, quick: Online.isQuick });
     this.trackFinished(win);
   }
 
@@ -950,7 +951,7 @@ class GameScene extends Phaser.Scene {
     this.netPaused = false;
     HUD.banner(null);
     HUD.countdown(0);
-    HUD.onlineResult('left', { room: Online.room });
+    HUD.onlineResult('left', { room: Online.room, quick: Online.isQuick });
     if (!wasOver) track('online_opponent_left', this.analyticsMatch);
   }
 
@@ -1335,6 +1336,19 @@ $('online-btn').addEventListener('click', () => {
   $('menu').classList.add('hidden');
   Online.openLobby();
 });
+$('quick-btn').addEventListener('click', () => {
+  Sound.unlock();
+  $('menu').classList.add('hidden');
+  Online.quick();
+});
+// 빠른 대전 결과에서: 지금 방을 나와 다시 큐에 선다
+$('requeue-btn').addEventListener('click', () => {
+  track('quick_requeue_clicked', scene().analyticsMatch);
+  Online.leave();
+  $('result').classList.add('hidden');
+  scene().backToMenu();
+  Online.quick();
+});
 
 Online.hooks = {
   onExit: showMenu,
@@ -1348,7 +1362,7 @@ Online.hooks = {
     const s = scene();
     $('menu').classList.add('hidden');
     $('result').classList.add('hidden');
-    if (s.mode !== 'online' || msg.round === 1) s.setupOnlineMatch(Online.slot, s.mode === 'online' ? 'rematch' : 'online');
+    if (s.mode !== 'online' || msg.round === 1) s.setupOnlineMatch(Online.slot, s.mode === 'online' ? 'rematch' : Online.isQuick ? 'quick' : 'online');
     s.startOnlineRound(msg);
   },
   // 새로고침·재연결로 진행 중인 경기에 다시 들어옴

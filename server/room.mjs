@@ -1,10 +1,14 @@
 // 1대1 방: 대기실 → 카운트다운 → 경기 → 결과/재대결. 서버가 src/sim.js 로 최종 판정한다.
+// 빠른 대전 방(quick)은 준비 없이 바로 시작하고, 사람이 안 오면 문도봇(고스트)이 한 자리를 채운다.
 import { randomUUID } from 'node:crypto';
 import { RULES } from '../src/rules.js';
 import { NET, packChamp, packCleaver } from '../src/net-protocol.js';
 import {
   createWorld, createChamp, resetChamp, constrain, castQ, castFlash, castGhost, stepWorld, roundWinner,
 } from '../src/sim.js';
+import { initBot, updateBot } from '../src/bot.js';
+import { botGame } from '../src/ghost.js';
+import { GhostObserver } from './ghost-profile.mjs';
 
 const STEP = 1 / NET.TICK_HZ;
 const SNAP_EVERY = Math.round(NET.TICK_HZ / NET.SNAP_HZ);
@@ -12,14 +16,19 @@ const LIMIT = RULES.arenaR * 3; // 입력 좌표 허용 범위
 const num = (v) => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= LIMIT;
 
 export class Room {
-  constructor(code, { onEmpty, now = () => performance.now() }) {
+  // ghosts: 사람끼리 끝난 경기의 성향을 남길 저장소 (server/ghosts.mjs)
+  constructor(code, { onEmpty, now = () => performance.now(), quick = false, ghosts = null }) {
     this.code = code;
     this.onEmpty = onEmpty;
+    this.quick = quick;
+    this.ghosts = ghosts;
     this.now = now;
     this.slots = [null, null];
     this.phase = 'lobby';
     this.paused = false;
     this.world = null;
+    this.bots = [];
+    this.observer = null;
     this.timers = new Set();
     this.lastActive = Date.now();
   }
@@ -31,8 +40,24 @@ export class Room {
     this.slots[slot] = { ws, token: randomUUID(), connected: true, ready: false, rematch: false, ack: 0, grace: null };
     this.welcome(slot);
     this.broadcastLobby();
+    if (this.quick && this.slots.every(Boolean)) {
+      this.broadcast({ type: 'matched', bot: false });
+      this.startMatch();
+    }
     return slot;
   }
+
+  // 빠른 대전에서 기다려도 사람이 안 오면: diff 는 src/bot.js 수치 (GhostStore.pick)
+  addBot(diff) {
+    const slot = this.slots.findIndex(s => !s);
+    if (slot < 0 || this.phase !== 'lobby') return false;
+    this.slots[slot] = { bot: true, diff, token: null, connected: true, ready: true, rematch: true, ack: 0, grace: null };
+    this.broadcast({ type: 'matched', bot: true });
+    this.startMatch();
+    return true;
+  }
+
+  hasBot() { return this.slots.some(s => s?.bot); }
 
   rejoin(ws, token) {
     const slot = this.slots.findIndex(s => s && s.token === token);
@@ -77,7 +102,7 @@ export class Room {
       this.phase = 'over';
       if (other) this.send(1 - slot, { type: 'opponentLeft', reason });
     } else this.broadcastLobby();
-    if (!this.slots.some(Boolean)) this.close();
+    if (!this.slots.some(s => s && !s.bot)) this.close();
   }
 
   close() {
@@ -141,7 +166,10 @@ export class Room {
     this.world.champs = [createChamp(0), createChamp(1)];
     this.round = 0;
     this.winner = null;
-    for (const s of this.slots) Object.assign(s, { ready: false, rematch: false });
+    for (const s of this.slots) Object.assign(s, { ready: !!s.bot, rematch: !!s.bot });
+    this.bots = this.slots.flatMap((s, i) => s.bot
+      ? [{ c: this.world.champs[i], diff: s.diff, game: botGame(this.world, this.world.champs[i], this.world.champs[1 - i]) }] : []);
+    this.observer = this.ghosts && !this.bots.length ? new GhostObserver(this.world) : null;
     this.startRound();
     this.startLoop();
   }
@@ -152,6 +180,7 @@ export class Room {
     w.cleavers = [];
     w.roundTime = 0;
     w.champs.forEach((c, i) => resetChamp(c, NET.SPAWN[i].x, NET.SPAWN[i].z));
+    for (const b of this.bots) initBot(b.c, b.diff);
     w.state = 'countdown';
     this.phase = 'countdown';
     this.countdownLeft = NET.COUNTDOWN_MS / 1000;
@@ -183,7 +212,12 @@ export class Room {
         this.broadcast({ type: 'go', t: this.time() });
       }
     }
+    if (this.phase === 'play') for (const b of this.bots) if (b.c.alive) updateBot(b.c, b.game, STEP);
     stepWorld(w, STEP);
+    if (this.observer) {
+      this.observer.events(w.feed);
+      this.observer.tick(STEP);
+    }
     if (this.phase === 'play') {
       const winner = roundWinner(w);
       if (winner !== null) this.endRound(winner);
@@ -200,6 +234,8 @@ export class Room {
         else {
           this.phase = 'over';
           this.winner = this.roundResult;
+          for (const p of this.observer?.profiles() ?? []) this.ghosts.record(p);
+          this.observer = null;
           this.flushEvents();
           this.sendSnap();
           this.broadcast({ type: 'over', winner: this.winner, reason: 'ko' });
@@ -249,11 +285,14 @@ export class Room {
 
   welcome(slot) {
     const s = this.slots[slot];
-    this.send(slot, { type: 'joined', room: this.code, slot, token: s.token, phase: this.phase, round: this.round ?? 0, paused: this.paused });
+    this.send(slot, {
+      type: 'joined', room: this.code, slot, token: s.token, phase: this.phase, round: this.round ?? 0, paused: this.paused,
+      quick: this.quick, bot: this.hasBot(),
+    });
   }
 
   lobbyState() {
-    return this.slots.map(s => s && { connected: s.connected, ready: s.ready });
+    return this.slots.map(s => s && { connected: s.connected, ready: s.ready, bot: !!s.bot });
   }
 
   broadcastLobby() { this.broadcast({ type: 'lobby', players: this.lobbyState() }); }

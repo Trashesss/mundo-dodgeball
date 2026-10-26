@@ -1,4 +1,4 @@
-// 친구와 대결: 서버 연결, 재접속, 서버 시계 맞추기, 대기실 화면.
+// 친구와 대결·빠른 대전: 서버 연결, 재접속, 서버 시계 맞추기, 대기실 화면.
 // 경기 화면 처리는 main.js 가 Online.hooks 로 받는다.
 import { NET, isRoomCode } from './net-protocol.js';
 import { track } from './analytics.js';
@@ -68,6 +68,11 @@ export const Online = {
   pingTimer: null,
   createStatusTimer: null,
   snackbarTimer: null,
+  isQuick: false,      // 빠른 대전 방
+  opponentBot: false,  // 상대가 문도봇
+  queueStart: 0,
+  queueEnd: 0,
+  queueTimer: null,
 
   // ---------- 연결 ----------
   connect() {
@@ -154,8 +159,12 @@ export const Online = {
   reset() {
     this.gen++;
     clearTimeout(this.createStatusTimer);
+    clearInterval(this.queueTimer);
     this.closeSocket();
-    Object.assign(this, { room: null, slot: -1, token: null, players: [null, null], intent: null, reconnectUntil: 0 });
+    Object.assign(this, {
+      room: null, slot: -1, token: null, players: [null, null], intent: null, reconnectUntil: 0,
+      isQuick: false, opponentBot: false, queueStart: 0, queueEnd: 0,
+    });
   },
 
   // ---------- 방 ----------
@@ -198,6 +207,22 @@ export const Online = {
     }
   },
 
+  // 빠른 대전: 기다리는 사람이 있으면 바로, 없으면 서버가 정한 시간 뒤 문도봇과 붙는다
+  async quick() {
+    this.reset();
+    this.intent = 'quick';
+    this.isQuick = true;
+    this.queueStart = performance.now();
+    this.showQueue();
+    try {
+      await this.connect();
+      this.send({ type: 'quick' });
+      track('quick_queue_started');
+    } catch (error) {
+      if (error.message !== 'stale') this.lobbyError(ERRORS.offline);
+    }
+  },
+
   toggleReady() {
     const me = this.players[this.slot];
     this.send({ type: 'ready', ready: !me?.ready });
@@ -223,20 +248,34 @@ export const Online = {
       case 'joined': {
         clearTimeout(this.createStatusTimer);
         const reconnected = !!this.reconnectUntil;
-        Object.assign(this, { room: msg.room, slot: msg.slot, token: msg.token, reconnectUntil: 0 });
+        Object.assign(this, {
+          room: msg.room, slot: msg.slot, token: msg.token, reconnectUntil: 0,
+          isQuick: !!msg.quick, opponentBot: !!msg.bot,
+        });
         storage.set(TOKEN_KEY(msg.room), msg.token);
         setUrlRoom(msg.room);
         if (this.intent === 'create') track('online_room_created', { room: msg.room });
         else if (this.intent === 'join') track('online_room_joined', { room: msg.room, slot: msg.slot });
         this.intent = null;
         if (reconnected) h.onReconnected?.();
-        if (msg.phase === 'lobby') { h.onLobby?.(); this.showLobby(); }
+        if (msg.phase === 'lobby') { h.onLobby?.(); if (this.isQuick) this.showQueue(); else this.showLobby(); }
         else { this.hideLobby(); h.onResume?.(msg); }
         return;
       }
       case 'lobby':
         this.players = msg.players;
-        this.renderLobby();
+        if (!this.isQuick) this.renderLobby();
+        return;
+      case 'queue':
+        this.queueEnd = performance.now() + msg.waitMs;
+        clearInterval(this.queueTimer);
+        this.queueTimer = setInterval(() => this.renderQueue(), 250);
+        this.renderQueue();
+        return;
+      case 'matched':
+        clearInterval(this.queueTimer);
+        this.opponentBot = !!msg.bot;
+        track('quick_matched', { room: this.room, opponent: msg.bot ? 'bot' : 'human', wait_ms: Math.round(performance.now() - this.queueStart) });
         return;
       case 'start':
         this.hideLobby();
@@ -284,9 +323,46 @@ export const Online = {
     if (!busy) $('lobby-create').textContent = '방 만들기';
   },
 
+  showQueue() {
+    $('lobby').classList.remove('hidden');
+    $('lobby').dataset.state = 'queue';
+    $('lobby-title').textContent = '빠른 대전';
+    $('lobby').querySelector('.lobby-brand-image').src = 'assets/cartoon/mundo-quick-match-v2.png';
+    $('lobby-leave').textContent = '취소';
+    this.renderQueue();
+  },
+
+  // 큰 줄: 지금 하는 일 · 작은 줄: 문도봇까지 남은 시간
+  renderQueue() {
+    const left = this.queueEnd ? Math.ceil((this.queueEnd - performance.now()) / 1000) : null;
+    const main = document.createElement('span');
+    main.className = 'queue-main';
+    // 점은 . → .. → ... 를 반복한다. 남은 점은 숨겨 두어 늘 '...' 폭으로 가운데 정렬한다
+    const n = Math.floor((performance.now() - this.queueStart) / 500) % 3 + 1;
+    const rest = document.createElement('span');
+    rest.className = 'queue-dots-rest';
+    rest.textContent = '.'.repeat(3 - n);
+    main.append(left == null || left > 0 ? '상대를 찾는 중' : '문도봇을 부르는 중', '.'.repeat(n), rest);
+    const lines = [main];
+    if (left > 0) {
+      const sub = document.createElement('span');
+      sub.className = 'queue-sub';
+      const sec = document.createElement('b');
+      sec.textContent = `${left}초`;
+      sub.append(sec, ' 뒤에는 문도봇과 붙어요');
+      const note = document.createElement('span');
+      note.className = 'queue-note';
+      note.textContent = '문도봇은 다른 플레이어의 플레이 습관을 따라 해요';
+      lines.push(sub, note);
+    }
+    $('lobby-status').replaceChildren(...lines);
+  },
+
   showLobby(status, code = this.room) {
     this.setEntryBusy(false);
     $('lobby').classList.remove('hidden');
+    $('lobby-title').textContent = '친구와 1대1';
+    $('lobby').querySelector('.lobby-brand-image').src = 'assets/cartoon/mundo-friends-v4.png';
     $('lobby').dataset.state = this.room ? 'room' : 'connecting';
     $('lobby-code').textContent = code || '------';
     $('lobby-link').value = code ? inviteUrl(code) : '';
@@ -298,6 +374,7 @@ export const Online = {
 
   hideLobby() {
     clearTimeout(this.createStatusTimer);
+    clearInterval(this.queueTimer);
     clearTimeout(this.snackbarTimer);
     $('copy-snackbar').classList.remove('visible');
     $('copy-snackbar').textContent = '';
@@ -382,7 +459,12 @@ $('lobby-join-form').addEventListener('submit', (event) => {
 $('lobby-copy').addEventListener('click', () => Online.shareInvite());
 $('lobby-leave').addEventListener('click', () => {
   // 에러 화면에서는 방 만들기/입장 화면으로 돌아가 다시 시도할 수 있게 한다
-  if ($('lobby').dataset.state === 'error') { Online.openLobby(); return; }
+  if ($('lobby').dataset.state === 'error') {
+    if (Online.isQuick) { Online.leave(); Online.hooks.onExit?.(); }
+    else Online.openLobby();
+    return;
+  }
+  if ($('lobby').dataset.state === 'queue') track('quick_cancelled', { wait_ms: Math.round(performance.now() - Online.queueStart) });
   Online.leave();
   Online.hooks.onExit?.();
 });

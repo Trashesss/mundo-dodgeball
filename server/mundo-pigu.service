@@ -10,6 +10,8 @@ WorkingDirectory=/opt/mundo-pigu
 ExecStart=/usr/bin/node server/index.mjs
 Environment=NODE_ENV=production PORT=3000 HOST=127.0.0.1
 DynamicUser=yes
+# 문도봇 고스트 기록 (/var/lib/mundo-pigu/ghosts.json, STATE_DIRECTORY 로 전달됨)
+StateDirectory=mundo-pigu
 Restart=always
 RestartSec=2
 NoNewPrivileges=yes

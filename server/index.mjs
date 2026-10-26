@@ -4,6 +4,7 @@ import { randomInt } from 'node:crypto';
 import { WebSocketServer } from 'ws';
 import { NET, isRoomCode } from '../src/net-protocol.js';
 import { Room } from './room.mjs';
+import { GhostStore } from './ghosts.mjs';
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -12,6 +13,8 @@ const IDLE_MS = 10 * 60 * 1000;
 const MAX_MSGS_PER_SEC = 120;
 const MAX_CONNS_PER_IP = 8;     // 한 사람이 방을 잔뜩 만들어 서버를 채우지 못하게
 const MAX_FAILED_JOINS = 10;    // 방 코드 무작위 대입 방지 (연결당)
+// 빠른 대전: 이만큼 기다려도 사람이 안 오면 문도봇과 붙인다 (검사용 서버만 줄일 수 있음)
+const QUICK_WAIT_MS = (process.env.MUNDO_TEST === '1' && Number(process.env.QUICK_WAIT_MS)) || 15000;
 // 배포 서버(NODE_ENV=production)는 게임 사이트만 허용한다. localhost 페이지는 로컬 개발 서버에서만 허용.
 const PRODUCTION = process.env.NODE_ENV === 'production';
 const ORIGINS = [
@@ -22,6 +25,14 @@ const ORIGINS = [
 
 const rooms = new Map();
 const connsByIp = new Map();
+const ghosts = new GhostStore();
+const quickWaiting = []; // 한 사람이 상대를 기다리는 빠른 대전 방 (먼저 온 순)
+
+function unqueue(room) {
+  clearTimeout(room.quickTimer);
+  const i = quickWaiting.indexOf(room);
+  if (i >= 0) quickWaiting.splice(i, 1);
+}
 
 // nginx 뒤에서는 접속 주소가 항상 127.0.0.1 이므로, 로컬 프록시가 붙인 X-Forwarded-For 의 마지막 값을 쓴다
 function clientIp(req) {
@@ -42,7 +53,7 @@ const server = http.createServer((req, res) => {
   // 서버 안에서만 확인용 (nginx 는 /ws 만 넘기므로 외부에 노출되지 않음)
   if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ ok: true, rooms: rooms.size }));
+    res.end(JSON.stringify({ ok: true, rooms: rooms.size, quickWaiting: quickWaiting.length, ghosts: ghosts.size }));
     return;
   }
   res.writeHead(404).end();
@@ -71,8 +82,8 @@ wss.on('connection', (ws, req) => {
     if (conn.room && conn.slot >= 0) conn.room.leave(conn.slot, 'left');
     conn.room = null; conn.slot = -1;
   };
-  const openRoom = () => {
-    const room = new Room(newCode(), { onEmpty: (r) => rooms.delete(r.code) });
+  const openRoom = (opts = {}) => {
+    const room = new Room(newCode(), { ...opts, ghosts, onEmpty: (r) => { rooms.delete(r.code); unqueue(r); } });
     rooms.set(room.code, room);
     return room;
   };
@@ -92,6 +103,29 @@ wss.on('connection', (ws, req) => {
       conn.slot = conn.room.add(ws);
       return;
     }
+    if (msg.type === 'quick') {
+      detach();
+      const waiting = quickWaiting.find(r => r.slots.some(x => x?.connected));
+      if (waiting) {
+        unqueue(waiting);
+        conn.room = waiting;
+        conn.slot = waiting.add(ws);
+        return;
+      }
+      if (rooms.size >= MAX_ROOMS) { send({ type: 'error', code: 'busy' }); return; }
+      const room = openRoom({ quick: true });
+      conn.room = room;
+      conn.slot = room.add(ws);
+      quickWaiting.push(room);
+      room.quickTimer = setTimeout(() => {
+        unqueue(room);
+        // 기다리던 사람이 끊긴 채면 봇을 붙이지 않고 방을 닫는다
+        if (room.slots.some(x => x?.connected)) room.addBot(ghosts.pick());
+        else room.close();
+      }, QUICK_WAIT_MS);
+      send({ type: 'queue', waitMs: QUICK_WAIT_MS });
+      return;
+    }
     if (msg.type === 'join') {
       const target = isRoomCode(msg.room) ? rooms.get(msg.room) : null;
       if (!target) {
@@ -105,6 +139,7 @@ wss.on('connection', (ws, req) => {
       if (s < 0) s = target.add(ws);
       if (s < 0) { send({ type: 'error', code: target.phase === 'lobby' ? 'full' : 'started' }); return; }
       conn.room = target; conn.slot = s;
+      if (target.phase !== 'lobby') unqueue(target);
       return;
     }
     if (msg.type === 'ping' && !conn.room) {
@@ -140,6 +175,7 @@ server.listen(PORT, HOST, () => console.log(`mundo-pigu server: ws://${HOST}:${P
 for (const sig of ['SIGTERM', 'SIGINT']) {
   process.on(sig, () => {
     for (const room of [...rooms.values()]) room.close();
+    ghosts.save();
     server.close(() => process.exit(0));
     setTimeout(() => process.exit(0), 2000).unref();
   });

@@ -30,6 +30,7 @@ Scott Buckley의 **Path Through The Mountains**를 사용한다 ([원곡](https:
   - 플레이어의 `throws` (실제 발사된 식칼 수), `hits` (상대에게 명중한 식칼 수), `accuracy` (`hits / throws`, 0~1 비율)를 판 전체로 요약한다. 투척이 없으면 명중률은 0이다. 발사 전에 취소된 투척은 제외하며, 무승부 재경기는 합산하고 새 게임·재도전에서는 초기화한다.
   - 적도 같은 기준으로 `enemy_throws`, `enemy_hits`, `enemy_accuracy`를 기록한다. 쌍둥이 모드는 두 봇의 횟수를 합산하고, 명중률은 합산 명중 수 / 합산 투척 수로 계산한다.
 - `replay_clicked`, `menu_returned`: 결과 화면에서 재도전 또는 난이도 선택. 직전 판 속성 포함
+- 빠른 대전: `quick_queue_started`, `quick_matched`(`room`, `opponent`: `human`/`bot`, `wait_ms`: 큐에 선 뒤 매칭까지), `quick_cancelled`(`wait_ms`), `quick_requeue_clicked`(결과 화면의 새 상대 찾기, 직전 판 속성). 대인전의 `game_started` / `game_finished`에는 `match_type`(`quick` / `invite`)과 `opponent`(`human` / `bot`)를 붙이고, 빠른 대전 첫 판의 `source`는 `quick`이다.
 - 친구와 대결: `online_room_created`(`room`), `online_room_joined`(`room`, `slot`), `online_invite_shared`, `online_rematch_clicked`, `online_opponent_left`. 대인전의 `game_started` / `game_finished`는 `difficulty: online`, `mode: online`, `room`, `source` (`online` / `rematch` / `resume`)를 갖는다. 적 수치(`enemy_*`)는 상대 사람의 기록이다.
 
 공유 성장 지표:
@@ -55,6 +56,15 @@ Scott Buckley의 **Path Through The Mountains**를 사용한다 ([원곡](https:
 ## 승부 규칙
 상단 양쪽 초상화 옆에 현재 체력을 표시한다. 시간 제한 없이 상대를 쓰러뜨리면 승리하는 단판 승부다. 동시에 쓰러지면 재경기한다.
 봇전에서는 라운드 시작 즉시 60초 동안 플레이어 쪽 왼쪽 반원의 반지름이 처음의 70%까지 서서히 줄어든다. 플레이어의 이동 범위만 함께 줄어들며, 경계에 닿으면 안쪽으로 밀려난다. 오른쪽 봇 진영은 경계선과 이동 범위 모두 처음 크기를 유지한다. 재경기와 메뉴 복귀 시 원 크기가 초기화된다.
+
+## 빠른 대전 (문도봇 고스트)
+메뉴의 **빠른 대전**은 방 코드 없이 상대를 찾는다. 큐는 하나뿐이고, 먼저 기다리던 사람이 있으면 준비 단계 없이 바로 카운트다운한다. 15초 안에 아무도 오지 않으면 서버가 **문도봇**을 상대로 붙인다. 문도봇은 숨기지 않는다: 이름표가 `문도봇 · BOT`이고, 대기 화면에서 시간이 지나면 문도봇과 붙는다고 알린다. 문도봇 상대 결과에는 굴욕 선사하기와 재대결이 없고 `새 상대 찾기`만 있다. 빠른 대전 결과의 `새 상대 찾기`는 방을 나와 다시 큐에 선다(사람 상대면 재대결도 할 수 있다). 그 밖의 규칙(경기장 고정, 단판, 연결 끊김, 재대결)은 친구와 대결과 같다.
+
+- **고스트**: 문도봇은 실제 대인전 유저의 성향을 본뜬다. 사람끼리 끝난 경기(빠른 대전과 친구 초대 모두, 15초 이상이고 4번 이상 던진 사람)마다 서버가 명중률·위협 식칼 회피율·식칼이 준비된 뒤 던지기까지 걸린 시간·분당 점멸과 유체화 횟수·중앙선에서 평균 거리를 재어(`server/ghost-profile.mjs`), `src/ghost.js`의 `profileToDiff`로 봇 수치(`src/bot.js`와 같은 모양)로 바꾼다. 문도봇 경기는 기록하지 않는다.
+- **기본 성향**: 기록이 없을 때는 기본 성향만 쓴다. 어려움부터 페이커, 페이커보다 어려운 단계까지 12가지에, 가끔 나오는 쉬움·보통 3가지를 더한 15가지다(쉬움·보통이 나올 확률 20%). 기록이 있으면 70%는 실제 고스트, 30%는 기본 성향에서 고른다. 둘 다 똑같이 `문도봇`으로 보인다.
+- **저장**: 이름·IP·방 코드 없이 숫자만 `ghosts.json` 하나에 최근 300개까지 둔다. 배포 서버는 systemd `StateDirectory`(`/var/lib/mundo-pigu`), 로컬은 `server/.data/`(git 제외). 서버 `/health`에 `quickWaiting`과 `ghosts` 개수가 나온다.
+- **보정**: `npm run calibrate:ghost`는 화면 없이 단계별 봇을 보통 봇과 붙여 같은 방법으로 재고, `ANCHORS` 표와 되돌림 확인(측정치 → 봇 수치가 원래 단계로 돌아오는지)을 출력한다. 봇 수치를 바꾸면 다시 돌려 `src/ghost.js`에 반영한다.
+- **검사**: `npm run check:quick` (사람 둘 즉시 매칭과 고스트 기록, 혼자일 때 문도봇 매칭·이동·투척·표시, 봇 결과에 재대결 없음, 새 상대 찾기, 대기 취소, 봇 경기 미기록). 검사용 서버는 `MUNDO_TEST=1`에서 `QUICK_WAIT_MS`, `GHOST_MIN_THROWS`, `GHOST_MIN_SECONDS`로 기다림과 기록 기준을 줄인다.
 
 ## 친구와 대결 (온라인 1대1)
 로그인 없이 초대 링크로 1대1을 한다. 메뉴의 **친구와 대결**을 누르면 방이 만들어지고, 대기실의 초대 링크(`?room=코드`)를 받은 친구는 메뉴를 거치지 않고 같은 방 대기실로 들어온다. 두 사람이 모두 **준비**를 누르면 3초 카운트다운 뒤 시작한다. 방장은 왼쪽, 친구는 오른쪽 진영에 서며 화면은 뒤집지 않는다. 내 문도만 초록 링·체력바로 표시하고, 식칼을 맞히면 양쪽 모두 따봉을 띄운다.
