@@ -5,7 +5,11 @@ export const MAPS = [
   { id: 'classic', name: '바위 협곡', subtitle: '익숙한 곳에서, 가볍게 한 판.', price: 0, image: 'assets/cartoon/arena.png', tag: '기본 맵', description: '둥근 바위와 잔잔한 물결. 문도들의 첫 번째 경기장입니다.' },
   { id: 'colosseum', name: '문도 콜로세움', subtitle: '모래 위에서 실력을 증명해.', price: 1500, image: 'assets/cartoon/colosseum-selected-v1.png', tag: '새로운 경기장', description: '황금빛 모래, 겹겹이 둘러선 석조 관중석, 붉은 깃발. 오늘의 주인공은 문도입니다.' },
 ];
-const fresh = () => ({ coins: COIN_REWARDS.firstVisit, owned: ['classic'], equipped: 'classic', rewarded: [] });
+export const WEAPONS = [
+  { id: 'cleaver', name: '문도의 식칼', subtitle: '익숙한 손맛, 묵직한 한 방.', price: 0, image: 'assets/cartoon/cleaver-icon.png', description: '문도와 함께해 온 기본 투척 무기. 언제든 다시 장착할 수 있어요.' },
+  { id: 'soccer', name: '클래식 축구공', subtitle: '발 대신 손으로, 골 대신 명중!', price: 100, image: 'assets/cartoon/soccer-ball-v2.png', description: '흑백 무늬 축구공을 힘껏 던져보세요! 손에 든 공부터 빙글빙글 날아가는 공까지 바뀌어요. 속도, 피해량, 재사용 대기시간은 식칼과 같아요.' },
+];
+const fresh = () => ({ coins: COIN_REWARDS.firstVisit, owned: ['classic'], equipped: 'classic', ownedWeapons: ['cleaver'], equippedWeapon: 'cleaver', rewarded: [] });
 let state = fresh();
 let persistent = true;
 
@@ -17,9 +21,11 @@ function read() {
     const data = JSON.parse(raw);
     if (!data || !Number.isSafeInteger(data.coins) || data.coins < 0) return state;
     const owned = MAPS.filter(map => map.price === 0 || (Array.isArray(data.owned) && data.owned.includes(map.id))).map(map => map.id);
+    const ownedWeapons = WEAPONS.filter(item => item.price === 0 || (Array.isArray(data.ownedWeapons) && data.ownedWeapons.includes(item.id))).map(item => item.id);
     return {
       coins: Math.min(data.coins, 1_000_000_000), owned,
       equipped: owned.includes(data.equipped) ? data.equipped : 'classic',
+      ownedWeapons, equippedWeapon: ownedWeapons.includes(data.equippedWeapon) ? data.equippedWeapon : 'cleaver',
       rewarded: Array.isArray(data.rewarded) ? data.rewarded.filter(id => typeof id === 'string').slice(-100) : [],
     };
   } catch { return state; }
@@ -33,7 +39,7 @@ state = read();
 save();
 
 export function getShopState() {
-  return { ...state, owned: [...state.owned], rewarded: [...state.rewarded], persistent };
+  return { ...state, owned: [...state.owned], ownedWeapons: [...state.ownedWeapons], rewarded: [...state.rewarded], persistent };
 }
 export function buyMap(id) {
   state = read();
@@ -50,6 +56,24 @@ export function equipMap(id) {
   state = read();
   if (!state.owned.includes(id)) return false;
   state.equipped = id;
+  save();
+  return true;
+}
+export function buyWeapon(id) {
+  state = read();
+  const weapon = WEAPONS.find(item => item.id === id);
+  if (!weapon) return { ok: false, reason: '없는 무기예요.' };
+  if (state.ownedWeapons.includes(id)) return { ok: false, reason: '이미 보유한 무기예요.' };
+  if (state.coins < weapon.price) return { ok: false, reason: `${weapon.price - state.coins} 코인이 더 필요해요. 한 판 플레이하고 돌아오세요!` };
+  state.coins -= weapon.price;
+  state.ownedWeapons.push(id);
+  save();
+  return { ok: true };
+}
+export function equipWeapon(id) {
+  state = read();
+  if (!state.ownedWeapons.includes(id)) return false;
+  state.equippedWeapon = id;
   save();
   return true;
 }

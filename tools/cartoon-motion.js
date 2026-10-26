@@ -2,7 +2,7 @@
 // body parts per frame: every displayed part comes from the painted atlas.
 import { THROW, throwPose } from '../src/throw-motion.js';
 
-export async function loadCartoonMotion() {
+export async function loadCartoonMotion({ gripImage = null } = {}) {
   const image = new Image();
   image.src = '/assets/cartoon/parts-source.png';
   await image.decode();
@@ -14,26 +14,26 @@ export async function loadCartoonMotion() {
   // The generated atlas has transparent gutters, but its painted parts do
   // not land on exact row boundaries. Find the four actual silhouettes in
   // each column so a neighboring blade never gets included in an arm crop.
-  function silhouettes(col) {
-    const left = Math.round(col * image.width / 4), right = Math.round((col + 1) * image.width / 4);
-    const visited = new Uint8Array(image.width * image.height), found = [];
-    for (let y = 0; y < image.height; y++) for (let x = left; x < right; x++) {
-      const first = y * image.width + x;
-      if (visited[first] || pixels[first * 4 + 3] < 40) continue;
+  function silhouettes(col, bitmap = image, rgba = pixels, columnCount = 4, includeMask = false) {
+    const left = Math.round(col * bitmap.width / columnCount), right = Math.round((col + 1) * bitmap.width / columnCount);
+    const visited = new Uint8Array(bitmap.width * bitmap.height), found = [];
+    for (let y = 0; y < bitmap.height; y++) for (let x = left; x < right; x++) {
+      const first = y * bitmap.width + x;
+      if (visited[first] || rgba[first * 4 + 3] < 40) continue;
       const queue = [first]; visited[first] = 1;
       let x0 = x, y0 = y, x1 = x, y1 = y;
       for (let cursor = 0; cursor < queue.length; cursor++) {
-        const index = queue[cursor], cx = index % image.width, cy = Math.floor(index / image.width);
+        const index = queue[cursor], cx = index % bitmap.width, cy = Math.floor(index / bitmap.width);
         x0 = Math.min(x0, cx); x1 = Math.max(x1, cx); y0 = Math.min(y0, cy); y1 = Math.max(y1, cy);
         for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
           const nx = cx + dx, ny = cy + dy;
-          if (nx < left || nx >= right || ny < 0 || ny >= image.height) continue;
-          const next = ny * image.width + nx;
-          if (visited[next] || pixels[next * 4 + 3] < 40) continue;
+          if (nx < left || nx >= right || ny < 0 || ny >= bitmap.height) continue;
+          const next = ny * bitmap.width + nx;
+          if (visited[next] || rgba[next * 4 + 3] < 40) continue;
           visited[next] = 1; queue.push(next);
         }
       }
-      if (queue.length > 200) found.push({ x: x0 - 1, y: y0 - 1, w: x1 - x0 + 3, h: y1 - y0 + 3, count: queue.length });
+      if (queue.length > 200) found.push({ x: x0 - 1, y: y0 - 1, w: x1 - x0 + 3, h: y1 - y0 + 3, count: queue.length, indices: includeMask ? queue : null });
     }
     const parts = found.sort((a, b) => b.count - a.count).slice(0, 4).sort((a, b) => a.y - b.y);
     if (parts.length !== 4) throw new Error(`Expected four painted parts in column ${col}`);
@@ -59,12 +59,54 @@ export async function loadCartoonMotion() {
     if (view !== 2) { g.translate(v.empty.width, 0); g.scale(-1, 1); }
     g.drawImage(v.empty, 0, 0);
   }
+  if (gripImage) {
+    const canvas = document.createElement('canvas');
+    canvas.width = gripImage.width; canvas.height = gripImage.height;
+    const g = canvas.getContext('2d');
+    g.drawImage(gripImage, 0, 0);
+    const rgba = g.getImageData(0, 0, canvas.width, canvas.height).data;
+    const grips = silhouettes(1, gripImage, rgba, 4, true);
+    for (let row = 0; row < 4; row++) {
+      const p = grips[row];
+      const arm = document.createElement('canvas');
+      arm.width = p.w; arm.height = p.h;
+      const context = arm.getContext('2d');
+      context.drawImage(gripImage, p.x, p.y, p.w, p.h, 0, 0, p.w, p.h);
+      // Neighboring rows can overlap in their bounding boxes. Keep just this
+      // connected arm plus one antialiased edge pixel, without stray fingertips.
+      const mask = new Uint8Array(p.w * p.h);
+      for (const index of p.indices) {
+        const x = index % canvas.width - p.x, y = Math.floor(index / canvas.width) - p.y;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          if (x + dx >= 0 && x + dx < p.w && y + dy >= 0 && y + dy < p.h) mask[(y + dy) * p.w + x + dx] = 1;
+        }
+      }
+      const cutout = context.getImageData(0, 0, p.w, p.h);
+      for (let i = 0; i < mask.length; i++) if (!mask[i]) cutout.data[i * 4 + 3] = 0;
+      context.putImageData(cutout, 0, 0);
+      views[row].grip = arm;
+      views[row].gripBounds = p;
+    }
+  }
   const shoulders = [
     { near: [-27, -87], far: [27, -82], weaponPivot: .66, emptyPivot: .35 },
     { near: [-29, -85], far: [30, -82], weaponPivot: .65, emptyPivot: .34 },
     { near: [28, -84], far: [-27, -83], weaponPivot: .36, emptyPivot: .35 },
     { near: [31, -84], far: [-31, -84], weaponPivot: .40, emptyPivot: .65 },
   ];
+  if (gripImage) {
+    // The edited sheet retains the original layout. Register its shoulder in
+    // source coordinates so a round weapon never changes the arm's proportions.
+    const ratio = gripImage.height / image.height;
+    for (const [view, v] of views.entries()) {
+      const original = columns[1][view], edited = v.gripBounds;
+      v.gripPose = {
+        height: 85 * edited.h / (original.h * ratio),
+        pivotX: ((original.x + original.w * shoulders[view].weaponPivot) * ratio - edited.x) / edited.w,
+        pivotY: ((original.y + original.h * .12) * ratio - edited.y) / edited.h,
+      };
+    }
+  }
   const ease = t => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
   function part(g, bitmap, x, y, height, pivotX, pivotY, angle = 0) {
     const scale = height / bitmap.height;
@@ -122,7 +164,10 @@ export async function loadCartoonMotion() {
       }
       if (weaponAlpha > 0) {
         g.globalAlpha = weaponAlpha;
-        part(g, v.weapon, shoulder.near[0], shoulder.near[1] + bob, 85, shoulder.weaponPivot, .12, nearAngle);
+        // Hand/ball overlap is painted into the source cutout, so occlusion
+        // stays correct while the entire arm rotates around its shoulder.
+        part(g, v.grip || v.weapon, shoulder.near[0], shoulder.near[1] + bob,
+          v.gripPose?.height ?? 85, v.gripPose?.pivotX ?? shoulder.weaponPivot, v.gripPose?.pivotY ?? .12, nearAngle);
       }
       g.restore();
     },

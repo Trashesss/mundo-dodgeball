@@ -134,6 +134,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #05080d; col
 #hud.unavailable { opacity: 0.45; filter: grayscale(0.8); }
 @keyframes ready { 50% { box-shadow: 0 0 18px #fff; } }
 .q-icon { background-image: url('assets/cartoon/cleaver-icon.png'); }
+.q-icon.soccer-icon { background-image: url('assets/cartoon/soccer-throw-icon-v1.png'); }
 .d-icon { background-image: url('assets/cartoon/flash.png'); }
 .f-icon { background-image: url('assets/cartoon/ghost.png'); }
 

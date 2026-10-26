@@ -3,6 +3,7 @@ import puppeteer from 'puppeteer-core';
 import { serve } from './serve.mjs';
 
 // Bake a consistent joint rig for every state into the game's trimmed atlas.
+const soccer = process.argv.includes('--soccer');
 const server = await serve(0);
 const browser = await puppeteer.launch({
   executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -11,7 +12,7 @@ const browser = await puppeteer.launch({
 try {
   const page = await browser.newPage();
   await page.goto(`http://localhost:${server.address().port}/`);
-  const result = await page.evaluate(async () => {
+  const result = await page.evaluate(async (soccer) => {
     const image = new Image();
     image.src = '/assets/cartoon/source.png';
     await image.decode();
@@ -33,10 +34,18 @@ try {
       return { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
     }));
     const { loadCartoonMotion } = await import('/tools/cartoon-motion.js');
-    const motion = await loadCartoonMotion();
+    let gripImage = null;
+    if (soccer) {
+      gripImage = new Image();
+      gripImage.src = '/assets/cartoon/soccer-parts-v4.png';
+      await gripImage.decode();
+    }
+    const motion = await loadCartoonMotion({ gripImage });
     const { THROW } = await import('/src/throw-motion.js');
     const bakeScale = 1.25;
-    const frameW = 320, frameH = 280, anchor = 0.76;
+    // The ball grip extends higher during the rear-view windup. Extra
+    // transparent headroom keeps the same normalized foot anchor and scale.
+    const frameW = 320, frameH = soccer ? 320 : 280, anchor = 0.76;
     const anims = {
       idle: { frames: 48, loop: true, fps: 24 },
       run: { frames: 30, loop: true, fps: 60 },
@@ -86,8 +95,8 @@ try {
             spriteSourceSize: { x: it.left, y: it.top, w, h },
             frame: { x: it.x, y: it.y, w, h } };
         });
-        const name = `${key}${index ? `-${index}` : ''}.png`;
-        images.push({ name, data: sheet.toDataURL() });
+        const name = `${key}${index ? `-${index}` : ''}.${soccer ? 'webp' : 'png'}`;
+        images.push({ name, data: soccer ? sheet.toDataURL('image/webp', .92) : sheet.toDataURL() });
         textures.push({ image: name, format: 'RGBA8888', size: { w: sheet.width, h: sheet.height }, scale: 1, frames });
       });
     }
@@ -111,15 +120,16 @@ try {
       image, p.x + (p.w - portraitSize) / 2, p.y, portraitSize, portraitSize,
       4, 4, 248, 248,
     );
-    images.push({ name: 'portrait.png', data: portrait.toDataURL() });
+    if (!soccer) images.push({ name: 'portrait.png', data: portrait.toDataURL() });
     return { images, atlas: { textures }, meta: { frameW, frameH, anchor, scale: 1 / bakeScale, anims } };
-  });
-  const out = new URL('../assets/cartoon/', import.meta.url);
+  }, soccer);
+  const out = new URL(soccer ? '../assets/cartoon/soccer/' : '../assets/cartoon/', import.meta.url);
+  fs.mkdirSync(out, { recursive: true });
   for (const image of result.images) fs.writeFileSync(new URL(image.name, out), Buffer.from(image.data.split(',')[1], 'base64'));
   fs.writeFileSync(new URL('atlas.json', out), JSON.stringify(result.atlas));
   fs.writeFileSync(new URL('meta.json', out), JSON.stringify(result.meta, null, 2));
   fs.mkdirSync(new URL('../output/animation/', import.meta.url), { recursive: true });
-  console.log('Cartoon atlas and portrait saved.');
+  console.log(soccer ? 'Soccer ball character atlas saved.' : 'Cartoon atlas and portrait saved.');
 } finally {
   await browser.close();
   server.close();

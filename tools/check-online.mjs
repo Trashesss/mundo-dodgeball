@@ -43,6 +43,7 @@ const open = async (url, map = 'classic') => {
     if (localStorage.getItem('mundo-shop-v1') === null) {
       localStorage.setItem('mundo-shop-v1', JSON.stringify({
         coins: 200, owned: ['classic', 'colosseum'], equipped: id, rewarded: [],
+        ownedWeapons: ['cleaver', 'soccer'], equippedWeapon: 'soccer',
       }));
     }
   }, map);
@@ -102,6 +103,9 @@ try {
   assert.deepEqual(roles[0].slice(0, 4), [0, 0, true, false]);
   assert.deepEqual(roles[1].slice(0, 4), [1, 1, true, false]);
   assert.ok(roles.every((r) => r[4] === 14 && r[5] && r[6]), 'no shrink, both champs have thumbs-up emote');
+  for (const page of [host, guest]) {
+    assert.deepEqual(await evalScene(page, 'return [s.player.sprite.texture.key, s.enemy.sprite.texture.key];'), ['mundo-soccer', 'mundo']);
+  }
   assert.equal(await host.$eval('#player-name', (el) => el.textContent), '나');
   assert.equal(await guest.$eval('#player-name', (el) => el.textContent), '상대방');
   for (const [i, page] of [host, guest].entries()) {
@@ -142,6 +146,8 @@ try {
   // 서버 판정 적중: 방장이 친구에게 Q → 양쪽 모두 체력 감소, 방장 문도에 따봉
   step('서버 판정 적중: 방장이 친구에게 Q → 양쪽 모두 체력 감소, 방장 문도에 따봉');
   await evalScene(host, 's.player.qCd = 0; s.lastCastSeq = 0; if (s.castQ(s.player, s.enemy.x, s.enemy.z)) s.sendInput({ cast: "q", tx: s.enemy.x, tz: s.enemy.z });');
+  await waitScene(host, 's.cleavers.some(cl => cl.team === 0 && cl.view?.img.texture.key === "soccer-ball")');
+  await waitScene(guest, 's.cleavers.some(cl => cl.team === 0 && cl.view?.img.texture.key === "cleaver")');
   for (const page of [host, guest]) {
     await waitScene(page, 's.champs[1].hp < 600 && s.champs[0].stats.hits === 1', 4000);
     await waitScene(page, 's.champs[0].emote.visible', 2000);

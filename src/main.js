@@ -82,6 +82,7 @@ class Champ {
     Object.assign(this, Sim.createChamp(team)); // team, side, stats
     this.scene = scene;
     this.isPlayer = isPlayer;
+    this.weaponId = isPlayer ? scene.weaponId : 'cleaver';
     this.hudSlot = team; // 상단 체력바 번호 (쌍둥이 모드의 두 번째 적은 2)
     this.color = isPlayer ? 0x5ee05e : 0xff4040;
     this.barColor = isPlayer ? 0x48c848 : 0xd83838;
@@ -147,7 +148,7 @@ class Champ {
   }
 
   setAnim(key, force = false) {
-    const full = `${key}_${this.dirIndex()}`;
+    const full = `${this.weaponId === 'soccer' ? 'soccer-' : ''}${key}_${this.dirIndex()}`;
     const anims = this.sprite.anims;
     if (!force && anims.currentAnim?.key === full && anims.isPlaying) return;
     if (!force && anims.currentAnim?.key === full && key === 'death') return;
@@ -228,7 +229,10 @@ class Champ {
 class CleaverView {
   constructor(scene, cl) {
     this.cont = scene.add.container(0, 0);
-    this.img = scene.add.image(0, 0, 'cleaver').setDisplaySize(72, 43.2).setRotation(Math.atan2(cl.dz * SIN, cl.dx));
+    const soccer = scene.weaponId === 'soccer' && scene.player?.team === cl.team;
+    this.img = scene.add.image(0, 0, soccer ? 'soccer-ball' : 'cleaver')
+      .setDisplaySize(soccer ? 48 : 72, soccer ? 48 : 43.2)
+      .setRotation(Math.atan2(cl.dz * SIN, cl.dx));
     this.cont.add(this.img);
     this.shadow = scene.add.image(0, 0, 'shadow').setDepth(DEPTH.decal).setAlpha(0.5);
     this.shadow.setDisplaySize(1.6 * PPU, 1.6 * PPU * SIN);
@@ -277,6 +281,8 @@ class GameScene extends Phaser.Scene {
       document.getElementById('load-text').textContent = percent < 100 ? '경기장 준비하는 중…' : '문도, 준비 끝!';
     });
     this.load.multiatlas('mundo', 'assets/cartoon/atlas.json', 'assets/cartoon/');
+    this.load.multiatlas('mundo-soccer', 'assets/cartoon/soccer/atlas.json', 'assets/cartoon/soccer/');
+    this.load.image('soccer-ball', 'assets/cartoon/soccer-ball-v2.png');
     this.load.json('meta', 'assets/cartoon/meta.json');
     this.load.json('arenaMeta', 'assets/cartoon/arena.json');
     this.load.image('arena', 'assets/cartoon/arena.png');
@@ -293,6 +299,7 @@ class GameScene extends Phaser.Scene {
     this.buildArena();
     this.makeFx();
     this.applyArena(getShopState().equipped);
+    this.applyWeapon(getShopState().equippedWeapon);
     this.setupInput();
     if (this.touchMode) this.touch = setupTouchControls(this, { sx, sy, depth: DEPTH.ring + 1 });
     this.spawnMenuMundos();
@@ -425,15 +432,31 @@ class GameScene extends Phaser.Scene {
   }
 
   makeAnims() {
-    for (const [key, a] of Object.entries(this.meta.anims)) {
-      for (let d = 0; d < 8; d++) {
-        this.anims.create({
-          key: `${key}_${d}`,
-          frames: this.anims.generateFrameNames('mundo', { prefix: `${key}_${d}_`, start: 0, end: a.frames - 1 }),
-          frameRate: a.fps,
-          repeat: a.loop ? -1 : 0,
-        });
+    for (const soccer of [false, true]) {
+      for (const [key, a] of Object.entries(this.meta.anims)) {
+        for (let d = 0; d < 8; d++) {
+          this.anims.create({
+            key: `${soccer ? 'soccer-' : ''}${key}_${d}`,
+            frames: this.anims.generateFrameNames(soccer ? 'mundo-soccer' : 'mundo', { prefix: `${key}_${d}_`, start: 0, end: a.frames - 1 }),
+            frameRate: a.fps,
+            repeat: a.loop ? -1 : 0,
+          });
+        }
       }
+    }
+  }
+
+  applyWeapon(id) {
+    this.weaponId = id === 'soccer' ? 'soccer' : 'cleaver';
+    const soccer = this.weaponId === 'soccer';
+    const label = soccer ? '축구공 투척' : '식칼 투척';
+    const skill = document.getElementById('sk-q');
+    skill.setAttribute('aria-label', `Q ${label}`);
+    skill.querySelector('.q-icon').classList.toggle('soccer-icon', soccer);
+    skill.parentElement.querySelector('.spell-name').textContent = label;
+    if (this.menuMundos) {
+      const key = `${soccer ? 'soccer-' : ''}dance_1`;
+      if (this.menuMundos[0].anims.currentAnim?.key !== key) this.menuMundos[0].play(key);
     }
   }
 
@@ -825,7 +848,7 @@ class GameScene extends Phaser.Scene {
   // ---------- 매치 흐름 ----------
   spawnMenuMundos() {
     this.menuMundos = [
-      this.add.sprite(sx(-8.5), sy(1.5), 'mundo').setOrigin(0.5, this.meta.anchor).setScale(this.meta.scale).play('dance_1'),
+      this.add.sprite(sx(-8.5), sy(1.5), 'mundo').setOrigin(0.5, this.meta.anchor).setScale(this.meta.scale).play(`${this.weaponId === 'soccer' ? 'soccer-' : ''}dance_1`),
       this.add.sprite(sx(8.5), sy(1.5), 'mundo').setOrigin(0.5, this.meta.anchor).setScale(this.meta.scale).play('dance_3'),
     ];
     this.menuMundos.forEach((s) => s.setDepth(s.y));
@@ -835,6 +858,7 @@ class GameScene extends Phaser.Scene {
   startMatch({ diff }, source = 'menu') {
     Sound.startMusic();
     this.applyArena(getShopState().equipped);
+    this.applyWeapon(getShopState().equippedWeapon);
     this.clearMatch();
     this.setMode('bot');
     this.twins = diff === 'twins';
@@ -930,6 +954,7 @@ class GameScene extends Phaser.Scene {
     this.setMode('bot');
     this.roundTime = 0;
     this.updateArena();
+    this.applyWeapon(getShopState().equippedWeapon);
     this.spawnMenuMundos();
     this.state = 'menu';
     this.applyArena(getShopState().equipped);
@@ -939,6 +964,7 @@ class GameScene extends Phaser.Scene {
   setupOnlineMatch(slot, source = 'online') {
     Sound.startMusic();
     this.applyArena(getShopState().equipped);
+    this.applyWeapon(getShopState().equippedWeapon);
     this.clearMatch();
     this.setMode('online');
     this.mySlot = slot;

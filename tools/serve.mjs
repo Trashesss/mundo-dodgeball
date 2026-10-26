@@ -15,6 +15,7 @@ const TYPES = {
   '.json': 'application/json',
   '.xml': 'application/xml; charset=utf-8',
   '.png': 'image/png',
+  '.webp': 'image/webp',
   '.svg': 'image/svg+xml',
   '.glb': 'model/gltf-binary',
   '.wasm': 'application/wasm',

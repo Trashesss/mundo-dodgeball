@@ -36,7 +36,8 @@
 .shop-icon-button { width: 32px; height: 32px; border: 0; border-radius: 5px; background: transparent; color: #b7baa6; font-size: 28px; }
 .shop-body { display: grid; grid-template-columns: 76px minmax(0, 1fr) 352px; grid-template-rows: minmax(0, 1fr); min-height: 0; overflow: auto; }
 .shop-category { display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 22px 8px; border-right: 1px solid var(--shop-line); background: #0d222a; }
-.shop-category-current { position: relative; display: flex; width: 58px; min-height: 73px; flex-direction: column; align-items: center; justify-content: center; gap: 9px; border: 1px solid #c0a26488; border-radius: 7px; background: #274149; color: #e1ca95; font-size: 12px; box-shadow: inset 0 1px #ffffff0c; }
+.shop-category-button { position: relative; display: flex; width: 58px; min-height: 73px; flex-direction: column; align-items: center; justify-content: center; gap: 9px; padding: 5px 0; border: 1px solid transparent; border-radius: 7px; background: transparent; color: var(--shop-muted); font-size: 12px; }
+.shop-category-current { border-color: #c0a26488; background: #274149; color: #e1ca95; box-shadow: inset 0 1px #ffffff0c; }
 .shop-category-current::before { content: ''; position: absolute; left: -9px; top: 15px; bottom: 15px; width: 3px; border-radius: 3px; background: #d5bd83; }
 .shop-catalog { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: auto; background: radial-gradient(ellipse at 35% 0, #27474d50, transparent 75%); }
 .shop-catalog-content { display: flex; flex: 1; flex-direction: column; padding: 20px 24px 24px; }
@@ -48,6 +49,7 @@
 .shop-map-card { display: flex; flex-direction: column; min-width: 0; padding: 0; border: 0; border-radius: 7px; background: transparent; color: #dddcc5; text-align: left; }
 .shop-card-art { position: relative; display: block; width: 100%; aspect-ratio: 1.16; overflow: hidden; border: 1px solid #5e7a7880; border-radius: 7px; background: radial-gradient(ellipse at 50% 60%, #3f5c60, #213b44 80%); box-shadow: inset 0 0 0 3px #0c242a99; }
 .shop-map-card[data-map="colosseum"] .shop-card-art { background: radial-gradient(ellipse at 50% 60%, #665540, #2d3e3e 80%); }
+.shop-map-card[data-weapon] img { padding: 24px; }
 .shop-map-card[aria-pressed="true"] .shop-card-art { border-color: #e3c68b; box-shadow: inset 0 0 0 2px #e3c68b38, 0 0 16px #d6b97c0d; }
 .shop-map-card img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; padding: 13px 10px; object-fit: contain; }
 .shop-card-badge { position: absolute; left: 8px; top: 8px; padding: 3px 6px; border: 1px solid #637d7880; border-radius: 3px; background: #142d35e8; color: #bad4b0; font-size: 10px; }
@@ -90,7 +92,7 @@
 }
 @media (max-width: 900px) and (min-width: 651px) {
   .shop-body { grid-template-columns: 64px minmax(0, 1fr) 300px; }
-  .shop-category-current { width: 48px; }
+  .shop-category-button { width: 48px; font-size: 11px; }
   .shop-catalog-content { padding-inline: 16px; }
   .shop-map-list { gap: 10px; }
   .shop-card-info strong { font-size: 13px; }
@@ -111,9 +113,12 @@
   .shop-wallet strong { min-width: 23px; font-size: 18px; }
   .shop-wallet > span:last-child { display: none; }
   .shop-icon-button { width: 26px; }
-  .shop-body { grid-template-columns: 1fr; grid-template-rows: auto auto; }
+  .shop-body { grid-template-columns: 1fr; grid-template-rows: auto auto auto; }
   .shop-catalog { overflow: visible; }
-  .shop-category { display: none; }
+  .shop-category { flex-direction: row; gap: 8px; padding: 10px 18px; border-right: 0; border-bottom: 1px solid var(--shop-line); }
+  .shop-category-button { flex-direction: row; width: auto; min-height: 38px; padding: 7px 12px; gap: 7px; }
+  .shop-category-button svg { width: 20px; height: 20px; }
+  .shop-category-current::before { display: none; }
   .shop-catalog-content { padding: 16px 18px 18px; }
   .shop-section-label h2 { font-size: 17px; }
   .shop-catalog-intro { margin: 6px 0 15px; font-size: 11px; }
