@@ -10,6 +10,8 @@ import puppeteer from 'puppeteer-core';
 import { serve } from './serve.mjs';
 import { skipConsent } from './skip-consent.mjs';
 
+const map = process.env.QUICK_MAP || 'colosseum';
+assert.ok(['classic', 'colosseum'].includes(map), 'QUICK_MAP must be a valid map ID');
 const WS_PORT = 3600 + Math.floor(Math.random() * 300);
 const WAIT_MS = 1500;
 const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mundo-ghosts-'));
@@ -42,6 +44,13 @@ const open = async () => {
   page.on('pageerror', (error) => errors.push(error.message));
   await page.setViewport({ width: 1200, height: 800 });
   await skipConsent(page);
+  await page.evaluateOnNewDocument(id => {
+    if (localStorage.getItem('mundo-shop-v1') === null) {
+      localStorage.setItem('mundo-shop-v1', JSON.stringify({
+        coins: 200, owned: ['classic', 'colosseum'], equipped: id, rewarded: [],
+      }));
+    }
+  }, map);
   await page.goto(base);
   await waitScene(page, "s.state === 'menu'");
   return page;
@@ -69,6 +78,7 @@ try {
   await b.click('#quick-btn');
   await waitScene(a, "s.mode === 'online' && s.state === 'play'");
   await waitScene(b, "s.mode === 'online' && s.state === 'play'");
+  for (const page of [a, b]) assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').arenaId), map);
   assert.equal(await text(a, '#enemy-tag'), 'FRIEND', 'human opponent is not labeled as bot');
   assert.equal((await health()).quickWaiting, 0);
   await throwAt(a, 4);
@@ -93,6 +103,7 @@ try {
   await solo.click('#quick-btn');
   await solo.waitForFunction(() => /\d초/.test(document.getElementById('lobby-status').textContent));
   await waitScene(solo, "s.mode === 'online' && s.state === 'play'", WAIT_MS + 8000);
+  assert.equal(await solo.evaluate(() => window.__game.scene.getScene('game').arenaId), map);
   assert.equal(await text(solo, '#enemy-name'), '문도봇');
   assert.equal(await text(solo, '#enemy-tag'), 'BOT');
   const start = await solo.evaluate(`(() => { const s = ${scene}; return { x: s.enemy.x, z: s.enemy.z }; })()`);
@@ -120,7 +131,7 @@ try {
   assert.equal((await health()).rooms, 0, 'cancelled room never gets a bot');
 
   assert.deepEqual(errors, []);
-  console.log('Quick match: human pairing without ready, ghost recording, 문도봇 fallback with moving/throwing bot, bot result without rematch, requeue and cancel passed.');
+  console.log(`Quick match (${map}): human pairing without ready, ghost recording, 문도봇 fallback with moving/throwing bot, bot result without rematch, requeue and cancel passed.`);
 } finally {
   await Promise.all(browsers.map((b) => b.close().catch(() => {})));
   web.close();

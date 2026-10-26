@@ -34,6 +34,7 @@
   <meta name="twitter:image:alt" content="식칼을 든 문도와 문도 피구 게임 설명" />
   <link rel="preload" href="assets/fonts/Jua-Regular.ttf" as="font" type="font/ttf" crossorigin />
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="shop.css" />
   <script defer src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
 </head>
 <body>
@@ -109,8 +110,12 @@
   </div>
 
   <div id="menu" class="screen hidden">
+    <button id="shop-open" type="button" aria-haspopup="dialog" aria-controls="shop-dialog">
+      <img class="shop-keeper-icon" src="assets/cartoon/mundo-shop-icon-v1.png" alt="" width="256" height="256" />
+      <span class="shop-nav-info"><span>상점</span><span class="shop-nav-coins"><span class="coin-icon" aria-hidden="true">C</span><span id="menu-coins">100</span></span></span>
+    </button>
     <button id="analytics-settings" type="button" aria-label="설정" title="설정" aria-haspopup="dialog" aria-expanded="false" aria-controls="settings-dialog">
-      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true" focusable="false">
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
         <path d="M21.88 10.44L21.88 13.56L19.49 13.80L18.57 16.02L20.09 17.88L17.88 20.09L16.02 18.57L13.80 19.49L13.56 21.88L10.44 21.88L10.20 19.49L7.98 18.57L6.12 20.09L3.91 17.88L5.43 16.02L4.51 13.80L2.12 13.56L2.12 10.44L4.51 10.20L5.43 7.98L3.91 6.12L6.12 3.91L7.98 5.43L10.20 4.51L10.44 2.12L13.56 2.12L13.80 4.51L16.02 5.43L17.88 3.91L20.09 6.12L18.57 7.98L19.49 10.20Z" />
         <circle cx="12" cy="12" r="3" />
       </svg>
@@ -264,6 +269,7 @@
       <img class="result-meme result-meme-win" src="assets/cartoon/mundo-satisfied-meme-v6.png" alt="양복을 입은 문도가 의자에 기대 흡족하게 웃는 짤. 흡족." width="1402" height="1122" />
       <h1 id="result-title">난이도 클리어!</h1>
       <p id="result-subtitle" class="hidden"></p>
+      <p id="result-reward" class="hidden" role="status"></p>
       <div class="result-actions">
         <button id="share-btn" type="button">자랑하기</button>
         <button id="humiliate-btn" class="hidden" type="button" aria-haspopup="dialog">굴욕 선사하기</button>
@@ -337,6 +343,37 @@
       </button>
     </div>
     <a class="game-guide-link" href="game-guide.html">게임 소개 · 조작법</a>
+  </dialog>
+  <dialog id="shop-dialog" aria-labelledby="shop-title">
+    <header class="shop-header">
+      <div class="shop-brand"><img class="shop-keeper-icon" src="assets/cartoon/mundo-shop-icon-v1.png" alt="" width="256" height="256" /><div><p class="shop-eyebrow">MUNDO'S SHOP</p><h1 id="shop-title">문도의 상점</h1></div></div>
+      <div class="shop-header-actions"><div class="shop-wallet" aria-label="보유 코인"><span class="coin-icon" aria-hidden="true">C</span><strong id="shop-coins">500</strong><span>코인</span></div><button id="shop-close" class="shop-icon-button" type="button" aria-label="상점 닫기">×</button></div>
+    </header>
+    <div class="shop-body">
+      <aside class="shop-category" aria-label="상품 종류"><div class="shop-category-current"><svg viewBox="0 0 32 32" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m4 10 8-4 8 4 8-4v20l-8 4-8-4-8 4V10Z"/><path d="M12 6v20m8-16v20"/></svg><span>경기장</span></div></aside>
+      <section class="shop-catalog" aria-labelledby="shop-catalog-title">
+        <div class="shop-catalog-content">
+          <div class="shop-section-label"><h2 id="shop-catalog-title">경기장</h2><span id="shop-owned-count">1 / 2 보유</span></div>
+          <p class="shop-catalog-intro">오늘은 어디서 한 판?</p>
+          <div id="shop-map-list" class="shop-map-list" role="group" aria-label="경기장 선택"></div>
+          <div class="shop-keeper-note"><span aria-hidden="true">“</span><p>문도, 마음에 드는 곳에서 싸운다!</p><small>경기장을 골라 자세히 둘러보세요.</small></div>
+        </div>
+      </section>
+      <section class="shop-feature" aria-labelledby="shop-map-name">
+        <p class="shop-detail-label">선택한 경기장 <span aria-hidden="true">✦</span></p>
+        <div class="shop-art">
+          <img id="shop-map-image" src="assets/cartoon/colosseum-selected-v1.png" alt="빈 석조 관중석과 붉은 깃발이 둘러싼 모래 경기장" width="1283" height="1226" />
+        </div>
+        <div class="shop-detail">
+          <h2 id="shop-map-name">문도 콜로세움</h2>
+          <p id="shop-map-subtitle" class="shop-subtitle">모래 위에서 실력을 증명해.</p>
+          <p id="shop-map-description" class="shop-description"></p>
+          <div class="shop-purchase"><p id="shop-ownership"></p><button id="shop-action" type="button"></button><p class="shop-price-note">온라인에서는 내 화면에만 적용돼요.</p></div>
+        </div>
+        <p id="shop-status" role="status" aria-live="polite"></p>
+      </section>
+    </div>
+    <footer class="shop-footer"><p><span class="coin-icon" aria-hidden="true">C</span> 첫 방문 <b>500</b> · 승리 <b>+100</b> · 패배 <b>+40</b></p><p id="shop-storage-note">코인과 구매 내역은 이 브라우저에 저장돼요.</p></footer>
   </dialog>
   <script type="module" src="src/consent.js"></script>
   <script type="module" src="src/settings.js"></script>

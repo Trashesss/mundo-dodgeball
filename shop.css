@@ -1,0 +1,134 @@
+/* The lobby's teal, cream lettering and illustrated controls, in an item-shop layout. */
+#shop-open {
+  position: fixed; top: max(20px, env(safe-area-inset-top)); left: max(24px, env(safe-area-inset-left));
+  z-index: 2; display: flex; align-items: center; gap: 10px; height: 64px; padding: 5px 14px 5px 5px;
+  border: 2px solid var(--entry-ink); border-radius: 14px; background: #2f4853; color: var(--entry-text);
+  font: 17px/1.1 'Jua', sans-serif; text-align: left; cursor: pointer;
+  box-shadow: inset 0 2px #ffffff12; transition: background .15s, border-color .15s;
+}
+.shop-keeper-icon { display: block; flex: 0 0 auto; width: 50px; height: 50px; object-fit: cover; border-radius: 9px; background: #152e38; }
+.shop-nav-info { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.shop-nav-coins { display: flex; align-items: center; gap: 5px; font-size: 12px; line-height: 16px; color: #f4d47d; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.coin-icon { display: inline-grid; place-items: center; flex: 0 0 auto; width: 21px; height: 21px; border: 2px solid #f2c966; border-radius: 50%; color: #ffe3a0; background: #947032; font: 12px 'Jua', sans-serif; box-shadow: inset 0 0 0 2px #a8813d; }
+.shop-nav-coins .coin-icon { width: 15px; height: 15px; border: 1px solid #cfa74b; background: #f4d47d; color: #695026; font-size: 10px; box-shadow: none; }
+#shop-open:active { background: #263f48; box-shadow: inset 0 2px #0b182040; }
+
+#shop-dialog {
+  --shop-line: #9c855044; --shop-muted: #93acaf; --shop-gold: #d7bd80;
+  width: min(1080px, calc(100% - 48px)); height: min(720px, calc(100dvh - 40px)); max-height: calc(100dvh - 40px); padding: 0; overflow: hidden;
+  border: 1px solid #a68b56; border-radius: 13px; background: #122830; color: var(--entry-text);
+  font-family: 'Jua', sans-serif; box-shadow: 0 24px 90px #0009, inset 0 0 0 4px #091e2580; scrollbar-color: #647d7c #122830;
+}
+#shop-dialog[open] { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+#shop-dialog::backdrop { background: #08151cd6; backdrop-filter: blur(5px); }
+#shop-dialog button { font-family: inherit; cursor: pointer; }
+#shop-dialog [hidden] { display: none !important; }
+#shop-dialog button:focus-visible { outline: 2px solid #c4e2ba; outline-offset: 3px; }
+.shop-header { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 24px; border-bottom: 1px solid var(--shop-line); background: #172f37; box-shadow: inset 0 1px #e1cd9414; }
+.shop-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.shop-brand .shop-keeper-icon { width: 48px; height: 48px; border: 1px solid #aa905b80; border-radius: 10px; }
+.shop-eyebrow { margin: 0 0 5px; color: var(--shop-gold); font: 700 9px/1.3 sans-serif; letter-spacing: 2px; }
+#shop-title { margin: 0; font-size: 26px; font-weight: 400; }
+.shop-header-actions { display: flex; align-items: center; gap: 22px; }
+.shop-wallet { display: flex; align-items: center; gap: 8px; padding: 0; white-space: nowrap; }
+.shop-wallet strong { min-width: 35px; color: #f4d47d; font-size: 21px; font-weight: 400; }
+.shop-wallet > span:last-child { color: #b8b9a4; font-size: 12px; }
+.shop-icon-button { width: 32px; height: 32px; border: 0; border-radius: 5px; background: transparent; color: #b7baa6; font-size: 28px; }
+.shop-body { display: grid; grid-template-columns: 76px minmax(0, 1fr) 352px; grid-template-rows: minmax(0, 1fr); min-height: 0; overflow: auto; }
+.shop-category { display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 22px 8px; border-right: 1px solid var(--shop-line); background: #0d222a; }
+.shop-category-current { position: relative; display: flex; width: 58px; min-height: 73px; flex-direction: column; align-items: center; justify-content: center; gap: 9px; border: 1px solid #c0a26488; border-radius: 7px; background: #274149; color: #e1ca95; font-size: 12px; box-shadow: inset 0 1px #ffffff0c; }
+.shop-category-current::before { content: ''; position: absolute; left: -9px; top: 15px; bottom: 15px; width: 3px; border-radius: 3px; background: #d5bd83; }
+.shop-catalog { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: auto; background: radial-gradient(ellipse at 35% 0, #27474d50, transparent 75%); }
+.shop-catalog-content { display: flex; flex: 1; flex-direction: column; padding: 20px 24px 24px; }
+.shop-section-label { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.shop-section-label h2 { margin: 0; font-size: 19px; font-weight: 400; }
+.shop-section-label > span { color: #95aaa4; font-size: 11px; white-space: nowrap; }
+.shop-catalog-intro { margin: 8px 0 22px; color: var(--shop-muted); font-size: 12px; }
+.shop-map-list { display: grid; grid-template-columns: repeat(2, minmax(0, 180px)); gap: 15px; align-items: start; }
+.shop-map-card { display: flex; flex-direction: column; min-width: 0; padding: 0; border: 0; border-radius: 7px; background: transparent; color: #dddcc5; text-align: left; }
+.shop-card-art { position: relative; display: block; width: 100%; aspect-ratio: 1.16; overflow: hidden; border: 1px solid #5e7a7880; border-radius: 7px; background: radial-gradient(ellipse at 50% 60%, #3f5c60, #213b44 80%); box-shadow: inset 0 0 0 3px #0c242a99; }
+.shop-map-card[data-map="colosseum"] .shop-card-art { background: radial-gradient(ellipse at 50% 60%, #665540, #2d3e3e 80%); }
+.shop-map-card[aria-pressed="true"] .shop-card-art { border-color: #e3c68b; box-shadow: inset 0 0 0 2px #e3c68b38, 0 0 16px #d6b97c0d; }
+.shop-map-card img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; padding: 13px 10px; object-fit: contain; }
+.shop-card-badge { position: absolute; left: 8px; top: 8px; padding: 3px 6px; border: 1px solid #637d7880; border-radius: 3px; background: #142d35e8; color: #bad4b0; font-size: 10px; }
+.shop-map-card[data-owned="false"] .shop-card-badge { border-color: #ac915d80; background: #4c4230; color: #f5d78e; font: 700 8px/1.4 sans-serif; letter-spacing: 1px; }
+.shop-map-check { position: absolute; bottom: 6px; right: 7px; color: #ead397; font-size: 17px; }
+.shop-card-info { display: grid; gap: 7px; padding: 12px 2px 8px; }
+.shop-card-info strong { font-size: 16px; font-weight: 400; }
+.shop-card-info small { color: var(--shop-gold); font-size: 12px; }
+.shop-map-card[data-owned="true"] small { color: #9fb9af; }
+.shop-keeper-note { margin-top: auto; padding-top: 35px; color: #b3c7bb; }
+.shop-keeper-note > span { display: block; height: 23px; color: #6d9188; font: 36px Georgia, serif; }
+.shop-keeper-note p { margin: 5px 0 8px; font-size: 15px; }
+.shop-keeper-note small { color: #6e8c91; font-size: 11px; }
+.shop-feature { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: auto; padding: 0 22px 14px; border-left: 1px solid var(--shop-line); background: #0d232bcc; }
+.shop-detail-label { display: flex; align-items: center; justify-content: space-between; min-height: 56px; margin: 0; border-bottom: 1px solid #83926826; color: #b9c4b8; font-size: 12px; }
+.shop-detail-label span { color: #b59c68; }
+.shop-art { position: relative; display: grid; place-items: center; flex-shrink: 0; min-width: 0; height: 218px; margin-top: 14px; overflow: hidden; border: 1px solid #75806138; border-radius: 6px; background: radial-gradient(ellipse, #3c4e46, #142e36 75%); }
+.shop-art img { display: block; width: 100%; height: 100%; min-height: 0; padding: 12px 20px; object-fit: contain; }
+.shop-detail { display: flex; flex: 1; flex-direction: column; align-items: flex-start; padding-top: 18px; }
+.shop-detail h2 { margin: 0 0 8px; color: #f1e5c8; font-size: 25px; line-height: 1.2; font-weight: 400; word-break: keep-all; }
+.shop-subtitle { margin: 0; color: #c3cdaf; font-size: 13px; }
+.shop-description { margin: 13px 0 12px; color: #9fb2b0; font: 12px/1.8 sans-serif; word-break: keep-all; }
+.shop-purchase { width: 100%; margin-top: auto; padding-top: 15px; border-top: 1px solid var(--shop-line); }
+#shop-ownership { margin: 0 0 10px; color: #bfbb9e; font-size: 11px; }
+#shop-action { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; padding: 10px; border: 1px solid #e3c88c; border-radius: 6px; background: #d5bc83; color: #29322d; box-shadow: inset 0 1px #fff4ce80, 0 3px 0 #77653e; font-size: 17px; }
+#shop-action:disabled { cursor: default; border-color: #738c70; background: #2c473f; color: #bfd7ad; box-shadow: inset 0 1px #ffffff0d; }
+.shop-price-note { margin: 10px 0 0; text-align: center; color: #6f8e92; font-size: 10px; }
+#shop-status { margin: 12px 0 0; color: #e6d3a1; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+#shop-status:empty { display: none; }
+.shop-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 16px; padding: 13px 24px; border-top: 1px solid var(--shop-line); background: #10252d; }
+.shop-footer p { display: flex; align-items: center; gap: 5px; margin: 0; color: #80999b; font-size: 10px; line-height: 1.5; }
+.shop-footer b { color: #cab784; font-weight: 400; }
+.shop-footer .coin-icon { width: 15px; height: 15px; margin-right: 3px; font-size: 8px; border-width: 1px; }
+
+#result-reward { margin: -8px 0 20px; color: #f1d18b; font-size: 17px; }
+@media (hover: hover) {
+  #shop-open:hover { background: #3b5963; border-color: #88a9a5; }
+  .shop-icon-button:hover { background: #2c474d; }
+  #shop-action:not(:disabled):hover { background: #ead09a; }
+  .shop-map-card:hover .shop-card-art { border-color: #d6c493; }
+}
+@media (max-width: 900px) and (min-width: 651px) {
+  .shop-body { grid-template-columns: 64px minmax(0, 1fr) 300px; }
+  .shop-category-current { width: 48px; }
+  .shop-catalog-content { padding-inline: 16px; }
+  .shop-map-list { gap: 10px; }
+  .shop-card-info strong { font-size: 13px; }
+  .shop-feature { padding-inline: 16px; }
+}
+@media (max-width: 650px) {
+  #shop-open { top: max(12px, env(safe-area-inset-top)); left: max(12px, env(safe-area-inset-left)); height: 56px; gap: 8px; padding: 4px 11px 4px 4px; font-size: 16px; }
+  #shop-open .shop-keeper-icon { width: 44px; height: 44px; border-radius: 8px; }
+  .shop-nav-info { gap: 4px; }
+  #shop-dialog { width: calc(100% - 20px); height: calc(100dvh - 20px); max-height: calc(100dvh - 20px); border-radius: 10px; }
+  .shop-header { padding: 13px 14px; gap: 10px; }
+  .shop-brand { gap: 9px; }
+  .shop-brand .shop-keeper-icon { width: 38px; height: 38px; border-radius: 7px; }
+  #shop-title { font-size: 21px; }
+  .shop-eyebrow { font-size: 7px; letter-spacing: 1.3px; }
+  .shop-header-actions { gap: 9px; }
+  .shop-wallet { gap: 5px; }
+  .shop-wallet strong { min-width: 23px; font-size: 18px; }
+  .shop-wallet > span:last-child { display: none; }
+  .shop-icon-button { width: 26px; }
+  .shop-body { grid-template-columns: 1fr; grid-template-rows: auto auto; }
+  .shop-catalog { overflow: visible; }
+  .shop-category { display: none; }
+  .shop-catalog-content { padding: 16px 18px 18px; }
+  .shop-section-label h2 { font-size: 17px; }
+  .shop-catalog-intro { margin: 6px 0 15px; font-size: 11px; }
+  .shop-map-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .shop-card-art { aspect-ratio: 1.4; }
+  .shop-map-card img { padding: 8px; }
+  .shop-card-info { padding-top: 9px; gap: 5px; }
+  .shop-card-info strong { font-size: 14px; }
+  .shop-card-info small { font-size: 11px; }
+  .shop-keeper-note { display: none; }
+  .shop-feature { overflow: visible; padding: 0 18px 18px; border-left: 0; border-top: 1px solid var(--shop-line); }
+  .shop-detail-label { min-height: 40px; }
+  .shop-art { height: 185px; margin-top: 12px; }
+  .shop-detail { padding-top: 16px; }
+  .shop-detail h2 { font-size: 24px; }
+  .shop-footer { padding: 13px 18px; gap: 8px; }
+}

@@ -289,13 +289,15 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 #analytics-settings {
   position: fixed; top: max(20px, env(safe-area-inset-top)); right: max(24px, env(safe-area-inset-right));
   z-index: 1; display: grid; place-items: center; width: 44px; height: 44px; padding: 0;
-  border: 1px solid #668786; border-radius: 12px; background: #142b33; color: var(--entry-muted); cursor: pointer;
+  border: 2px solid var(--entry-ink); border-radius: 12px; background: #2f4853; color: var(--entry-text); cursor: pointer;
+  box-shadow: inset 0 2px #ffffff12;
+  transition: background .15s, border-color .15s;
 }
-#analytics-settings svg { display: block; }
-#analytics-settings:active { background: #304c53; }
+#analytics-settings svg { display: block; width: 22px; height: 22px; }
+#analytics-settings:active { background: #263f48; box-shadow: inset 0 2px #0b182040; }
 #menu.practice-view #analytics-settings { display: none; }
 @media (hover: hover) {
-  #analytics-settings:hover { background: #263f48; color: var(--entry-text); }
+  #analytics-settings:hover { background: #3b5963; border-color: #88a9a5; }
 }
 .consent-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
 /* 설정 */
@@ -336,8 +338,10 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 }
 .consent-actions #humiliate-copy,
 .consent-actions #analytics-accept { background: var(--entry-green); border-color: var(--entry-green); color: #172c26; }
-@media (max-width: 600px) {
+@media (max-width: 650px) {
   #analytics-settings { top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); }
+}
+@media (max-width: 600px) {
   .analytics-consent { padding: 18px; font-size: 13px; }
   .consent-summary h2 { font-size: 16px; }
   .consent-actions button { flex: 1; padding-inline: 8px; }

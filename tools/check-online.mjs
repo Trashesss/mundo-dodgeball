@@ -7,6 +7,11 @@ import { spawn } from 'node:child_process';
 import puppeteer from 'puppeteer-core';
 import { serve } from './serve.mjs';
 import { skipConsent } from './skip-consent.mjs';
+import { RULES } from '../src/rules.js';
+
+// ONLINE_MAPS=classic,colosseum npm run check:online 로 진영을 바꿔 검사할 수 있다.
+const maps = (process.env.ONLINE_MAPS || 'colosseum,classic').split(',');
+assert.ok(maps.length === 2 && maps.every(id => ['classic', 'colosseum'].includes(id)), 'ONLINE_MAPS must contain two valid map IDs');
 
 const WS_PORT = 3100 + Math.floor(Math.random() * 500);
 const gameServer = spawn(process.execPath, ['server/index.mjs'], {
@@ -23,7 +28,7 @@ const base = `http://localhost:${web.address().port}/?server=${encodeURIComponen
 const browsers = [];
 const step = (name) => process.env.DEBUG && console.log('step:', name);
 const errors = [];
-const open = async (url) => {
+const open = async (url, map = 'classic') => {
   const browser = await puppeteer.launch({
     executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
     headless: true,
@@ -34,6 +39,13 @@ const open = async (url) => {
   page.on('pageerror', (error) => errors.push(error.message));
   await page.setViewport({ width: 1200, height: 800 });
   await skipConsent(page);
+  await page.evaluateOnNewDocument(id => {
+    if (localStorage.getItem('mundo-shop-v1') === null) {
+      localStorage.setItem('mundo-shop-v1', JSON.stringify({
+        coins: 200, owned: ['classic', 'colosseum'], equipped: id, rewarded: [],
+      }));
+    }
+  }, map);
   await page.goto(url);
   return page;
 };
@@ -41,12 +53,29 @@ const scene = 'window.__game.scene.getScene("game")';
 const waitScene = (page, expr, timeout = 8000) => page.waitForFunction(`(() => { const s = ${scene}; return ${expr}; })()`, { timeout });
 const evalScene = (page, body) => page.evaluate(`(() => { const s = ${scene}; ${body} })()`);
 const resultTitle = (page) => page.$eval('#result-title', (el) => el.textContent);
+const checkMap = async (page, expected) => {
+  const state = await evalScene(page, `return {
+    id: s.arenaId, texture: s.arenaImage.texture.key, water: s.water.visible,
+    boundary: s.sandBoundary.visible, radius: s.arenaR, fixed: s.fixedArenaR,
+    shrinkTeam: s.shrinkTeam,
+  };`);
+  assert.deepEqual(state, {
+    id: expected, texture: expected === 'classic' ? 'arena' : 'colosseum',
+    water: expected === 'classic', boundary: expected === 'colosseum',
+    radius: RULES.arenaR, fixed: null, shrinkTeam: null,
+  });
+};
 
 try {
+  fs.mkdirSync('output', { recursive: true });
   // 방 만들기
   step('방 만들기');
-  const host = await open(base);
+  const host = await open(base, maps[0]);
   await waitScene(host, "s.state === 'menu'");
+  // 좁은 봇전에서 돌아온 뒤에도 온라인에는 축소 규칙이 남지 않아야 한다.
+  await evalScene(host, `s.startMatch({ diff: 'faker' });`);
+  assert.ok(await evalScene(host, 'return s.arenaR < 14;'));
+  await evalScene(host, 's.backToMenu();');
   await host.click('#online-btn');
   await host.click('#lobby-create');
   await host.waitForFunction(() => /^[A-Z2-9]{6}$/.test(document.getElementById('lobby-code').textContent));
@@ -56,7 +85,7 @@ try {
 
   // 초대 링크로 친구 입장 → 메뉴 없이 바로 대기실
   step('초대 링크로 친구 입장 → 메뉴 없이 바로 대기실');
-  const guest = await open(link);
+  const guest = await open(link, maps[1]);
   await guest.waitForFunction(() => document.getElementById('lobby-p1').dataset.state === 'joined');
   await host.waitForFunction(() => document.getElementById('lobby-p1').dataset.state === 'joined');
   assert.ok(await guest.$eval('#menu', (el) => el.classList.contains('hidden')));
@@ -75,6 +104,34 @@ try {
   assert.ok(roles.every((r) => r[4] === 14 && r[5] && r[6]), 'no shrink, both champs have thumbs-up emote');
   assert.equal(await host.$eval('#player-name', (el) => el.textContent), '나');
   assert.equal(await guest.$eval('#player-name', (el) => el.textContent), '상대방');
+  for (const [i, page] of [host, guest].entries()) {
+    await checkMap(page, maps[i]);
+    await evalScene(page, 's.roundTime = 3600; s.updateArena(); s.roundTime = 0;');
+    await checkMap(page, maps[i]);
+  }
+
+  step('맵별 실제 클릭 좌표 → 이동 동기화');
+  const click = await evalScene(guest, `
+    const cam = s.cameras.main;
+    const point = cam.matrix.transformPoint(9 * 40 - cam.scrollX, 4 * 40 * Math.sin(52 * Math.PI / 180) - cam.scrollY);
+    const canvas = s.game.canvas, bounds = canvas.getBoundingClientRect();
+    return { x: bounds.left + point.x * bounds.width / canvas.width, y: bounds.top + point.y * bounds.height / canvas.height };
+  `);
+  await guest.mouse.click(click.x, click.y);
+  await waitScene(host, 'Math.hypot(s.enemy.x - 9, s.enemy.z - 4) < 0.3', 6000);
+  await waitScene(guest, 'Math.hypot(s.player.x - 9, s.player.z - 4) < 0.3');
+
+  step('양쪽 맵의 외곽 이동 제한·점멸·유체화 서버 동기화');
+  const edge = (RULES.arenaR - RULES.champR * .5) / Math.SQRT2;
+  for (const page of [host, guest]) await evalScene(page, 's.setMoveTarget({ x: s.player.side * 42, z: 42 });');
+  for (const page of [host, guest]) {
+    await waitScene(page, `s.champs.every(c => Math.hypot(c.x - c.side * ${edge}, c.z - ${edge}) < .15)`, 8000);
+    assert.ok(await evalScene(page, `return s.champs.every(c => Math.hypot(c.x, c.z) <= ${RULES.arenaR - RULES.champR * .5 + .03});`));
+  }
+  await evalScene(guest, 's.useSkill("d", 6.5, 0); s.useSkill("f");');
+  for (const page of [host, guest]) await waitScene(page, `s.champs[1].flashCd > 10 && s.champs[1].ghostT > 0 && Math.hypot(s.champs[1].x - ${edge}, s.champs[1].z - ${edge}) > 3.7`);
+  await evalScene(host, 's.setMoveTarget({ x: -6.5, z: 0 });');
+  await waitScene(guest, 'Math.hypot(s.enemy.x + 6.5, s.enemy.z) < .15');
 
   // 이동 동기화: 친구가 움직이면 방장 화면의 상대도 따라온다
   step('이동 동기화: 친구가 움직이면 방장 화면의 상대도 따라온다');
@@ -101,6 +158,8 @@ try {
   assert.equal(await resultTitle(host), '승리!');
   assert.equal(await resultTitle(guest), '패배');
   assert.ok(await host.$eval('#share-btn', (el) => el.classList.contains('hidden')));
+  assert.match(await host.$eval('#result-reward', el => el.textContent), /\+100/);
+  assert.match(await guest.$eval('#result-reward', el => el.textContent), /\+40/);
   await guest.screenshot({ path: 'output/online-result-guest.png' });
 
   // 굴욕 선사하기: 승자에게만 버튼, 상대 이름을 넣은 문구와 짤 미리보기 링크를 복사
@@ -136,12 +195,14 @@ try {
   for (const page of [host, guest]) await waitScene(page, "s.state === 'countdown' || s.state === 'play'");
   assert.ok(await host.$eval('#result', (el) => el.classList.contains('hidden')));
   for (const page of [host, guest]) await waitScene(page, "s.state === 'play' && s.champs.every(c => c.alive && c.hp > 600)", 5000);
+  for (const [i, page] of [host, guest].entries()) await checkMap(page, maps[i]);
 
   // 새로고침 재접속: 잠시 멈췄다가 같은 자리로 복귀
   step('새로고침 재접속: 잠시 멈췄다가 같은 자리로 복귀');
   await guest.reload();
   await waitScene(guest, "s.mode === 'online' && s.mySlot === 1 && s.state === 'play' && !s.netPaused", 10000);
   await waitScene(host, '!s.netPaused');
+  for (const [i, page] of [host, guest].entries()) await checkMap(page, maps[i]);
   await host.waitForFunction(() => document.getElementById('net-banner').dataset.state === 'back' && !document.getElementById('net-banner').classList.contains('hidden'));
   assert.equal(await host.$eval('#net-title', (el) => el.textContent), '상대방이 다시 돌아왔어요!');
   await host.screenshot({ path: 'output/online-back.png' });
@@ -172,7 +233,7 @@ try {
 
   fs.mkdirSync('output', { recursive: true });
   assert.deepEqual(errors, []);
-  console.log('Online: room link, lobby ready, countdown, movement sync, server hit + both emotes, KO result, humiliate share, rematch, refresh rejoin, opponent-left notice and missing room passed.');
+  console.log(`Online (${maps.join(' vs ')}): map persistence, bot-to-online reset, no shrink, click projection, movement limits, flash/ghost sync, room link, lobby ready, countdown, server hit + both emotes, KO rewards, humiliate share, rematch, refresh rejoin, opponent-left notice and missing room passed.`);
 } finally {
   await Promise.all(browsers.map((b) => b.close()));
   web.close();

@@ -13,6 +13,8 @@ import * as Sim from './sim.js';
 import { NET, unpackChamp, unpackCleaver } from './net-protocol.js';
 import { Online, roomFromUrl } from './online.js';
 import { isTouchDevice, setupTouchControls } from './touch-controls.js';
+import { initShop } from './shop.js';
+import { getShopState, awardMatch } from './shop-state.js';
 
 const { PPU, SIN, COS } = PROJ;
 const sx = (x) => x * PPU;
@@ -278,6 +280,8 @@ class GameScene extends Phaser.Scene {
     this.load.json('meta', 'assets/cartoon/meta.json');
     this.load.json('arenaMeta', 'assets/cartoon/arena.json');
     this.load.image('arena', 'assets/cartoon/arena.png');
+    this.load.image('colosseum', 'assets/cartoon/colosseum-selected-v1.png');
+    this.load.json('colosseumMeta', 'assets/cartoon/colosseum-selected-v1.json');
     this.load.image('baron-cute', 'assets/cartoon/baron-cute.png');
     this.load.image('mundo-emote', 'assets/cartoon/mundo-thumbs-up-emote-v1.png');
   }
@@ -288,6 +292,7 @@ class GameScene extends Phaser.Scene {
     this.makeAnims();
     this.buildArena();
     this.makeFx();
+    this.applyArena(getShopState().equipped);
     this.setupInput();
     if (this.touchMode) this.touch = setupTouchControls(this, { sx, sy, depth: DEPTH.ring + 1 });
     this.spawnMenuMundos();
@@ -324,6 +329,11 @@ class GameScene extends Phaser.Scene {
       gr.addColorStop(0.4, 'rgba(255,255,255,0.6)');
       gr.addColorStop(1, 'rgba(255,255,255,0)');
       g.fillStyle = gr; g.fillRect(0, 0, 32, 32);
+    });
+    canvasTex('sand-bank', 256, 256, (g, w, h) => {
+      g.fillStyle = '#574438'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#604c3c';
+      for (let i = 0; i < 110; i++) g.fillRect((i * 73) % w, (i * 137) % h, 4, 2);
     });
     canvasTex('shadow', 64, 64, (g) => {
       const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
@@ -431,7 +441,8 @@ class GameScene extends Phaser.Scene {
     this.arenaR = RULES.arenaR;
     this.bank = this.add.tileSprite(0, 0, 1, 1, 'bank').setOrigin(0, 0).setDepth(DEPTH.water - 1);
     const am = this.cache.json.get('arenaMeta');
-    this.add.image(0, 0, 'arena').setOrigin(am.originX / am.width, am.originY / am.height).setDepth(DEPTH.arena);
+    this.arenaImage = this.add.image(0, 0, 'arena').setOrigin(am.originX / am.width, am.originY / am.height).setDepth(DEPTH.arena);
+    this.sandBoundary = this.add.graphics().setDepth(DEPTH.decal - 2);
     const wx = (ARENA.ROCK_R + 2.5) * PPU, wy = (ARENA.ROCK_R + 2.5) * SIN * PPU;
     const base = new Phaser.Display.BaseShader('water', WATER_FRAG, undefined, {
       uTime: { type: '1f', value: 0 },
@@ -458,6 +469,46 @@ class GameScene extends Phaser.Scene {
       return { ward, shadow };
     });
     this.cameras.main.setBackgroundColor('#293b43');
+  }
+
+  applyArena(id) {
+    if (this.arenaId === id) return;
+    this.arenaId = id === 'colosseum' ? id : 'classic';
+    const sand = this.arenaId === 'colosseum';
+    const meta = this.cache.json.get(sand ? 'colosseumMeta' : 'arenaMeta');
+    this.arenaImage.setTexture(sand ? 'colosseum' : 'arena');
+    // Preserve the artwork's proportions. The playable ellipse is drawn separately;
+    // its fixed projection must never stretch the architecture in a generated image.
+    const scale = sand ? Math.max(sx(ARENA.R) / meta.groundRadiusX, sy(ARENA.R) / meta.groundRadiusY) : 1;
+    this.arenaImage.setOrigin(meta.originX / meta.width, meta.originY / meta.height)
+      .setScale(scale);
+    this.bank.setTexture(sand ? 'sand-bank' : 'bank');
+    this.water.setVisible(!sand);
+    this.baron.root.setVisible(!sand);
+    this.fx.mote.setVisible(!sand);
+    this.sandBoundary.setVisible(sand);
+    this.drawSandBoundary();
+    this.updateCamera();
+  }
+
+  drawSandBoundary() {
+    if (this.arenaId !== 'colosseum') return;
+    const g = this.sandBoundary;
+    g.clear();
+    const r = this.arenaR, initial = RULES.arenaR;
+    // The painted rim is decoration; this line marks the exact movement boundary.
+    g.lineStyle(3, 0xb78648, .9).strokeEllipse(0, 0, sx(initial) * 2, sy(initial) * 2, 128);
+    const half = (radius, start, end) => Array.from({ length: 65 }, (_, i) => {
+      const a = start + (end - start) * i / 64;
+      return { x: sx(Math.cos(a) * radius), y: sy(Math.sin(a) * radius) };
+    });
+    if (r < initial - .01) {
+      const leftOnly = this.fixedArenaR == null && this.shrinkTeam === 0;
+      const start = leftOnly ? Math.PI / 2 : 0, end = leftOnly ? Math.PI * 1.5 : Math.PI * 2;
+      const outer = half(initial, start, end), inner = half(r, end, start);
+      g.fillStyle(0x8f392b, .24).fillPoints([...outer, ...inner], true);
+      g.lineStyle(4, 0xa34330, .95).strokePoints(half(r, start, end), false);
+    }
   }
 
   makeFx() {
@@ -567,6 +618,7 @@ class GameScene extends Phaser.Scene {
   updateArena() {
     Sim.updateArena(this);
     this.water.setUniform('uR.value', this.arenaR);
+    this.drawSandBoundary();
   }
 
   constrain(p, champ) {
@@ -782,6 +834,7 @@ class GameScene extends Phaser.Scene {
   // diff: easy | normal | hard | faker | twins(보통 봇 둘)
   startMatch({ diff }, source = 'menu') {
     Sound.startMusic();
+    this.applyArena(getShopState().equipped);
     this.clearMatch();
     this.setMode('bot');
     this.twins = diff === 'twins';
@@ -849,6 +902,10 @@ class GameScene extends Phaser.Scene {
   }
 
   trackFinished(win) {
+    const reward = awardMatch(this.analyticsMatch?.match_id, win);
+    const rewardLabel = document.getElementById('result-reward');
+    rewardLabel.textContent = reward ? `+${reward} 코인 획득 · 보유 ${getShopState().coins.toLocaleString('ko-KR')} 코인` : '';
+    rewardLabel.classList.toggle('hidden', !reward);
     const enemyThrows = this.enemies.reduce((total, enemy) => total + enemy.stats.throws, 0);
     const enemyHits = this.enemies.reduce((total, enemy) => total + enemy.stats.hits, 0);
     track('game_finished', {
@@ -878,11 +935,13 @@ class GameScene extends Phaser.Scene {
     this.updateArena();
     this.spawnMenuMundos();
     this.state = 'menu';
+    this.applyArena(getShopState().equipped);
   }
 
   // ---------- 온라인 1대1 (서버 판정) ----------
   setupOnlineMatch(slot, source = 'online') {
     Sound.startMusic();
+    this.applyArena(getShopState().equipped);
     this.clearMatch();
     this.setMode('online');
     this.mySlot = slot;
@@ -917,6 +976,7 @@ class GameScene extends Phaser.Scene {
     this.correction = null;
     this.moveHeld = false;
     this.roundTime = 0;
+    this.updateArena();
     this.state = 'countdown';
     HUD.updateFight(this.champs, true);
     HUD.countdown(countdownMs);
@@ -1193,6 +1253,10 @@ class GameScene extends Phaser.Scene {
   // 빗나간 식칼: 사거리 끝에서 물보라와 물결(암벽이면 불꽃)과 소리만 낸다
   missFx(x, z, rock) {
     const X = sx(x), Y = sy(z), vol = this.volAt(x, z);
+    if (this.arenaId === 'colosseum' && !rock) {
+      this.ripple(x, z);
+      return;
+    }
     if (rock) {
       this.fx.spark.explode(10, X, Y);
       Sound.clank(vol);
@@ -1206,18 +1270,20 @@ class GameScene extends Phaser.Scene {
 
   ripple(x, z) {
     const r = this.add.image(sx(x), sy(z), 'ripple').setDepth(DEPTH.decal - 1).setAlpha(0.45);
+    if (this.arenaId === 'colosseum') r.setTint(0xa97a45);
     r.setScale(0.25, 0.25 * SIN);
     this.tweens.add({ targets: r, scaleX: 0.75, scaleY: 0.75 * SIN, alpha: 0, duration: 750, onComplete: () => r.destroy() });
   }
 
   updateCamera(dt = 0) {
-    // 경기장 전체(암벽 + 캐릭터 머리 높이)가 상단바·하단 HUD를 피해 한 화면에 들어오도록 고정
+    // 모든 맵에서 같은 플레이 영역과 캐릭터 크기를 유지한다.
     const cam = this.cameras.main;
     // 터치 가로 화면은 상단바·조이스틱·스킬이 양옆 구석에 있으니 위아래를 거의 비우지 않는다
     const landscape = this.touchMode && cam.width > cam.height;
     const padTop = (landscape ? 8 : 110) * DPR, padBot = (landscape ? 22 : 120) * DPR;
     const halfW = (ARENA.ROCK_R + 1) * PPU;
-    const top = sy(-ARENA.ROCK_R, 3.2), bot = sy(ARENA.ROCK_R) + 0.5 * PPU;
+    const top = sy(-ARENA.ROCK_R, 3.2);
+    const bot = sy(ARENA.ROCK_R) + 0.5 * PPU;
     const zoom = Math.min(cam.width / (halfW * 2), (cam.height - padTop - padBot) / (bot - top));
     cam.setZoom(zoom);
     // 카메라를 반대로 밀어 화면 속 경기장이 식칼 방향으로 튕기게 한다
@@ -1240,7 +1306,9 @@ const game = new Phaser.Game({
   parent: 'game',
   backgroundColor: '#293b43',
   scale: { mode: Phaser.Scale.NONE, width: window.innerWidth * DPR, height: window.innerHeight * DPR, zoom: 1 / DPR },
-  render: { antialias: true },
+  // Phaser defaults pixelArt to true when scale.zoom !== 1 (including 1 / DPR),
+  // which overrides antialias and forces nearest-neighbor sampling on Retina.
+  render: { antialias: true, pixelArt: false },
   fps: { target: 60 },
   scene: [GameScene],
 });
@@ -1435,6 +1503,7 @@ let awayTimer = null;
 
 // 초대 링크(?room=CODE)로 들어오면 메뉴 대신 바로 대기실로
 game.events.once('mundo-ready', () => {
+  initShop(scene());
   const code = roomFromUrl();
   if (code) Online.join(code);
   else $('menu').classList.remove('hidden');

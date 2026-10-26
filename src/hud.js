@@ -130,6 +130,7 @@ export const HUD = {
   // 대인전 결과: win | lose | left(상대가 나감)
   // bot: 상대가 문도봇 · quick: 빠른 대전 (굴욕·재대결 없이 새 상대 찾기)
   onlineResult(kind, { room, bot = false, quick = false } = {}) {
+    $('result-reward').classList.add('hidden');
     resultVersion += 1;
     shareData = null;
     this.show(false);
@@ -213,6 +214,7 @@ export const HUD = {
   },
 
   result(win, difficulty, matchProperties = {}) {
+    $('result-reward').classList.add('hidden');
     const names = DIFFICULTY_NAMES;
     resultVersion += 1;
     shareProperties = { ...matchProperties, difficulty, result: win ? 'win' : 'loss' };
