@@ -902,10 +902,7 @@ class GameScene extends Phaser.Scene {
   }
 
   trackFinished(win) {
-    const reward = awardMatch(this.analyticsMatch?.match_id, win);
-    const rewardLabel = document.getElementById('result-reward');
-    rewardLabel.textContent = reward ? `+${reward} 코인 획득 · 보유 ${getShopState().coins.toLocaleString('ko-KR')} 코인` : '';
-    rewardLabel.classList.toggle('hidden', !reward);
+    awardMatch(this.analyticsMatch?.match_id, win);
     const enemyThrows = this.enemies.reduce((total, enemy) => total + enemy.stats.throws, 0);
     const enemyHits = this.enemies.reduce((total, enemy) => total + enemy.stats.hits, 0);
     track('game_finished', {

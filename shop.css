@@ -82,7 +82,6 @@
 .shop-footer b { color: #cab784; font-weight: 400; }
 .shop-footer .coin-icon { width: 15px; height: 15px; margin-right: 3px; font-size: 8px; border-width: 1px; }
 
-#result-reward { margin: -8px 0 20px; color: #f1d18b; font-size: 17px; }
 @media (hover: hover) {
   #shop-open:hover { background: #3b5963; border-color: #88a9a5; }
   .shop-icon-button:hover { background: #2c474d; }

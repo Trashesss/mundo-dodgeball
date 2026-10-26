@@ -1,9 +1,11 @@
-import { MAPS, getShopState, buyMap, equipMap } from './shop-state.js';
+import { MAPS, COIN_REWARDS, getShopState, buyMap, equipMap } from './shop-state.js';
 
 const $ = id => document.getElementById(id);
 
 export function initShop(scene) {
   const dialog = $('shop-dialog');
+  $('shop-reward-win').textContent = `+${COIN_REWARDS.win.toLocaleString('ko-KR')}`;
+  $('shop-reward-loss').textContent = `+${COIN_REWARDS.loss.toLocaleString('ko-KR')}`;
   let selected = 'colosseum';
   const currentMap = () => MAPS.find(map => map.id === selected);
 

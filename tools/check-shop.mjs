@@ -94,10 +94,9 @@ try {
     const shop = await import('/src/shop-state.js');
     const first = shop.getShopState().coins;
     s.endMatch();
-    return { first, after: shop.getShopState().coins, duplicate: shop.awardMatch(s.analyticsMatch.match_id, true), text: document.querySelector('#result-reward').textContent };
+    return { first, after: shop.getShopState().coins, duplicate: shop.awardMatch(s.analyticsMatch.match_id, true) };
   });
   assert.equal(reward.first, 300); assert.equal(reward.after, 300); assert.equal(reward.duplicate, 0);
-  assert.match(reward.text, /\+100/);
   const loss = await page.evaluate(async () => (await import('/src/shop-state.js')).awardMatch('test-loss', false));
   assert.equal(loss, 30);
   await page.click('#menu-btn');

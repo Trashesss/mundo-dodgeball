@@ -269,7 +269,6 @@
       <img class="result-meme result-meme-win" src="assets/cartoon/mundo-satisfied-meme-v6.png" alt="양복을 입은 문도가 의자에 기대 흡족하게 웃는 짤. 흡족." width="1402" height="1122" />
       <h1 id="result-title">난이도 클리어!</h1>
       <p id="result-subtitle" class="hidden"></p>
-      <p id="result-reward" class="hidden" role="status"></p>
       <div class="result-actions">
         <button id="share-btn" type="button">자랑하기</button>
         <button id="humiliate-btn" class="hidden" type="button" aria-haspopup="dialog">굴욕 선사하기</button>
@@ -347,7 +346,7 @@
   <dialog id="shop-dialog" aria-labelledby="shop-title">
     <header class="shop-header">
       <div class="shop-brand"><img class="shop-keeper-icon" src="assets/cartoon/mundo-shop-icon-v1.png" alt="" width="256" height="256" /><div><p class="shop-eyebrow">MUNDO'S SHOP</p><h1 id="shop-title">문도의 상점</h1></div></div>
-      <div class="shop-header-actions"><div class="shop-wallet" aria-label="보유 코인"><span class="coin-icon" aria-hidden="true">C</span><strong id="shop-coins">500</strong><span>코인</span></div><button id="shop-close" class="shop-icon-button" type="button" aria-label="상점 닫기">×</button></div>
+      <div class="shop-header-actions"><div class="shop-wallet" aria-label="보유 코인"><span class="coin-icon" aria-hidden="true">C</span><strong id="shop-coins">100</strong><span>코인</span></div><button id="shop-close" class="shop-icon-button" type="button" aria-label="상점 닫기">×</button></div>
     </header>
     <div class="shop-body">
       <aside class="shop-category" aria-label="상품 종류"><div class="shop-category-current"><svg viewBox="0 0 32 32" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m4 10 8-4 8 4 8-4v20l-8 4-8-4-8 4V10Z"/><path d="M12 6v20m8-16v20"/></svg><span>경기장</span></div></aside>
@@ -373,7 +372,7 @@
         <p id="shop-status" role="status" aria-live="polite"></p>
       </section>
     </div>
-    <footer class="shop-footer"><p><span class="coin-icon" aria-hidden="true">C</span> 첫 방문 <b>500</b> · 승리 <b>+100</b> · 패배 <b>+40</b></p><p id="shop-storage-note">코인과 구매 내역은 이 브라우저에 저장돼요.</p></footer>
+    <footer class="shop-footer"><p><span class="coin-icon" aria-hidden="true">C</span> 승리 <b id="shop-reward-win">+100</b> · 패배 <b id="shop-reward-loss">+30</b></p><p id="shop-storage-note">코인과 구매 내역은 이 브라우저에 저장돼요.</p></footer>
   </dialog>
   <script type="module" src="src/consent.js"></script>
   <script type="module" src="src/settings.js"></script>

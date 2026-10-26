@@ -1,10 +1,11 @@
 // Local MVP economy. No real-money purchases or server-side inventory.
 export const SHOP_KEY = 'mundo-shop-v1';
+export const COIN_REWARDS = Object.freeze({ firstVisit: 100, win: 100, loss: 30 });
 export const MAPS = [
   { id: 'classic', name: '바위 협곡', subtitle: '익숙한 곳에서, 가볍게 한 판.', price: 0, image: 'assets/cartoon/arena.png', tag: '기본 맵', description: '둥근 바위와 잔잔한 물결. 문도들의 첫 번째 경기장입니다.' },
   { id: 'colosseum', name: '문도 콜로세움', subtitle: '모래 위에서 실력을 증명해.', price: 1500, image: 'assets/cartoon/colosseum-selected-v1.png', tag: '새로운 경기장', description: '황금빛 모래, 겹겹이 둘러선 석조 관중석, 붉은 깃발. 오늘의 주인공은 문도입니다.' },
 ];
-const fresh = () => ({ coins: 100, owned: ['classic'], equipped: 'classic', rewarded: [] });
+const fresh = () => ({ coins: COIN_REWARDS.firstVisit, owned: ['classic'], equipped: 'classic', rewarded: [] });
 let state = fresh();
 let persistent = true;
 
@@ -55,7 +56,7 @@ export function equipMap(id) {
 export function awardMatch(id, win) {
   state = read();
   if (!id || state.rewarded.includes(id)) return 0;
-  const amount = win ? 100 : 30;
+  const amount = win ? COIN_REWARDS.win : COIN_REWARDS.loss;
   state.coins = Math.min(1_000_000_000, state.coins + amount);
   state.rewarded = [...state.rewarded, id].slice(-100);
   save();
