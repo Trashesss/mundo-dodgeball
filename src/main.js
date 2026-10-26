@@ -951,7 +951,7 @@ class GameScene extends Phaser.Scene {
 
   trackFinished(win) {
     awardMatch(this.analyticsMatch?.match_id, win);
-    HUD.xpGain(awardXp(this.analyticsMatch?.match_id, win), getProfile());
+    awardXp(this.analyticsMatch?.match_id, win);
     const enemyThrows = this.enemies.reduce((total, enemy) => total + enemy.stats.throws, 0);
     const enemyHits = this.enemies.reduce((total, enemy) => total + enemy.stats.hits, 0);
     track('game_finished', {

@@ -1,4 +1,4 @@
-// 프로필 창: 레벨·경험치, 룬 선택·저장·복구, 봇전 반영, 결과 화면 경험치, PC·모바일 배치
+// 룬 설정 창: 레벨·경험치, 룬 선택·저장·복구, 봇전 반영, 경기 경험치, PC·모바일 배치
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import puppeteer from 'puppeteer-core';
@@ -74,8 +74,6 @@ try {
     return { first, after: profile.getProfile().xp, duplicate: profile.awardXp(s.analyticsMatch.match_id, true) };
   });
   assert.deepEqual(xp, { first: 100, after: 100, duplicate: 0 });
-  assert.equal(await page.$eval('#result-xp', el => el.classList.contains('hidden') ? '' : el.textContent), '+100 XP · Lv.2');
-  await page.screenshot({ path: 'output/profile/result-xp.png' });
   assert.equal(await page.evaluate(async () => (await import('/src/profile-state.js')).awardXp('test-loss', false)), 40);
   await page.click('#menu-btn');
   assert.equal(await page.$eval('#menu-level', el => el.textContent), '2');
@@ -106,5 +104,5 @@ try {
     await page.click('#profile-close');
   }
   assert.deepEqual(errors, []);
-  console.log('Profile: level/XP, rune select/persist/repair, bot match mods, result XP, duplicate prevention and responsive layouts passed.');
+  console.log('Profile: level/XP, rune select/persist/repair, bot match mods, match XP, duplicate prevention and responsive layouts passed.');
 } finally { await browser.close(); server.close(); }

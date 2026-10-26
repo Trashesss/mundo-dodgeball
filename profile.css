@@ -108,15 +108,6 @@
 .profile-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px 16px; padding: 12px 24px; border-top: 1px solid var(--profile-line); background: #172f37; }
 .profile-footer p { margin: 0; color: #80999b; font-size: 12px; }
 
-/* 결과 화면 위쪽에 받은 경험치 */
-.result-xp {
-  position: absolute; top: max(16px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); z-index: 1;
-  margin: 0; padding: 6px 14px; border: 2px solid var(--entry-ink); border-radius: 999px; background: #284641;
-  color: #b9e39e; font-size: 16px; white-space: nowrap; animation: result-xp-in .4s ease-out;
-}
-.result-xp.hidden { display: none; }
-@keyframes result-xp-in { from { opacity: 0; transform: translate(-50%, -8px); } }
-
 @media (hover: hover) {
   .profile-close:hover { background: #2c474d; color: var(--entry-text); }
   .profile-rune:hover { border-color: #88a9a5; }
@@ -156,7 +147,6 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .menu-nav > :is(#profile-open, #shop-open, #analytics-settings), .profile-rune, #profile-xp-fill { transition: none; }
-  .result-xp { animation: none; }
 }
 
 /* 친구 대기실의 참가자 룬 요약 */
