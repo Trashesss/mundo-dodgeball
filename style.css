@@ -303,6 +303,8 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid #2c4a52; }
 .consent-summary + .settings-row { margin-top: 8px; border-top: 1px solid #2c4a52; }
 .settings-row:last-child { padding-bottom: 4px; border-bottom: 0; }
+.settings-dialog .game-guide-link { display: inline-block; margin-top: 16px; color: var(--entry-text); font: 17px/1.3 'Jua', sans-serif; text-underline-offset: 4px; }
+.settings-dialog .game-guide-link:hover { color: var(--entry-green); }
 .settings-dialog .consent-summary { margin: -8px -10px 0 0; }
 .analytics-consent .settings-close { display: grid; place-items: center; width: 44px; min-height: 44px; padding: 0; border: 0; background: none; color: var(--entry-muted); }
 @media (hover: hover) { .analytics-consent .settings-close:hover { background: #263f48; color: var(--entry-text); } }

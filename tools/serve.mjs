@@ -13,6 +13,7 @@ const TYPES = {
   '.ttf': 'font/ttf',
   '.mp3': 'audio/mpeg',
   '.json': 'application/json',
+  '.xml': 'application/xml; charset=utf-8',
   '.png': 'image/png',
   '.svg': 'image/svg+xml',
   '.glb': 'model/gltf-binary',
