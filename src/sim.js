@@ -4,7 +4,7 @@
 //   fixedArenaR: 양 팀의 경기장을 같은 반경으로 고정 (페이커)
 //   judge: 식칼 발사·충돌·피격을 여기서 판정할지 (온라인 클라이언트는 false, 서버가 판정)
 // 화면 효과는 직접 그리지 않고 world.feed 에 쌓는다. 챔피언은 world.champs 의 번호(ci)로 가리킨다.
-import { RULES } from './rules.js';
+import { RULES, cleanRunes, runeMods } from './rules.js';
 import { THROW } from './throw-motion.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -17,8 +17,10 @@ export function createWorld({ shrinkTeam = null, judge = true, fixedArenaR = nul
   };
 }
 
-export function createChamp(team) {
-  return { team, side: team === 0 ? -1 : 1, stats: { kills: 0, deaths: 0, throws: 0, hits: 0 } };
+// runes: 칸별 룬 id (src/rules.js RUNES). mods 는 그 룬을 풀어 둔 수치
+export function createChamp(team, runes) {
+  const clean = cleanRunes(runes);
+  return { team, side: team === 0 ? -1 : 1, runes: clean, mods: runeMods(clean), stats: { kills: 0, deaths: 0, throws: 0, hits: 0 } };
 }
 
 export function resetChamp(c, x, z) {
@@ -31,7 +33,7 @@ export function resetChamp(c, x, z) {
 }
 
 export function champSpeed(c) {
-  return RULES.moveSpeed * (c.ghostT > 0 ? RULES.ghost.mul : 1) * (c.slowT > 0 ? 1 - RULES.q.slow : 1);
+  return RULES.moveSpeed * c.mods.move * (c.ghostT > 0 ? RULES.ghost.mul : 1) * (c.slowT > 0 ? 1 - RULES.q.slow : 1);
 }
 
 const emit = (world, event) => world.feed.push(event);
@@ -67,8 +69,8 @@ export function castQ(world, c, tx, tz) {
   if (l < 0.01) { dx = Math.cos(c.facing); dz = Math.sin(c.facing); l = 1; }
   dx /= l; dz /= l;
   c.facing = Math.atan2(dz, dx);
-  c.qCd = RULES.q.cd;
-  const paid = Math.min(RULES.q.cost, Math.max(0, c.hp - 1)); // 체력 비용으로 스스로 죽지 않음(최소 1)
+  c.qCd = c.mods.qCd;
+  const paid = Math.min(c.mods.qCost, Math.max(0, c.hp - 1)); // 체력 비용으로 스스로 죽지 않음(최소 1)
   c.hp -= paid;
   c.castT = RULES.q.windup;
   c.pending = { dx, dz, paid };
@@ -88,7 +90,7 @@ export function castFlash(world, c, tx, tz, { stop = false } = {}) {
   const to = constrain(world, { x: c.x + dx * d, z: c.z + dz * d }, c);
   c.x = to.x; c.z = to.z;
   c.facing = Math.atan2(dz, dx);
-  c.flashCd = RULES.flash.cd;
+  c.flashCd = c.mods.flashCd;
   if (stop) c.moveTarget = null;
   emit(world, { type: 'flash', ci: ci(world, c), fromX, fromZ, x: c.x, z: c.z });
   return true;
@@ -96,18 +98,18 @@ export function castFlash(world, c, tx, tz, { stop = false } = {}) {
 
 export function castGhost(world, c) {
   if (world.state !== 'play' || !c.alive || c.ghostCd > 0) return false;
-  c.ghostT = RULES.ghost.dur;
-  c.ghostCd = RULES.ghost.cd;
+  c.ghostT = c.mods.ghostDur;
+  c.ghostCd = c.mods.ghostCd;
   emit(world, { type: 'ghost', ci: ci(world, c) });
   return true;
 }
 
 export function hit(world, victim, cleaver) {
   const k = cleaver.owner;
-  const dmg = Math.round(Math.max(RULES.q.dmgMin, victim.hp * RULES.q.dmgPct));
+  const dmg = Math.round(Math.max(RULES.q.dmgMin, victim.hp * RULES.q.dmgPct) * k.mods.dmg * victim.mods.taken);
   victim.hp -= dmg;
-  if (k.alive) k.hp = Math.min(RULES.maxHp, k.hp + cleaver.paid);
-  victim.slowT = RULES.q.slowDur;
+  if (k.alive) k.hp = Math.min(RULES.maxHp, k.hp + cleaver.paid + k.mods.lifesteal);
+  victim.slowT = k.mods.slowDur;
   k.stats.hits++;
   emit(world, {
     type: 'hit', id: cleaver.id, victim: ci(world, victim), killer: ci(world, k), dmg, x: victim.x, z: victim.z,
@@ -136,7 +138,7 @@ export function updateChamp(world, c, dt) {
   c.slowT = Math.max(0, c.slowT - dt);
   c.actionT = Math.max(0, c.actionT - dt);
   const playing = world.state === 'play';
-  if (c.alive && playing) c.hp = Math.min(RULES.maxHp, c.hp + RULES.regen * dt);
+  if (c.alive && playing) c.hp = Math.min(RULES.maxHp, c.hp + c.mods.regen * dt);
 
   if (c.castT > 0) {
     c.castT -= dt;
@@ -144,12 +146,12 @@ export function updateChamp(world, c, dt) {
       if (world.judge) {
         const { dx, dz, paid } = c.pending;
         const cl = {
-          id: world.nextCleaverId++, owner: c, team: c.team, dx, dz, paid,
+          id: world.nextCleaverId++, owner: c, team: c.team, dx, dz, paid, speed: RULES.q.speed * c.mods.qSpeed,
           x: c.x + dx * 0.6, z: c.z + dz * 0.6, dist: 0, age: 0, alive: true,
         };
         world.cleavers.push(cl);
         c.stats.throws++;
-        emit(world, { type: 'throw', id: cl.id, ci: ci(world, c), x: cl.x, z: cl.z, dx, dz });
+        emit(world, { type: 'throw', id: cl.id, ci: ci(world, c), x: cl.x, z: cl.z, dx, dz, speed: cl.speed });
       }
       c.pending = null;
     }
@@ -178,7 +180,7 @@ export function updateChamp(world, c, dt) {
 
 // 식칼 이동과 충돌. 사거리 끝이면 cleaverEnd 이벤트.
 export function updateCleaver(world, p, dt) {
-  const step = RULES.q.speed * dt;
+  const step = (p.speed ?? RULES.q.speed) * dt;
   p.x += p.dx * step;
   p.z += p.dz * step;
   p.dist += step;

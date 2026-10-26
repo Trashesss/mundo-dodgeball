@@ -147,10 +147,17 @@ export const HUD = {
     $('share-status').textContent = '';
     $('result').dataset.outcome = kind === 'win' ? 'win' : 'lose';
     $('result').dataset.art = { win: 'custom-win', lose: 'custom-loss', left: 'portrait' }[kind];
+    $('result-xp').classList.add('hidden');
     $('result-title').textContent = { win: '승리!', lose: '패배', left: '상대가 나갔어요' }[kind];
     $('result-subtitle').textContent = { win: '실력으로 증명하셨습니다.', lose: '실력이 들통났습니다..' }[kind] || '';
     $('result-subtitle').classList.toggle('hidden', kind === 'left');
     $('result').classList.remove('hidden');
+  },
+
+  // 결과 화면 위쪽에 받은 경험치와 현재 레벨 (이미 받은 판이면 숨김)
+  xpGain(amount, profile) {
+    $('result-xp').textContent = `+${amount} XP · Lv.${profile.level}`;
+    $('result-xp').classList.toggle('hidden', !amount);
   },
 
   resultStatus(text) {
@@ -191,9 +198,9 @@ export const HUD = {
 
   _prev: {},
   update(p) {
-    this._prev.q = this._skill('sk-q', p.qCd, RULES.q.cd, this._prev.q);
-    this._prev.d = this._skill('sk-d', p.flashCd, RULES.flash.cd, this._prev.d);
-    this._prev.f = this._skill('sk-f', p.ghostCd, RULES.ghost.cd, this._prev.f);
+    this._prev.q = this._skill('sk-q', p.qCd, p.mods?.qCd ?? RULES.q.cd, this._prev.q);
+    this._prev.d = this._skill('sk-d', p.flashCd, p.mods?.flashCd ?? RULES.flash.cd, this._prev.d);
+    this._prev.f = this._skill('sk-f', p.ghostCd, p.mods?.ghostCd ?? RULES.ghost.cd, this._prev.f);
     $('hud').classList.toggle('unavailable', !p.alive);
   },
 
@@ -237,6 +244,7 @@ export const HUD = {
     $('result').dataset.art = 'portrait';
     $('result-subtitle').textContent = '';
     $('result-subtitle').classList.add('hidden');
+    $('result-xp').classList.add('hidden');
     $('result-title').textContent = `${names[difficulty]} 난이도 ${win ? '클리어!' : '실패'}`;
     $('result').classList.remove('hidden');
   },

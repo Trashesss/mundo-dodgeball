@@ -267,6 +267,12 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 .match-setup { width: min(900px, 100%); margin: auto; }
 .riot-disclaimer { max-width: 760px; margin: 28px auto 0; color: var(--entry-muted); font: 12px/1.7 sans-serif; text-align: center; word-break: keep-all; overflow-wrap: anywhere; }
 .riot-disclaimer p { margin: 0; }
+/* 홈: 본문은 가운데, 고지문은 화면 맨 아래에 작게 붙인다 */
+#menu:not(.practice-view) { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+#menu:not(.practice-view) .match-setup { display: flex; flex-direction: column; min-height: 100%; }
+#menu:not(.practice-view) .setup-heading { margin-top: auto; }
+#menu:not(.practice-view) .match-setup > .riot-disclaimer { margin: auto auto 0; padding-top: 16px; font-size: 10px; line-height: 1.6; opacity: .6; }
+.creator-contact { display: block; }
 .creator-contact a { color: var(--entry-text); text-underline-offset: 3px; }
 .creator-contact a:focus-visible { outline: 2px solid var(--entry-green); outline-offset: 4px; }
 .analytics-consent {

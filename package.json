@@ -6,6 +6,7 @@
     "bake:arena": "node tools/bake-cartoon-arena.mjs",
     "bake:colosseum": "node tools/bake-colosseum.mjs",
     "check:shop": "node tools/check-shop.mjs",
+    "check:profile": "node tools/check-profile.mjs",
     "check:soccer": "node tools/check-soccer.mjs",
     "check:arena-scale": "node tools/check-arena-scale.mjs",
     "check:arena-quality": "node tools/check-arena-quality.mjs",

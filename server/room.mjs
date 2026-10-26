@@ -47,11 +47,11 @@ export class Room {
     return slot;
   }
 
-  // 빠른 대전에서 기다려도 사람이 안 오면: diff 는 src/bot.js 수치 (GhostStore.pick)
-  addBot(diff) {
+  // 빠른 대전에서 기다려도 사람이 안 오면: diff 는 src/bot.js 수치, runes 는 고스트의 룬 (GhostStore.pick)
+  addBot(diff, runes) {
     const slot = this.slots.findIndex(s => !s);
     if (slot < 0 || this.phase !== 'lobby') return false;
-    this.slots[slot] = { bot: true, diff, look: cleanLook(), token: null, connected: true, ready: true, rematch: true, ack: 0, grace: null };
+    this.slots[slot] = { bot: true, diff, look: cleanLook({ runes }), token: null, connected: true, ready: true, rematch: true, ack: 0, grace: null };
     this.broadcast({ type: 'matched', bot: true });
     this.startMatch();
     return true;
@@ -165,7 +165,7 @@ export class Room {
   // ---------- 경기 흐름 ----------
   startMatch() {
     this.world = createWorld({ shrinkTeam: null, judge: true });
-    this.world.champs = [createChamp(0), createChamp(1)];
+    this.world.champs = this.slots.map((s, i) => createChamp(i, s.look.runes));
     this.round = 0;
     this.winner = null;
     for (const s of this.slots) Object.assign(s, { ready: !!s.bot, rematch: !!s.bot });
@@ -296,7 +296,7 @@ export class Room {
   looks() { return this.slots.map(s => cleanLook(s?.look)); }
 
   lobbyState() {
-    return this.slots.map(s => s && { connected: s.connected, ready: s.ready, bot: !!s.bot });
+    return this.slots.map(s => s && { connected: s.connected, ready: s.ready, bot: !!s.bot, runes: cleanLook(s.look).runes });
   }
 
   broadcastLobby() { this.broadcast({ type: 'lobby', players: this.lobbyState() }); }

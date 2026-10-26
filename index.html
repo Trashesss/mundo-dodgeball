@@ -35,6 +35,7 @@
   <link rel="preload" href="assets/fonts/Jua-Regular.ttf" as="font" type="font/ttf" crossorigin />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="shop.css" />
+  <link rel="stylesheet" href="profile.css" />
   <script defer src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
 </head>
 <body>
@@ -110,16 +111,6 @@
   </div>
 
   <div id="menu" class="screen hidden">
-    <button id="shop-open" type="button" aria-haspopup="dialog" aria-controls="shop-dialog">
-      <img class="shop-keeper-icon" src="assets/cartoon/mundo-shop-icon-v1.png" alt="" width="256" height="256" />
-      <span class="shop-nav-info"><span>상점</span><span class="shop-nav-coins"><span class="coin-icon" aria-hidden="true">C</span><span id="menu-coins">100</span></span></span>
-    </button>
-    <button id="analytics-settings" type="button" aria-label="설정" title="설정" aria-haspopup="dialog" aria-expanded="false" aria-controls="settings-dialog">
-      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-        <path d="M21.88 10.44L21.88 13.56L19.49 13.80L18.57 16.02L20.09 17.88L17.88 20.09L16.02 18.57L13.80 19.49L13.56 21.88L10.44 21.88L10.20 19.49L7.98 18.57L6.12 20.09L3.91 17.88L5.43 16.02L4.51 13.80L2.12 13.56L2.12 10.44L4.51 10.20L5.43 7.98L3.91 6.12L6.12 3.91L7.98 5.43L10.20 4.51L10.44 2.12L13.56 2.12L13.80 4.51L16.02 5.43L17.88 3.91L20.09 6.12L18.57 7.98L19.49 10.20Z" />
-        <circle cx="12" cy="12" r="3" />
-      </svg>
-    </button>
     <main class="match-setup" aria-labelledby="select-title">
       <header class="setup-heading">
         <div id="practice-heading" class="practice-heading hidden">
@@ -145,6 +136,29 @@
         <h1 id="select-title">게임 모드 선택</h1>
         <p class="setup-subtitle" id="difficulty-label">어떤 모드를 플레이할까요?</p>
       </header>
+      <nav class="menu-nav" aria-label="내 정보">
+        <button id="profile-open" type="button" aria-haspopup="dialog" aria-controls="profile-dialog">
+          <img class="profile-nav-icon" src="assets/cartoon/mundo-profile-icon-v1.png" alt="" width="256" height="256" />
+          <span class="profile-nav-info"><span><span class="profile-nav-label">숙련도 </span><span class="profile-nav-level">Lv.<span id="menu-level">1</span></span></span><span class="profile-nav-sep" aria-hidden="true">/</span><span>룬 설정</span></span>
+        </button>
+        <button id="shop-open" type="button" aria-haspopup="dialog" aria-controls="shop-dialog">
+          <img class="shop-keeper-icon" src="assets/cartoon/mundo-shop-icon-v1.png" alt="" width="256" height="256" />
+          <span class="shop-nav-info"><span>상점</span><span class="shop-nav-coins"><span class="coin-icon" aria-hidden="true">C</span><span id="menu-coins">100</span></span></span>
+        </button>
+        <div class="flash-prank" id="flash-prank">
+          <button id="flash-swap-btn" type="button">점멸을 F로 바꾸기</button>
+          <div class="flash-prank-reply" role="status" aria-live="polite" aria-atomic="true">
+            <span id="flash-swap-status"></span>
+            <img class="flash-prank-emote" src="assets/cartoon/mundo-thumbs-up-emote-v1.png" alt="따봉 날리는 문도" width="64" height="64" />
+          </div>
+        </div>
+        <button id="analytics-settings" type="button" aria-label="설정" title="설정" aria-haspopup="dialog" aria-expanded="false" aria-controls="settings-dialog">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M21.88 10.44L21.88 13.56L19.49 13.80L18.57 16.02L20.09 17.88L17.88 20.09L16.02 18.57L13.80 19.49L13.56 21.88L10.44 21.88L10.20 19.49L7.98 18.57L6.12 20.09L3.91 17.88L5.43 16.02L4.51 13.80L2.12 13.56L2.12 10.44L4.51 10.20L5.43 7.98L3.91 6.12L6.12 3.91L7.98 5.43L10.20 4.51L10.44 2.12L13.56 2.12L13.80 4.51L16.02 5.43L17.88 3.91L20.09 6.12L18.57 7.98L19.49 10.20Z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        </button>
+      </nav>
       <div id="mode-select" class="mode-select">
         <button id="quick-btn" class="mode-card" type="button">
           <img src="assets/cartoon/mundo-quick-match-v2.png" alt="번개를 사이에 두고 물음표로 표시된 모르는 상대와 맞서는 문도" width="160" height="160" />
@@ -161,13 +175,6 @@
           <span class="mode-name">인공지능 상대 연습</span>
           <span class="mode-description">난이도를 골라 문도 봇과 한 판</span>
         </button>
-        <div class="flash-prank" id="flash-prank">
-          <button id="flash-swap-btn" type="button">점멸을 F로 바꾸기</button>
-          <div class="flash-prank-reply" role="status" aria-live="polite" aria-atomic="true">
-            <span id="flash-swap-status"></span>
-            <img class="flash-prank-emote" src="assets/cartoon/mundo-thumbs-up-emote-v1.png" alt="따봉 날리는 문도" width="64" height="64" />
-          </div>
-        </div>
       </div>
       <section id="practice-select" class="hidden" aria-labelledby="select-title">
       <div id="opt-diff" role="group" aria-labelledby="difficulty-label">
@@ -250,8 +257,8 @@
         <section class="lobby-panel lobby-match" aria-labelledby="lobby-players-title">
         <h2 id="lobby-players-title">대전 준비</h2>
         <ul class="lobby-players" aria-label="참가자">
-          <li id="lobby-p0" data-state="empty"><span class="lobby-role">방장</span><span class="lobby-player-status">기다리는 중</span></li>
-          <li id="lobby-p1" data-state="empty"><span class="lobby-role">상대방</span><span class="lobby-player-status">기다리는 중</span></li>
+          <li id="lobby-p0" data-state="empty"><span class="lobby-role">방장</span><span class="lobby-player-status">기다리는 중</span><span class="lobby-player-build"></span></li>
+          <li id="lobby-p1" data-state="empty"><span class="lobby-role">상대방</span><span class="lobby-player-status">기다리는 중</span><span class="lobby-player-build"></span></li>
         </ul>
         <button id="lobby-ready" type="button">준비</button>
         </section>
@@ -263,6 +270,7 @@
   </div>
 
   <div id="result" class="screen hidden" role="dialog" aria-modal="true" aria-labelledby="result-title">
+    <p id="result-xp" class="result-xp hidden"></p>
     <div class="match-result">
       <img class="result-portrait" src="assets/cartoon/portrait-hud-v3.png" alt="" width="160" height="160" />
       <img class="result-meme result-meme-loss" src="assets/cartoon/mundo-bad-play-meme-v1.png" alt="문도가 상대에게 너 개못하잖아라고 말하는 짤. 전적 199패 1승, 최근 전적 1승." width="1681" height="936" />
@@ -342,6 +350,36 @@
       </button>
     </div>
     <a class="game-guide-link" href="game-guide.html">게임 소개 · 조작법</a>
+  </dialog>
+  <dialog id="profile-dialog" aria-labelledby="profile-title">
+    <header class="profile-header">
+      <img class="profile-avatar" src="assets/cartoon/mundo-profile-icon-v1.png" alt="" width="256" height="256" />
+      <div class="profile-heading">
+        <p class="profile-eyebrow">MY MUNDO</p>
+        <h1 id="profile-title">룬 설정</h1>
+      </div>
+      <button id="profile-close" class="profile-close" type="button" aria-label="프로필 닫기">×</button>
+    </header>
+    <div class="profile-body">
+      <section class="profile-level" aria-labelledby="profile-level-title">
+        <div class="profile-level-row">
+          <h2 id="profile-level-title">숙련도 <strong>Lv.<span id="profile-level">1</span></strong></h2>
+          <span id="profile-xp-text" class="profile-xp-text">0 / 100 XP</span>
+        </div>
+        <div id="profile-xp-bar" class="profile-xp-bar" role="progressbar" aria-labelledby="profile-level-title" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="profile-xp-fill"></div></div>
+        <p class="profile-xp-note">승리 <b id="profile-xp-win">+100</b> · 패배 <b id="profile-xp-loss">+40</b> 경험치</p>
+      </section>
+      <section class="profile-runes" aria-labelledby="profile-runes-title">
+        <div class="profile-runes-head">
+          <h2 id="profile-runes-title">룬</h2>
+          <p>칸마다 하나씩 골라 나만의 빌드를 만들어 보세요.</p>
+        </div>
+        <div id="profile-rune-slots" class="profile-rune-slots"></div>
+      </section>
+    </div>
+    <footer class="profile-footer">
+      <p id="profile-storage-note">경험치와 룬은 이 브라우저에 저장돼요.</p>
+    </footer>
   </dialog>
   <dialog id="shop-dialog" aria-labelledby="shop-title">
     <header class="shop-header">

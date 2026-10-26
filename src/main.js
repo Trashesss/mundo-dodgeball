@@ -15,6 +15,8 @@ import { Online, roomFromUrl } from './online.js';
 import { isTouchDevice, setupTouchControls } from './touch-controls.js';
 import { initShop } from './shop.js';
 import { getShopState, awardMatch } from './shop-state.js';
+import { getProfile, awardXp } from './profile-state.js';
+import { initProfile } from './profile.js';
 
 const { PPU, SIN, COS } = PROJ;
 const sx = (x) => x * PPU;
@@ -86,8 +88,9 @@ void main() {
 class Champ {
   // emote: 적중 시 따봉 표시 (봇전은 봇만, 대인전은 양쪽 모두)
   // look: 온라인 상대의 외형. 없으면 내 캐릭터는 장착한 외형, 봇은 기본 외형
-  constructor(scene, { team, isPlayer, emote = !isPlayer, look = null }) {
-    Object.assign(this, Sim.createChamp(team)); // team, side, stats
+  // runes: 온라인에서 서버가 알려 준 룬. 없으면 내 캐릭터는 프로필의 룬, 봇은 기본 룬
+  constructor(scene, { team, isPlayer, emote = !isPlayer, look = null, runes = null }) {
+    Object.assign(this, Sim.createChamp(team, runes ?? (isPlayer ? getProfile().runes : null))); // team, side, runes, mods, stats
     this.scene = scene;
     this.isPlayer = isPlayer;
     this.weaponId = look ? look.weapon : isPlayer ? scene.weaponId : 'cleaver';
@@ -190,7 +193,7 @@ class Champ {
       const tx = x0 + (w * hp) / RULES.maxHp;
       g.fillRect(tx, hp % 500 === 0 ? 0 : 3, 1, hp % 500 === 0 ? h : h - 3);
     }
-    if (this.slowT > 0) g.fillStyle(0x9fd4ff, 1).fillRect(x0, h + 2, w * (this.slowT / RULES.q.slowDur), 2);
+    if (this.slowT > 0) g.fillStyle(0x9fd4ff, 1).fillRect(x0, h + 2, w * Math.min(1, this.slowT / RULES.q.slowDur), 2);
     this.lastHp = this.hp;
   }
 
@@ -731,7 +734,7 @@ class GameScene extends Phaser.Scene {
         if (!c) return;
         let cl = this.cleavers.find(p => p.id === e.id);
         if (!cl && remote) {
-          cl = { id: e.id, team: c.team, x: e.x, z: e.z, dx: e.dx, dz: e.dz, dist: 0, age: 0, alive: true };
+          cl = { id: e.id, team: c.team, x: e.x, z: e.z, dx: e.dx, dz: e.dz, speed: e.speed ?? RULES.q.speed * c.mods.qSpeed, dist: 0, age: 0, alive: true };
           this.cleavers.push(cl);
         }
         if (cl && !cl.view) cl.view = new CleaverView(this, cl);
@@ -757,7 +760,7 @@ class GameScene extends Phaser.Scene {
           this.removeCleaver(e.id);
           k.stats.hits++;
           victim.hp = Math.max(0, victim.hp - e.dmg);
-          victim.slowT = RULES.q.slowDur;
+          victim.slowT = k.mods.slowDur;
         }
         victim.hitFlash = 0.14;
         // 식칼 진행 방향(화면 좌표). 예전 서버 이벤트에는 방향이 없어 던진 쪽 → 맞은 쪽으로 대신한다.
@@ -948,6 +951,7 @@ class GameScene extends Phaser.Scene {
 
   trackFinished(win) {
     awardMatch(this.analyticsMatch?.match_id, win);
+    HUD.xpGain(awardXp(this.analyticsMatch?.match_id, win), getProfile());
     const enemyThrows = this.enemies.reduce((total, enemy) => total + enemy.stats.throws, 0);
     const enemyHits = this.enemies.reduce((total, enemy) => total + enemy.stats.hits, 0);
     track('game_finished', {
@@ -993,7 +997,7 @@ class GameScene extends Phaser.Scene {
     this.mySlot = slot;
     // 방장(0)은 왼쪽, 친구(1)는 오른쪽. 내 캐릭터만 초록색, 따봉은 양쪽 모두.
     this.champs = [0, 1].map(team => new Champ(this, {
-      team, isPlayer: team === slot, emote: true, look: team === slot ? null : cleanLook(looks[team]),
+      team, isPlayer: team === slot, emote: true, look: team === slot ? null : cleanLook(looks[team]), runes: cleanLook(looks[team]).runes,
     }));
     this.player = this.champs[slot];
     this.enemy = this.champs[1 - slot];
@@ -1108,7 +1112,7 @@ class GameScene extends Phaser.Scene {
       const target = me.moveTarget;
       if (target && advance > 0 && this.state === 'play') {
         const dx = target.x - tx, dz = target.z - tz, l = Math.hypot(dx, dz);
-        const step = Math.min(l, Sim.champSpeed(s) * advance);
+        const step = Math.min(l, Sim.champSpeed({ ...s, mods: me.mods }) * advance);
         if (l > 0) { tx += (dx / l) * step; tz += (dz / l) * step; }
       }
       // 이동 중에는 시계 추정 오차만큼의 차이는 무시하고(뒤로 끌려가는 떨림 방지), 크게 어긋날 때만 맞춘다.
@@ -1120,7 +1124,7 @@ class GameScene extends Phaser.Scene {
     }
 
     // 식칼: 서버 목록 기준으로 생성·제거, 위치는 경과 시간만큼 앞으로
-    const lead = (Math.max(0, now - msg.t) / 1000) * RULES.q.speed;
+    const elapsed = Math.max(0, now - msg.t) / 1000;
     const ids = new Set();
     for (const a of msg.k) {
       const k = unpackCleaver(a);
@@ -1130,7 +1134,8 @@ class GameScene extends Phaser.Scene {
         cl = { ...k, age: 0, alive: true };
         this.cleavers.push(cl);
       }
-      Object.assign(cl, { x: k.x + k.dx * lead, z: k.z + k.dz * lead, dist: k.dist + lead });
+      const ahead = elapsed * k.speed;
+      Object.assign(cl, { x: k.x + k.dx * ahead, z: k.z + k.dz * ahead, dist: k.dist + ahead, speed: k.speed });
       if (!cl.view) cl.view = new CleaverView(this, cl);
     }
     for (const cl of [...this.cleavers]) if (!ids.has(cl.id)) this.removeCleaver(cl.id);
@@ -1552,6 +1557,7 @@ let awayTimer = null;
 // 초대 링크(?room=CODE)로 들어오면 메뉴 대신 바로 대기실로
 game.events.once('mundo-ready', () => {
   initShop(scene());
+  initProfile();
   const code = roomFromUrl();
   if (code) Online.join(code);
   else $('menu').classList.remove('hidden');

@@ -53,7 +53,7 @@ function findThreat(c, game) {
     const perp = Math.hypot(px, pz);
     const hitR = RULES.q.width + RULES.champR;
     if (perp > hitR + 0.45) continue;
-    const t = along / RULES.q.speed;
+    const t = along / (p.speed ?? RULES.q.speed);
     if (!best || t < best.t) best = { p, t, px, pz, perp, hitR };
   }
   return best;
@@ -101,7 +101,8 @@ function aim(c, game) {
   if (!target.alive) return false;
   const dist = Math.hypot(target.x - c.x, target.z - c.z);
   if (dist > RULES.q.range + 1) return false;
-  const t = dist / RULES.q.speed + RULES.q.windup;
+  const speedQ = RULES.q.speed * (c.mods?.qSpeed ?? 1);
+  const t = dist / speedQ + RULES.q.windup;
   let ax = target.x + target.vx * t * d.lead;
   let az = target.z + target.vz * t * d.lead;
   if (d.tactical) {
@@ -115,7 +116,7 @@ function aim(c, game) {
       }
       const predicted = game.constrain({ x: target.x + target.vx * travelTime, z: target.z + target.vz * travelTime }, target);
       ax = predicted.x; az = predicted.z;
-      flightTime = Math.max(0, Math.hypot(ax - c.x, az - c.z) - 0.6) / RULES.q.speed + RULES.q.windup;
+      flightTime = Math.max(0, Math.hypot(ax - c.x, az - c.z) - 0.6) / speedQ + RULES.q.windup;
     }
   }
   const err = d.aimErr * (0.4 + dist / RULES.q.range);
