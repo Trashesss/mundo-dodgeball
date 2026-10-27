@@ -12,6 +12,8 @@
     "check:arena-quality": "node tools/check-arena-quality.mjs",
     "bake:cartoon": "node tools/bake-cartoon.mjs",
     "bake:soccer": "node tools/bake-cartoon.mjs --soccer",
+    "bake:mushroom": "node tools/bake-cartoon.mjs --mushroom && node tools/bake-cartoon.mjs --mushroom --ronaldo && node tools/bake-cartoon.mjs --mushroom --teemo",
+    "check:mushroom": "node tools/check-mushroom.mjs && node tools/check-mushroom-game.mjs",
     "bake:ronaldo": "node tools/bake-cartoon.mjs --ronaldo && node tools/bake-cartoon.mjs --ronaldo --soccer",
     "bake:teemo": "node tools/bake-cartoon.mjs --teemo && node tools/bake-cartoon.mjs --teemo --soccer",
     "check:skins": "node tools/check-skins.mjs",

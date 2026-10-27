@@ -12,6 +12,7 @@ import { RULES } from '../src/rules.js';
 // ONLINE_MAPS=classic,colosseum npm run check:online 로 진영을 바꿔 검사할 수 있다.
 const maps = (process.env.ONLINE_MAPS || 'colosseum,classic').split(',');
 const guestSkin = process.argv.includes('--teemo') ? 'teemo' : 'ronaldo';
+const guestWeapon = process.argv.includes('--mushroom') ? 'mushroom' : 'cleaver';
 assert.ok(maps.length === 2 && maps.every(id => ['classic', 'colosseum'].includes(id)), 'ONLINE_MAPS must contain two valid map IDs');
 
 const WS_PORT = 3100 + Math.floor(Math.random() * 500);
@@ -29,7 +30,7 @@ const base = `http://localhost:${web.address().port}/?server=${encodeURIComponen
 const browsers = [];
 const step = (name) => process.env.DEBUG && console.log('step:', name);
 const errors = [];
-// 방장은 기본 문도 + 축구공, 친구는 호날두 문도 + 식칼: 서로의 외형이 상대 화면에 그대로 보여야 한다.
+// 방장은 기본 문도 + 축구공, 친구는 선택한 스킨·무기: 서로의 외형이 상대 화면에 그대로 보여야 한다.
 const open = async (url, map = 'classic', skin = 'classic', weapon = 'soccer') => {
   const browser = await puppeteer.launch({
     executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -45,7 +46,7 @@ const open = async (url, map = 'classic', skin = 'classic', weapon = 'soccer') =
     if (localStorage.getItem('mundo-shop-v1') === null) {
       localStorage.setItem('mundo-shop-v1', JSON.stringify({
         coins: 200, owned: ['classic', 'colosseum'], equipped: id, rewarded: [],
-        ownedWeapons: ['cleaver', 'soccer'], equippedWeapon: weapon,
+        ownedWeapons: ['cleaver', 'soccer', 'mushroom'], equippedWeapon: weapon,
         ownedSkins: ['classic', skin], equippedSkin: skin,
       }));
     }
@@ -89,7 +90,7 @@ try {
 
   // 초대 링크로 친구 입장 → 메뉴 없이 바로 대기실
   step('초대 링크로 친구 입장 → 메뉴 없이 바로 대기실');
-  const guest = await open(link, maps[1], guestSkin, 'cleaver');
+  const guest = await open(link, maps[1], guestSkin, guestWeapon);
   await guest.waitForFunction(() => document.getElementById('lobby-p1').dataset.state === 'joined');
   await host.waitForFunction(() => document.getElementById('lobby-p1').dataset.state === 'joined');
   assert.ok(await guest.$eval('#menu', (el) => el.classList.contains('hidden')));
@@ -107,7 +108,7 @@ try {
   assert.deepEqual(roles[1].slice(0, 4), [1, 1, true, false]);
   assert.ok(roles.every((r) => r[4] === 14 && r[5] && r[6]), 'no shrink, both champs have thumbs-up emote');
   const looks = 'return s.champs.map(c => [c.skinId, c.weaponId, c.sprite.texture.key]);';
-  const expectedLooks = [['classic', 'soccer', 'mundo-soccer'], [guestSkin, 'cleaver', `mundo-${guestSkin}`]];
+  const expectedLooks = [['classic', 'soccer', 'mundo-soccer'], [guestSkin, guestWeapon, `mundo-${guestSkin}${guestWeapon === 'mushroom' ? '-mushroom' : ''}`]];
   for (const page of [host, guest]) assert.deepEqual(await evalScene(page, looks), expectedLooks);
   assert.equal(await host.$eval('#player-name', (el) => el.textContent), '나');
   assert.equal(await guest.$eval('#player-name', (el) => el.textContent), '상대방');
@@ -152,8 +153,8 @@ try {
   await waitScene(host, 's.cleavers.some(cl => cl.team === 0 && cl.view?.img.texture.key === "soccer-ball")');
   await waitScene(guest, 's.cleavers.some(cl => cl.team === 0 && cl.view?.img.texture.key === "soccer-ball")');
   await evalScene(guest, 's.player.qCd = 0; s.lastCastSeq = 0; if (s.castQ(s.player, s.enemy.x, s.enemy.z)) s.sendInput({ cast: "q", tx: s.enemy.x, tz: s.enemy.z });');
-  await waitScene(guest, 's.cleavers.some(cl => cl.team === 1 && cl.view?.img.texture.key === "cleaver")');
-  await waitScene(host, 's.cleavers.some(cl => cl.team === 1 && cl.view?.img.texture.key === "cleaver")');
+  await waitScene(guest, `s.cleavers.some(cl => cl.team === 1 && cl.view?.img.texture.key === "${guestWeapon}")`);
+  await waitScene(host, `s.cleavers.some(cl => cl.team === 1 && cl.view?.img.texture.key === "${guestWeapon}")`);
   for (const page of [host, guest]) {
     await waitScene(page, 's.champs[1].hp < 600 && s.champs[0].stats.hits === 1', 4000);
     await waitScene(page, 's.champs[0].emote.visible', 2000);

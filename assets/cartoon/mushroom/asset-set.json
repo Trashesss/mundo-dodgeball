@@ -1,0 +1,39 @@
+{
+  "id": "mushroom",
+  "name": "티모 버섯",
+  "projectile": {
+    "image": "assets/cartoon/teemo-mushroom-v1.png",
+    "origin": [0.5, 0.5],
+    "suggestedDisplaySize": [48, 48]
+  },
+  "shopImage": "assets/cartoon/teemo-mushroom-v1.png",
+  "abilityIcon": "assets/cartoon/teemo-mushroom-throw-icon-v1.png",
+  "gripSource": "assets/cartoon/teemo-mushroom-parts-v1.png",
+  "throw": { "releaseSeconds": 0.14, "durationSeconds": 0.5 },
+  "characters": [
+    {
+      "skin": "classic",
+      "name": "기본 문도",
+      "texture": "mundo-mushroom",
+      "animationPrefix": "mushroom-",
+      "atlas": "assets/cartoon/mushroom/atlas.json",
+      "meta": "assets/cartoon/mushroom/meta.json"
+    },
+    {
+      "skin": "ronaldo",
+      "name": "호날두 문도",
+      "texture": "mundo-ronaldo-mushroom",
+      "animationPrefix": "ronaldo-mushroom-",
+      "atlas": "assets/cartoon/ronaldo/mushroom/atlas.json",
+      "meta": "assets/cartoon/ronaldo/mushroom/meta.json"
+    },
+    {
+      "skin": "teemo",
+      "name": "티모 문도",
+      "texture": "mundo-teemo-mushroom",
+      "animationPrefix": "teemo-mushroom-",
+      "atlas": "assets/cartoon/teemo/mushroom/atlas.json",
+      "meta": "assets/cartoon/teemo/mushroom/meta.json"
+    }
+  ]
+}

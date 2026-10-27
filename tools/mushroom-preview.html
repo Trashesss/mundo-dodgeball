@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>티모 버섯 에셋 미리보기</title>
+<link rel="icon" href="/assets/cartoon/favicon.png">
+<style>
+  *{box-sizing:border-box}body{margin:0;background:#18232b;color:#f6eed8;font:16px system-ui,sans-serif}
+  main{max-width:1100px;margin:auto;padding:28px}h1{margin:0 0 8px;font-size:28px}p{color:#bdcbd0;line-height:1.6}
+  .controls{display:flex;flex-wrap:wrap;gap:16px;align-items:end;margin:24px 0 14px}label{display:grid;gap:7px}
+  select,button{font:inherit;color:inherit;background:#334954;border:1px solid #637b83;border-radius:8px;padding:10px 16px}
+  button{cursor:pointer}input{accent-color:#b4db55}.timeline{display:flex;align-items:center;gap:12px}.timeline input{flex:1}
+  canvas{display:block;width:100%;height:auto;background:#2b414c;border-radius:16px;margin:16px 0}
+  .items{display:flex;flex-wrap:wrap;gap:24px}.items figure{margin:0}.items img{width:150px;height:150px;object-fit:contain;border-radius:12px;background:#334954}
+  figcaption{margin-top:8px;color:#bdcbd0}output{min-width:120px;font-variant-numeric:tabular-nums}
+</style>
+<main>
+<h1>티모 버섯</h1>
+<p>세 가지 문도 · 다섯 가지 동작 · 여덟 방향<br>게임에서 사용하는 버섯 무기 에셋입니다.</p>
+<div class="controls">
+  <label>캐릭터<select id="skin"></select></label>
+  <label>동작<select id="state"><option value="idle">대기</option><option value="run">달리기</option><option value="throw">투척</option><option value="dance">춤</option><option value="death">쓰러짐</option></select></label>
+  <button id="pause" type="button" aria-pressed="false">일시정지</button>
+</div>
+<div class="timeline"><label for="frame">프레임</label><input id="frame" type="range" min="0" max="47" value="0"><output id="progress">준비 중…</output></div>
+<canvas width="1024" height="560" aria-label="선택한 문도의 여덟 방향 애니메이션"></canvas>
+<p id="status" role="status">에셋을 불러오고 있어요.</p>
+<div class="items">
+  <figure><img src="/assets/cartoon/teemo-mushroom-v1.png" alt="투명 배경의 티모 버섯"><figcaption>투척물 · 상점 이미지</figcaption></figure>
+  <figure><img src="/assets/cartoon/teemo-mushroom-throw-icon-v1.png" alt="문도가 버섯을 던지는 스킬 아이콘"><figcaption>투척 스킬 아이콘</figcaption></figure>
+</div>
+</main>
+<script type="module">
+const manifest = await (await fetch('/assets/cartoon/mushroom/asset-set.json')).json();
+const sets = new Map();
+for (const character of manifest.characters) {
+  const [meta, atlas] = await Promise.all([character.meta, character.atlas].map(async path => (await fetch('/' + path)).json()));
+  const frames = new Map();
+  for (const texture of atlas.textures) {
+    const image = new Image(); image.src = '/' + character.atlas.replace('atlas.json', texture.image); await image.decode();
+    for (const frame of texture.frames) frames.set(frame.filename, { image, ...frame });
+  }
+  sets.set(character.skin, { ...character, meta, frames });
+  document.querySelector('#skin').add(new Option(character.name, character.skin));
+}
+const canvas = document.querySelector('canvas'), g = canvas.getContext('2d');
+const skin = document.querySelector('#skin'), state = document.querySelector('#state'), slider = document.querySelector('#frame');
+const pause = document.querySelector('#pause'), progress = document.querySelector('#progress'), status = document.querySelector('#status');
+let paused = false, started = performance.now(), selectedFrame = 0;
+function pose(ctx, skinId, key, direction, index, x, y, scale = .9) {
+  const set = sets.get(skinId), entry = set.frames.get(`${key}_${direction}_${index}`);
+  const r = entry.frame, s = entry.spriteSourceSize, meta = set.meta;
+  ctx.drawImage(entry.image, r.x, r.y, r.w, r.h, x + (s.x - meta.frameW / 2) * scale, y + (s.y - meta.frameH * meta.anchor) * scale, s.w * scale, s.h * scale);
+}
+function render(index) {
+  const anim = sets.get(skin.value).meta.anims[state.value];
+  selectedFrame = Math.max(0, Math.min(anim.frames - 1, index));
+  slider.max = anim.frames - 1; slider.value = selectedFrame;
+  progress.textContent = `${selectedFrame + 1} / ${anim.frames}`;
+  g.fillStyle = '#2b414c'; g.fillRect(0, 0, canvas.width, canvas.height);
+  for (let direction = 0; direction < 8; direction++) {
+    const x = direction % 4 * 256 + 128, y = Math.floor(direction / 4) * 280 + 238;
+    g.fillStyle = '#c2d2d5'; g.font = '15px system-ui'; g.fillText(`${direction + 1} 방향`, x - 105, y - 205);
+    g.strokeStyle = '#536d77'; g.beginPath(); g.moveTo(x - 85, y); g.lineTo(x + 85, y); g.stroke();
+    pose(g, skin.value, state.value, direction, selectedFrame, x, y);
+  }
+  status.textContent = state.value === 'throw'
+    ? `투척 ${Math.round(selectedFrame / anim.fps * 1000)}ms · 버섯은 ${manifest.throw.releaseSeconds * 1000}ms에 손에서 떨어집니다.`
+    : `${sets.get(skin.value).name} · ${anim.fps}fps · ${anim.loop ? '반복 동작' : '일회 동작'}`;
+}
+function setPaused(value) { paused = value; pause.textContent = value ? '재생' : '일시정지'; pause.setAttribute('aria-pressed', String(value)); }
+pause.onclick = () => { setPaused(!paused); started = performance.now() - selectedFrame / sets.get(skin.value).meta.anims[state.value].fps * 1000; };
+slider.oninput = () => { setPaused(true); render(Number(slider.value)); };
+for (const select of [skin, state]) select.onchange = () => { started = performance.now(); render(0); };
+function tick(now) {
+  if (!paused) {
+    const anim = sets.get(skin.value).meta.anims[state.value], index = Math.floor((now - started) / 1000 * anim.fps);
+    render(anim.loop ? index % anim.frames : Math.min(anim.frames - 1, index));
+  }
+  requestAnimationFrame(tick);
+}
+window.mushroomPreview = { manifest, sets, pose, render, pause: () => setPaused(true) };
+render(0); requestAnimationFrame(tick);
+</script>
+</html>

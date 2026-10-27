@@ -8,6 +8,7 @@ export const MAPS = [
 export const WEAPONS = [
   { id: 'cleaver', name: '문도의 식칼', subtitle: '익숙한 손맛, 묵직한 한 방.', price: 0, image: 'assets/cartoon/cleaver-icon.png', description: '문도와 함께해 온 기본 투척 무기. 언제든 다시 장착할 수 있어요.' },
   { id: 'soccer', name: '클래식 축구공', subtitle: '발 대신 손으로, 골 대신 명중!', price: 300, image: 'assets/cartoon/soccer-ball-v2.png', description: '흑백 무늬 축구공을 힘껏 던져보세요! 손에 든 공부터 빙글빙글 날아가는 공까지 바뀌어요. 속도, 피해량, 재사용 대기시간은 식칼과 같아요.' },
+  { id: 'mushroom', name: '티모의 버섯', subtitle: '문도, 버섯도 잘 던진다!', price: 300, image: 'assets/cartoon/teemo-mushroom-v1.png', description: '초록 갓에 빨간 반점! 티모의 버섯을 힘껏 던져보세요. 모든 스킨에서 손에 든 모습과 투척물, 스킬 아이콘이 바뀌어요. 속도, 피해량, 재사용 대기시간은 식칼과 같아요.' },
 ];
 export const SKINS = [
   { id: 'classic', name: '기본 문도', subtitle: '문도, 원래 모습도 멋있다!', price: 0, image: 'assets/cartoon/shop-classic-v1.png', description: '보라색 근육과 익숙한 조끼. 언제든 돌아올 수 있는 문도의 기본 모습이에요.' },

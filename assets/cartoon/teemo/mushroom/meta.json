@@ -1,0 +1,33 @@
+{
+  "frameW": 320,
+  "frameH": 320,
+  "anchor": 0.76,
+  "scale": 0.8,
+  "anims": {
+    "idle": {
+      "frames": 48,
+      "loop": true,
+      "fps": 24
+    },
+    "run": {
+      "frames": 30,
+      "loop": true,
+      "fps": 60
+    },
+    "throw": {
+      "frames": 30,
+      "loop": false,
+      "fps": 60
+    },
+    "death": {
+      "frames": 46,
+      "loop": false,
+      "fps": 60
+    },
+    "dance": {
+      "frames": 60,
+      "loop": true,
+      "fps": 60
+    }
+  }
+}

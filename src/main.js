@@ -26,7 +26,7 @@ const BAR_OFF = 154;
 const EMOTE_DELAY = 0.25;
 const EMOTE_DURATION = 1;
 const EMOTE_SIZE = 104;
-const animationPrefix = (skin, weapon) => `${skin === 'ronaldo' || skin === 'teemo' ? `${skin}-` : ''}${weapon === 'soccer' ? 'soccer-' : ''}`;
+const animationPrefix = (skin, weapon) => `${skin === 'ronaldo' || skin === 'teemo' ? `${skin}-` : ''}${weapon === 'soccer' || weapon === 'mushroom' ? `${weapon}-` : ''}`;
 const CHARACTER_ATLASES = [
   { prefix: '', texture: 'mundo', path: '' },
   { prefix: 'soccer-', texture: 'mundo-soccer', path: 'soccer/' },
@@ -34,6 +34,9 @@ const CHARACTER_ATLASES = [
   { prefix: 'ronaldo-soccer-', texture: 'mundo-ronaldo-soccer', path: 'ronaldo/soccer/' },
   { prefix: 'teemo-', texture: 'mundo-teemo', path: 'teemo/' },
   { prefix: 'teemo-soccer-', texture: 'mundo-teemo-soccer', path: 'teemo/soccer/' },
+  { prefix: 'mushroom-', texture: 'mundo-mushroom', path: 'mushroom/' },
+  { prefix: 'ronaldo-mushroom-', texture: 'mundo-ronaldo-mushroom', path: 'ronaldo/mushroom/' },
+  { prefix: 'teemo-mushroom-', texture: 'mundo-teemo-mushroom', path: 'teemo/mushroom/' },
 ];
 const INTERP_MS = 100; // 대인전 상대 표시 지연: 스냅샷 3개 간격 + 도착 흔들림 여유
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -242,9 +245,10 @@ class Champ {
 class CleaverView {
   constructor(scene, cl) {
     this.cont = scene.add.container(0, 0);
-    const soccer = scene.champs.find(c => c.team === cl.team)?.weaponId === 'soccer';
-    this.img = scene.add.image(0, 0, soccer ? 'soccer-ball' : 'cleaver')
-      .setDisplaySize(soccer ? 48 : 72, soccer ? 48 : 43.2)
+    const weapon = scene.champs.find(c => c.team === cl.team)?.weaponId;
+    const round = weapon === 'soccer' || weapon === 'mushroom';
+    this.img = scene.add.image(0, 0, weapon === 'mushroom' ? 'mushroom' : weapon === 'soccer' ? 'soccer-ball' : 'cleaver')
+      .setDisplaySize(round ? 48 : 72, round ? 48 : 43.2)
       .setRotation(Math.atan2(cl.dz * SIN, cl.dx));
     this.cont.add(this.img);
     this.shadow = scene.add.image(0, 0, 'shadow').setDepth(DEPTH.decal).setAlpha(0.5);
@@ -297,6 +301,7 @@ class GameScene extends Phaser.Scene {
       this.load.multiatlas(texture, `assets/cartoon/${path}atlas.json`, `assets/cartoon/${path}`);
     }
     this.load.image('soccer-ball', 'assets/cartoon/soccer-ball-v2.png');
+    this.load.image('mushroom', 'assets/cartoon/teemo-mushroom-v1.png');
     this.load.json('meta', 'assets/cartoon/meta.json');
     this.load.json('arenaMeta', 'assets/cartoon/arena.json');
     this.load.image('arena', 'assets/cartoon/arena.png');
@@ -462,12 +467,12 @@ class GameScene extends Phaser.Scene {
   }
 
   applyWeapon(id) {
-    this.weaponId = id === 'soccer' ? 'soccer' : 'cleaver';
-    const soccer = this.weaponId === 'soccer';
-    const label = soccer ? '축구공 투척' : '식칼 투척';
+    this.weaponId = cleanLook({ weapon: id }).weapon;
+    const label = this.weaponId === 'mushroom' ? '버섯 투척' : this.weaponId === 'soccer' ? '축구공 투척' : '식칼 투척';
     const skill = document.getElementById('sk-q');
     skill.setAttribute('aria-label', `Q ${label}`);
-    skill.querySelector('.q-icon').classList.toggle('soccer-icon', soccer);
+    skill.querySelector('.q-icon').classList.toggle('soccer-icon', this.weaponId === 'soccer');
+    skill.querySelector('.q-icon').classList.toggle('mushroom-icon', this.weaponId === 'mushroom');
     skill.parentElement.querySelector('.spell-name').textContent = label;
     this.updateMenuAppearance();
   }

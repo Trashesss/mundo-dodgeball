@@ -21,7 +21,7 @@ for (const texture of atlas.textures) for (const frame of texture.frames) {
 const server = await serve(0);
 const browser = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
 const errors = [];
-const ready = page => page.waitForFunction(() => window.__game?.scene.getScene('game').state === 'menu' && document.querySelector('#shop-weapon-list').children.length === 2 && document.querySelector('#loading').classList.contains('hidden'));
+const ready = page => page.waitForFunction(() => window.__game?.scene.getScene('game').state === 'menu' && document.querySelector('[data-weapon="soccer"]') && document.querySelector('#loading').classList.contains('hidden'));
 try {
   fs.mkdirSync('output/soccer', { recursive: true });
   const page = await browser.newPage();
