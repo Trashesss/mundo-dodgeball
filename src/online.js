@@ -311,10 +311,11 @@ export const Online = {
       case 'go': return h.onGo?.(msg);
       case 'ev': return h.onEvents?.(msg.list);
       case 'roundEnd': return h.onRoundEnd?.(msg.winner);
-      case 'over': return h.onOver?.(msg.winner);
+      // reason 'left': 경기 중 상대가 나가 바로 이김. 방은 끝났으니 재접속 토큰도 버린다
+      case 'over':
+        if (msg.reason === 'left' && this.room) storage.remove(TOKEN_KEY(this.room));
+        return h.onOver?.(msg.winner, msg.reason);
       case 'rematch': return h.onRematch?.(msg.want);
-      case 'opponentAway': return h.onAway?.(msg.graceMs);
-      case 'opponentBack': return h.onBack?.();
       // 빠른 대전에서 제한 시간 안에 준비하지 않아 서버가 내보냄: 재접속하지 않고 안내 화면을 띄운다
       case 'kicked':
         if (this.room) storage.remove(TOKEN_KEY(this.room));

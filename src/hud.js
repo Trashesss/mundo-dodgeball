@@ -129,16 +129,16 @@ export const HUD = {
 
   // 대인전 결과: win | lose | left(상대가 나감)
   // bot: 상대가 문도봇 · quick: 빠른 대전 (굴욕·재대결 없이 다시 플레이)
-  onlineResult(kind, { room, bot = false, quick = false } = {}) {
+  onlineResult(kind, { room, bot = false, quick = false, left = false } = {}) {
     resultVersion += 1;
     shareData = null;
     this.show(false);
     this.clearFeeds();
     this.banner(null);
     $('share-btn').classList.add('hidden');
-    setHumiliateAvailable(kind === 'win' && !bot && !quick, { mode: 'online', room });
+    setHumiliateAvailable(kind === 'win' && !bot && !quick && !left, { mode: 'online', room });
     // 빠른 대전과 문도봇 경기는 재대결 없이 다시 플레이만
-    $('again-btn').classList.toggle('hidden', kind === 'left' || bot || quick);
+    $('again-btn').classList.toggle('hidden', kind === 'left' || left || bot || quick);
     $('again-btn').disabled = false;
     $('again-btn').textContent = kind === 'win' ? '다시 한 수 가르쳐주기' : '다시 한 수 배우기';
     $('requeue-btn').classList.toggle('hidden', !quick);
@@ -148,7 +148,7 @@ export const HUD = {
     $('result').dataset.outcome = kind === 'win' ? 'win' : 'lose';
     $('result').dataset.art = { win: 'custom-win', lose: 'custom-loss', left: 'portrait' }[kind];
     $('result-title').textContent = { win: '승리!', lose: '패배', left: '상대가 나갔어요' }[kind];
-    $('result-subtitle').textContent = { win: '실력으로 증명하셨습니다.', lose: '실력이 들통났습니다..' }[kind] || '';
+    $('result-subtitle').textContent = left ? '상대가 도망갔어요.' : { win: '실력으로 증명하셨습니다.', lose: '실력이 들통났습니다..' }[kind] || '';
     $('result-subtitle').classList.toggle('hidden', kind === 'left');
     $('result').classList.remove('hidden');
   },

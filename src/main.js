@@ -1058,15 +1058,17 @@ class GameScene extends Phaser.Scene {
     if (winner >= 0) (winner === this.mySlot ? Sound.win : Sound.lose)();
   }
 
-  onlineOver(winner) {
+  // reason 'left': 경기 중 상대가 나가서 바로 끝남 (남은 쪽 승리)
+  onlineOver(winner, reason) {
     if (this.mode !== 'online' || this.state === 'over') return;
     this.state = 'over';
+    this.netPaused = false;
     const win = winner === this.mySlot;
-    HUD.onlineResult(win ? 'win' : 'lose', { room: Online.room, bot: Online.opponentBot, quick: Online.isQuick });
+    HUD.onlineResult(win ? 'win' : 'lose', { room: Online.room, bot: Online.opponentBot, quick: Online.isQuick, left: reason === 'left' });
     this.trackFinished(win);
   }
 
-  // 상대가 끝내 돌아오지 않았거나 나감
+  // 결과 화면에서 상대가 나감 (재대결 불가)
   onlineOpponentLeft() {
     if (this.mode !== 'online') return;
     const wasOver = this.state === 'over';
@@ -1090,7 +1092,7 @@ class GameScene extends Phaser.Scene {
     if (this.mode !== 'online' || !this.player) return;
     const now = Online.serverNow();
     const states = msg.c.map(unpackChamp);
-    this.setNetPaused(!!msg.p);
+    this.setNetPaused(false);
     if (['countdown', 'play', 'roundEnd'].includes(msg.ph) && this.state !== 'over' && this.state !== msg.ph) {
       if (msg.ph === 'play') this.onlineGo();
       else this.state = msg.ph;
@@ -1509,8 +1511,7 @@ Online.hooks = {
       s.champs.forEach((c, i) => c.reset(NET.SPAWN[i].x, NET.SPAWN[i].z));
       s.state = msg.phase === 'over' ? 'roundEnd' : msg.phase;
     }
-    s.setNetPaused(!!msg.paused);
-    if (msg.paused) HUD.banner('상대방 연결을 기다려요');
+    s.setNetPaused(false);
   },
   onGo: () => scene().onlineGo(),
   onSnap: (msg) => scene().applySnap(msg),
@@ -1519,49 +1520,30 @@ Online.hooks = {
     if (s.mode === 'online' && s.champs.length) for (const e of list) s.showEvent(e, true);
   },
   onRoundEnd: (winner) => scene().onlineRoundEnd(winner),
-  onOver: (winner) => scene().onlineOver(winner),
+  onOver: (winner, reason) => scene().onlineOver(winner, reason),
   onRematch: (want) => {
     if (scene().mode !== 'online' || Online.isQuick || $('result').classList.contains('hidden')) return;
     const mine = want[Online.slot], theirs = want[1 - Online.slot];
     if (theirs && !mine) HUD.resultStatus(rematchStatus('wanted'));
     else if (mine && !theirs) HUD.resultStatus(rematchStatus('waiting'));
   },
-  onAway: (graceMs) => {
-    scene().setNetPaused(true);
-    const end = performance.now() + graceMs;
-    clearInterval(awayTimer);
-    const tick = () => {
-      const left = Math.max(0, Math.ceil((end - performance.now()) / 1000));
-      HUD.banner('상대방 연결이 끊겼어요', { detail: '', seconds: left });
-    };
-    tick();
-    awayTimer = setInterval(tick, 250);
-  },
-  onBack: () => {
-    clearInterval(awayTimer);
-    scene().setNetPaused(false);
-    HUD.banner('상대방이 다시 돌아왔어요!', { state: 'back', detail: '' });
-  },
   onOpponentLeft: () => {
-    clearInterval(awayTimer);
     const s = scene();
     if (s.mode === 'online' && s.champs.length) s.onlineOpponentLeft();
     else if (!$('lobby').classList.contains('hidden')) Online.renderLobby();
   },
   onReconnecting: () => {
     scene().setNetPaused(true);
-    HUD.banner('다시 연결하고 있어요', { detail: '연결되면 대결을 이어서 할 수 있어요.' });
+    HUD.banner('다시 연결하고 있어요', { detail: '경기 중에 연결이 끊기면 패배로 처리돼요.' });
   },
   onReconnected: () => {
     HUD.banner(null);
   },
   onLost: () => {
-    clearInterval(awayTimer);
     showMenu();
     HUD.chat('서버 연결이 끊겨서 메뉴로 돌아왔어요.');
   },
 };
-let awayTimer = null;
 
 initPresence();
 

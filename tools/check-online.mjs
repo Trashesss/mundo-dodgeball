@@ -212,32 +212,16 @@ try {
   for (const [i, page] of [host, guest].entries()) await checkMap(page, maps[i]);
   for (const page of [host, guest]) assert.deepEqual(await evalScene(page, looks), expectedLooks);
 
-  // 새로고침 재접속: 잠시 멈췄다가 같은 자리로 복귀
-  step('새로고침 재접속: 잠시 멈췄다가 같은 자리로 복귀');
+  // 경기 중 이탈(새로고침 포함): 기다리지 않고 바로 남은 사람 승리
+  step('경기 중 이탈: 바로 남은 사람 승리');
   await guest.reload();
-  await waitScene(guest, "s.mode === 'online' && s.mySlot === 1 && s.state === 'play' && !s.netPaused", 10000);
-  await waitScene(host, '!s.netPaused');
-  for (const page of [host, guest]) assert.deepEqual(await evalScene(page, looks), expectedLooks);
-  for (const [i, page] of [host, guest].entries()) await checkMap(page, maps[i]);
-  await host.waitForFunction(() => document.getElementById('net-banner').dataset.state === 'back' && !document.getElementById('net-banner').classList.contains('hidden'));
-  assert.equal(await host.$eval('#net-title', (el) => el.textContent), '상대방이 다시 돌아왔어요!');
-  await host.screenshot({ path: 'output/online-back.png' });
-  await host.waitForFunction(() => document.getElementById('net-banner').classList.contains('hidden'));
-  assert.ok(await host.$eval('#net-banner', (el) => el.classList.contains('hidden')));
-
-  // 상대 이탈: 15초 동안 기다린 뒤 안내
-  step('상대 이탈: 15초 동안 기다린 뒤 안내');
-  await guest.browser().close();
-  await host.waitForFunction(() => document.getElementById('net-banner').textContent.includes('상대방 연결이 끊겼어요'), { timeout: 15000 });
-  assert.ok(await evalScene(host, 'return s.netPaused;'));
-  await host.screenshot({ path: 'output/online-away.png' });
-  await host.setViewport({ width: 390, height: 844 });
-  await host.screenshot({ path: 'output/online-away-mobile.png' });
-  await host.setViewport({ width: 844, height: 390 });
-  await host.screenshot({ path: 'output/online-away-landscape.png' });
-  await host.setViewport({ width: 1200, height: 800 });
-  await host.waitForFunction(() => document.getElementById('result-title').textContent === '상대가 나갔어요', { timeout: 20000 });
+  await host.waitForFunction(() => document.getElementById('result-title').textContent === '승리!', { timeout: 3000 });
+  assert.equal(await host.$eval('#result-subtitle', (el) => el.textContent), '상대가 도망갔어요.');
   assert.ok(await host.$eval('#again-btn', (el) => el.classList.contains('hidden')));
+  assert.equal(await evalScene(host, 'return s.state;'), 'over');
+  await host.screenshot({ path: 'output/online-left-win.png' });
+  await guest.waitForFunction(() => document.getElementById('lobby').dataset.state === 'error', { timeout: 5000 });
+  await guest.browser().close();
   await host.click('#menu-btn');
   await waitScene(host, "s.state === 'menu' && s.mode === 'bot'");
   assert.doesNotMatch(new URL(await host.url()).search, /room=/);
@@ -249,7 +233,7 @@ try {
 
   fs.mkdirSync('output', { recursive: true });
   assert.deepEqual(errors, []);
-  console.log(`Online (${maps.join(' vs ')}): map persistence, opponent skin/weapon on both screens, bot-to-online reset, no shrink, click projection, movement limits, flash/ghost sync, room link, lobby ready, countdown, server hit + both emotes, KO rewards, humiliate share, rematch, refresh rejoin, opponent-left notice and missing room passed.`);
+  console.log(`Online (${maps.join(' vs ')}): map persistence, opponent skin/weapon on both screens, bot-to-online reset, no shrink, click projection, movement limits, flash/ghost sync, room link, lobby ready, countdown, server hit + both emotes, KO rewards, humiliate share, rematch, opponent-left instant win and missing room passed.`);
 } finally {
   await Promise.all(browsers.map((b) => b.close()));
   web.close();

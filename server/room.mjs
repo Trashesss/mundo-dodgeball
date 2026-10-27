@@ -29,7 +29,6 @@ export class Room {
     this.now = now;
     this.slots = [null, null];
     this.phase = 'lobby';
-    this.paused = false;
     this.world = null;
     this.bots = [];
     this.observer = null;
@@ -77,26 +76,22 @@ export class Room {
     Object.assign(s, { ws, connected: true, grace: null });
     if (look && !this.inMatch()) s.look = cleanLook(look);
     this.welcome(slot);
-    if (this.inMatch()) {
-      this.paused = !this.slots.every(x => x?.connected);
-      this.send(1 - slot, { type: 'opponentBack' });
-      this.sendSnap();
-    } else if (this.phase === 'over') {
+    if (this.inMatch()) this.sendSnap();
+    else if (this.phase === 'over') {
       this.send(slot, { type: 'over', winner: this.winner, reason: 'ko' });
       if (!this.quick) this.broadcastRematch();
     } else this.broadcastLobby();
     return slot;
   }
 
+  // 경기 중 끊김은 기다리지 않고 바로 이탈(남은 사람 승리). 대기실·결과 화면에서는 재접속을 기다린다
   disconnect(slot, ws) {
     const s = this.slots[slot];
     if (!s || s.ws !== ws) return;
     s.connected = false;
     s.ws = null;
-    if (this.inMatch()) {
-      this.paused = true;
-      this.send(1 - slot, { type: 'opponentAway', graceMs: NET.GRACE_MS });
-    } else this.broadcastLobby();
+    if (this.inMatch()) { this.leave(slot, 'left'); return; }
+    this.broadcastLobby();
     s.grace = this.after(NET.GRACE_MS, () => this.leave(slot, 'timeout'));
   }
 
@@ -119,7 +114,7 @@ export class Room {
     this.readyDeadline = 0;
   }
 
-  // 완전히 나감: 상대에게 알리고 경기를 끝낸다
+  // 완전히 나감: 경기 중이면 남은 사람 승리로 바로 끝내고, 결과 화면이면 상대에게 알린다
   leave(slot, reason = 'left') {
     const s = this.slots[slot];
     if (!s) return;
@@ -127,9 +122,13 @@ export class Room {
     this.clearReady();
     this.slots[slot] = null;
     const other = this.slots[1 - slot];
-    if (this.inMatch() || this.phase === 'over') {
+    if (this.inMatch()) {
       this.stopLoop();
       this.phase = 'over';
+      this.winner = 1 - slot;
+      this.observer = null;
+      if (other) this.send(1 - slot, { type: 'over', winner: this.winner, reason: 'left' });
+    } else if (this.phase === 'over') {
       if (other) this.send(1 - slot, { type: 'opponentLeft', reason });
     } else {
       if (other && this.quick) other.ready = false;
@@ -185,7 +184,7 @@ export class Room {
   input(slot, msg) {
     const s = this.slots[slot];
     if (Number.isInteger(msg.seq) && msg.seq > s.ack) s.ack = msg.seq;
-    if (!this.world || this.paused || !(this.phase === 'play' || this.phase === 'countdown')) return;
+    if (!this.world || !(this.phase === 'play' || this.phase === 'countdown')) return;
     const w = this.world, c = w.champs[slot];
     if (!c.alive) return;
     if (msg.stop) c.moveTarget = null;
@@ -238,9 +237,8 @@ export class Room {
     this.broadcast({ type: 'roundEnd', winner, t: this.time() });
   }
 
-  // 일시정지 중에는 타이머도 멈추도록 카운트다운·결과 대기는 틱에서 센다
+  // 카운트다운·결과 대기는 틱에서 센다
   tick() {
-    if (this.paused) return;
     const w = this.world;
     if (this.phase === 'countdown') {
       this.countdownLeft -= STEP;
@@ -324,7 +322,7 @@ export class Room {
   welcome(slot) {
     const s = this.slots[slot];
     this.send(slot, {
-      type: 'joined', room: this.code, slot, token: s.token, phase: this.phase, round: this.round ?? 0, paused: this.paused,
+      type: 'joined', room: this.code, slot, token: s.token, phase: this.phase, round: this.round ?? 0,
       quick: this.quick, bot: this.hasBot(), looks: this.looks(),
     });
   }
@@ -345,7 +343,7 @@ export class Room {
   sendSnap() {
     const w = this.world;
     if (!w) return;
-    const base = { type: 'snap', t: this.time(), ph: this.phase, p: this.paused ? 1 : 0,
+    const base = { type: 'snap', t: this.time(), ph: this.phase,
       c: w.champs.map(packChamp), k: w.cleavers.map(packCleaver) };
     this.slots.forEach((s, i) => s && this.send(i, { ...base, ack: s.ack }));
   }
