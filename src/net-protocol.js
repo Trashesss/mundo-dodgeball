@@ -5,6 +5,7 @@ export const NET = {
   COUNTDOWN_MS: 3000,
   ROUND_END_MS: 3400,   // 결과 연출 (봇전 endT 와 같음)
   GRACE_MS: 15000,      // 연결 끊김 재접속 대기
+  READY_MS: 10000,      // 빠른 대전 준비 제한: 넘기면 준비 안 한 쪽이 대기실에서 나가고 남은 쪽이 다시 상대를 기다린다
   CODE_CHARS: 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', // 헷갈리는 0/O, 1/I 제외
   CODE_LEN: 6,
   SPAWN: [{ x: -6.5, z: 0 }, { x: 6.5, z: 0 }],

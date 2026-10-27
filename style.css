@@ -638,8 +638,8 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 #lobby[data-state="error"] .lobby-actions { justify-content: center; }
 #lobby[data-state="error"] #lobby-leave { width: min(320px, 100%); }
 #lobby-error-title {
-  margin: 0; color: #f0b2a8; font-size: clamp(30px, 6vw, 56px); font-weight: 400;
-  line-height: 1.2; letter-spacing: -1px; text-shadow: 0 5px #08171f; text-wrap: balance;
+  margin: 0; color: #f0b2a8; font-size: clamp(24px, 3.6vw, 34px); font-weight: 400;
+  line-height: 1.3; letter-spacing: -0.5px; text-shadow: 0 3px #08171f; text-wrap: balance;
 }
 .lobby-entry, .lobby-room { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 #lobby:not([data-state="room"]) .lobby-room,
@@ -681,7 +681,7 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 .queue-sub { color: var(--entry-muted); font-size: clamp(15px, 2vw, 18px); line-height: 1.3; }
 /* 설명은 위 안내와 떨어뜨리고 취소 버튼 쪽에 붙인다 */
 .queue-note { margin-top: 22px; color: var(--entry-muted); font-size: 13px; line-height: 1.4; opacity: .75; word-break: keep-all; }
-.queue-sub b { color: var(--entry-green); font-weight: 400; font-variant-numeric: tabular-nums; }
+.queue-sub b, #lobby[data-state="room"] .lobby-status b {color: var(--entry-green); font-weight: 400; font-variant-numeric: tabular-nums; }
 #lobby[data-state="queue"] .lobby-actions { flex-direction: column; align-items: center; gap: 10px; }
 #lobby[data-state="queue"] #lobby-leave { width: min(320px, 100%); }
 /* 기다리는 동안 문도봇과 플레이를 고를 수 있다. 위 안내 문구와는 버튼 사이보다 넓게 띄운다 */

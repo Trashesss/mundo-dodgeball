@@ -1,5 +1,6 @@
 // 빠른 대전 확인: 로컬 서버 + 브라우저 창
 // 두 사람 → 준비 대기실 → 둘 다 준비해야 시작 → KO → 고스트 기록 / 준비 대기실에서 나가면 남은 사람은 다시 큐
+// 준비 제한 시간 → 준비 안 한 사람만 나가고 남은 사람이 방을 이어받음 / 둘 다 안 하면 방 닫힘
 // 혼자 → 시간이 지나도 계속 대기 → 문도봇과 플레이 버튼 → 봇이 움직이고 던짐 → 결과(재대결 없음)·다시 플레이
 // 대기 취소 → 큐에서 빠짐 / 문도봇 경기는 고스트로 남지 않음
 import assert from 'node:assert/strict';
@@ -10,6 +11,7 @@ import { spawn } from 'node:child_process';
 import puppeteer from 'puppeteer-core';
 import { serve } from './serve.mjs';
 import { skipConsent } from './skip-consent.mjs';
+import { NET } from '../src/net-protocol.js';
 
 const map = process.env.QUICK_MAP || 'colosseum';
 assert.ok(['classic', 'colosseum'].includes(map), 'QUICK_MAP must be a valid map ID');
@@ -148,6 +150,38 @@ try {
   await c.waitForFunction(() => !document.getElementById('menu').classList.contains('hidden'));
   for (const p of [c, d]) await p.browser().close();
 
+  step('준비 제한 시간: 준비 안 한 사람은 나가고 준비한 사람이 방을 이어받음');
+  const [e, f] = await Promise.all([open(), open()]);
+  await e.click('#quick-btn');
+  await e.waitForFunction(() => document.getElementById('lobby').dataset.state === 'queue');
+  await f.click('#quick-btn');
+  await f.waitForFunction(() => document.getElementById('lobby').dataset.state === 'room');
+  await f.waitForFunction(() => /^\d+초 안에 준비를 눌러주세요$/.test(document.getElementById('lobby-status').textContent));
+  await e.click('#lobby-ready');
+  await e.waitForFunction(() => /^상대가 \d+초 안에 준비하지 않으면/.test(document.getElementById('lobby-status').textContent));
+  const roomCode = await e.evaluate(() => window.__mundoOnline.room);
+  await f.waitForFunction(() => document.getElementById('lobby').dataset.state === 'error', { timeout: NET.READY_MS + 3000 });
+  assert.equal(await text(f, '#lobby-error-title'), '준비 시간이 지나 대기실에서 나왔어요');
+  await e.waitForFunction(() => document.getElementById('lobby').dataset.state === 'queue');
+  assert.equal((await health()).quickWaiting, 1, 'ready player waits for a new opponent');
+  await sleep(NET.GRACE_MS / 10);
+  assert.equal(await lobbyState(f), 'error', 'kicked player does not reconnect');
+  await f.click('#lobby-leave');
+  await f.waitForFunction(() => !document.getElementById('menu').classList.contains('hidden'));
+  // 새로 온 사람은 남은 사람의 방으로 들어간다
+  await f.click('#quick-btn');
+  await e.waitForFunction(() => document.getElementById('lobby').dataset.state === 'room');
+  assert.equal(await f.evaluate(() => window.__mundoOnline.room), roomCode);
+  assert.equal(await text(e, '#lobby-ready'), '준비', 'ready resets for the new opponent');
+  step('준비 제한 시간: 둘 다 준비 안 하면 방이 닫힘');
+  for (const page of [e, f]) {
+    await page.waitForFunction(() => document.getElementById('lobby').dataset.state === 'error', { timeout: NET.READY_MS + 3000 });
+  }
+  await sleep(300);
+  assert.equal((await health()).quickWaiting, 0);
+  assert.equal((await health()).rooms, 0, 'room closes when nobody gets ready');
+  for (const p of [e, f]) await p.browser().close();
+
   step('혼자: 계속 기다리다 문도봇과 플레이');
   const solo = await open();
   await solo.click('#quick-btn');
@@ -193,7 +227,7 @@ try {
   assert.equal((await health()).rooms, 0, 'cancelled room is closed');
 
   assert.deepEqual(errors, []);
-  console.log(`Quick match (${map}): human ready room, requeue after a leave, ghost recording, 문도봇 button after waiting with moving/throwing bot, server-side rematch blocked for humans and bot, requeue and cancel passed.`);
+  console.log(`Quick match (${map}): human ready room, requeue after a leave, ready timeout kick/handover, ghost recording, 문도봇 button after waiting with moving/throwing bot, server-side rematch blocked for humans and bot, requeue and cancel passed.`);
 } finally {
   await Promise.all(browsers.map((b) => b.close().catch(() => {})));
   web.close();

@@ -1,5 +1,5 @@
 // 1대1 방: 대기실 → 카운트다운 → 경기 → 결과/재대결. 서버가 src/sim.js 로 최종 판정한다.
-// 빠른 대전 방(quick)도 사람끼리는 둘 다 준비해야 시작한다. 혼자 일정 시간 기다리면 '문도봇과 플레이'로 문도봇(고스트)이 한 자리를 채운다. 재대결은 없다.
+// 빠른 대전 방(quick)도 사람끼리는 둘 다 준비해야 시작한다. 만난 뒤 READY_MS 안에 준비하지 않으면 그 사람은 내보내고 남은 사람이 방을 이어받아 다시 기다린다. 혼자 일정 시간 기다리면 '문도봇과 플레이'로 문도봇(고스트)이 한 자리를 채운다. 재대결은 없다.
 import { randomUUID } from 'node:crypto';
 import { RULES } from '../src/rules.js';
 import { NET, packChamp, packCleaver, cleanLook } from '../src/net-protocol.js';
@@ -34,6 +34,8 @@ export class Room {
     this.bots = [];
     this.observer = null;
     this.timers = new Set();
+    this.readyTimer = null;
+    this.readyDeadline = 0;
     this.lastActive = Date.now();
   }
 
@@ -42,9 +44,14 @@ export class Room {
     const slot = this.slots.findIndex(s => !s);
     if (slot < 0 || this.phase !== 'lobby') return -1;
     this.slots[slot] = { ws, look: cleanLook(look), token: randomUUID(), connected: true, ready: false, rematch: false, ack: 0, grace: null, queuedAt: Date.now() };
+    const matched = this.quick && this.slots.every(Boolean);
+    if (matched) {
+      this.readyDeadline = Date.now() + NET.READY_MS;
+      this.readyTimer = this.after(NET.READY_MS, () => this.readyTimeout());
+    }
     this.welcome(slot);
     this.broadcastLobby();
-    if (this.quick && this.slots.every(Boolean)) this.broadcast({ type: 'matched', bot: false });
+    if (matched) this.broadcast({ type: 'matched', bot: false });
     return slot;
   }
 
@@ -93,11 +100,31 @@ export class Room {
     s.grace = this.after(NET.GRACE_MS, () => this.leave(slot, 'timeout'));
   }
 
+  // 빠른 대전 준비 시간 끝: 준비 안 한 사람은 내보낸다. 둘 다 안 했으면 방을 닫는다
+  readyTimeout() {
+    this.readyTimer = null;
+    if (this.phase !== 'lobby') return;
+    const afk = [0, 1].filter(i => this.slots[i] && !this.slots[i].ready);
+    for (const i of afk) {
+      this.send(i, { type: 'kicked', reason: 'afk' });
+      this.slots[i].ws?.close(4002, 'not ready');
+    }
+    if (afk.length === 2) this.close();
+    else if (afk.length === 1) this.leave(afk[0], 'afk');
+  }
+
+  clearReady() {
+    clearTimeout(this.readyTimer);
+    this.readyTimer = null;
+    this.readyDeadline = 0;
+  }
+
   // 완전히 나감: 상대에게 알리고 경기를 끝낸다
   leave(slot, reason = 'left') {
     const s = this.slots[slot];
     if (!s) return;
     clearTimeout(s.grace);
+    this.clearReady();
     this.slots[slot] = null;
     const other = this.slots[1 - slot];
     if (this.inMatch() || this.phase === 'over') {
@@ -176,6 +203,7 @@ export class Room {
     this.world.champs = [createChamp(0), createChamp(1)];
     this.round = 0;
     this.winner = null;
+    this.clearReady();
     for (const s of this.slots) Object.assign(s, { ready: !!s.bot, rematch: false });
     this.bots = this.slots.flatMap((s, i) => s.bot
       ? [{ c: this.world.champs[i], diff: s.diff, game: botGame(this.world, this.world.champs[i], this.world.champs[1 - i]) }] : []);
@@ -307,7 +335,11 @@ export class Room {
     return this.slots.map(s => s && { connected: s.connected, ready: s.ready, bot: !!s.bot });
   }
 
-  broadcastLobby() { this.broadcast({ type: 'lobby', players: this.lobbyState() }); }
+  // readyMs: 빠른 대전 준비 제한까지 남은 시간 (없으면 null)
+  broadcastLobby() {
+    const readyMs = this.readyDeadline ? Math.max(0, this.readyDeadline - Date.now()) : null;
+    this.broadcast({ type: 'lobby', players: this.lobbyState(), readyMs });
+  }
   broadcastRematch() { this.broadcast({ type: 'rematch', want: this.slots.map(s => !!s?.rematch) }); }
 
   sendSnap() {

@@ -52,6 +52,7 @@ const ERRORS = {
   started: '이미 경기가 진행 중이에요',
   busy: '서버가 혼잡해요',
   offline: '게임 서버에 연결할 수 없어요',
+  afk: '준비 시간이 지나 대기실에서 나왔어요',
 };
 
 export const Online = {
@@ -74,6 +75,8 @@ export const Online = {
   queueStart: 0,
   queueEnd: 0,
   queueTimer: null,
+  readyEnd: 0,         // 빠른 대전 준비 제한 시각 (0 이면 없음)
+  readyTimer: null,
 
   // ---------- 연결 ----------
   connect() {
@@ -167,10 +170,11 @@ export const Online = {
     this.gen++;
     clearTimeout(this.createStatusTimer);
     clearInterval(this.queueTimer);
+    clearInterval(this.readyTimer);
     this.closeSocket();
     Object.assign(this, {
       room: null, slot: -1, token: null, players: [null, null], intent: null, reconnectUntil: 0,
-      isQuick: false, opponentBot: false, queueStart: 0, queueEnd: 0,
+      isQuick: false, opponentBot: false, queueStart: 0, queueEnd: 0, readyEnd: 0,
     });
   },
 
@@ -278,6 +282,7 @@ export const Online = {
       }
       case 'lobby':
         this.players = msg.players;
+        this.setReadyEnd(msg.readyMs);
         if (!this.isQuick) this.renderLobby();
         else if (msg.players.every(Boolean)) this.showQuickRoom();
         else if ($('lobby').dataset.state !== 'queue') this.showQueue();
@@ -310,6 +315,18 @@ export const Online = {
       case 'rematch': return h.onRematch?.(msg.want);
       case 'opponentAway': return h.onAway?.(msg.graceMs);
       case 'opponentBack': return h.onBack?.();
+      // 빠른 대전에서 제한 시간 안에 준비하지 않아 서버가 내보냄: 재접속하지 않고 안내 화면을 띄운다
+      case 'kicked':
+        if (this.room) storage.remove(TOKEN_KEY(this.room));
+        setUrlRoom(null);
+        track('quick_ready_timeout', { room: this.room });
+        this.room = null;
+        this.token = null;
+        this.readyEnd = 0;
+        clearInterval(this.readyTimer);
+        this.closeSocket();
+        this.lobbyError(ERRORS[msg.reason] || ERRORS.offline);
+        return;
       case 'opponentLeft':
         if (this.room) storage.remove(TOKEN_KEY(this.room));
         return h.onOpponentLeft?.(msg.reason);
@@ -332,6 +349,13 @@ export const Online = {
       this.offset = this.offset == null ? sample : this.offset + (sample - this.offset) * 0.25;
     }
     this.rtt = this.rtt * 0.8 + rtt * 0.2;
+  },
+
+  // 남은 준비 시간을 0.25초마다 다시 그린다
+  setReadyEnd(ms) {
+    clearInterval(this.readyTimer);
+    this.readyEnd = ms == null ? 0 : performance.now() + ms;
+    if (this.readyEnd) this.readyTimer = setInterval(() => { if ($('lobby').dataset.state === 'room') this.renderLobby(); }, 250);
   },
 
   // ---------- 대기실 화면 ----------
@@ -417,6 +441,7 @@ export const Online = {
   hideLobby() {
     clearTimeout(this.createStatusTimer);
     clearInterval(this.queueTimer);
+    clearInterval(this.readyTimer);
     clearTimeout(this.snackbarTimer);
     $('copy-snackbar').classList.remove('visible');
     $('copy-snackbar').textContent = '';
@@ -449,9 +474,18 @@ export const Online = {
     });
     $('lobby-ready').textContent = me?.ready ? '준비 취소' : '준비';
     $('lobby-ready').classList.toggle('on', !!me?.ready);
+    const left = this.readyEnd ? Math.max(0, Math.ceil((this.readyEnd - performance.now()) / 1000)) : null;
+    // 남은 초는 대기 화면처럼 초록색으로 강조한다
+    const sec = () => Object.assign(document.createElement('b'), { textContent: `${left}초` });
+    if (other && !(me?.ready && other.ready) && left != null) {
+      $('lobby-status').replaceChildren(...(me?.ready
+        ? ['상대가 ', sec(), ' 안에 준비하지 않으면 다른 상대를 찾아요']
+        : [sec(), ' 안에 준비를 눌러주세요']));
+      return;
+    }
     $('lobby-status').textContent = !other ? ''
-      : !other.connected ? '상대방 연결이 끊겼어요. 다시 들어오길 기다리는 중…'
-        : me?.ready && other.ready ? '곧 시작합니다!'
+      : me?.ready && other.ready ? '곧 시작합니다!'
+        : !other.connected ? '상대방 연결이 끊겼어요. 다시 들어오길 기다리는 중…'
           : me?.ready ? '상대방을 기다리는 중'
             : '준비되면 버튼을 눌러주세요.';
   },
