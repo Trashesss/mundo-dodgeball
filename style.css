@@ -684,8 +684,8 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 .queue-sub b { color: var(--entry-green); font-weight: 400; font-variant-numeric: tabular-nums; }
 #lobby[data-state="queue"] .lobby-actions { flex-direction: column; align-items: center; gap: 10px; }
 #lobby[data-state="queue"] #lobby-leave { width: min(320px, 100%); }
-/* 기다린 시간이 지나야 문도봇과 플레이를 고를 수 있다 */
-#lobby #lobby-bot { display: none; width: min(320px, 100%); min-height: 58px; padding: 12px; border-width: 3px; border-radius: 16px; background: var(--entry-green); color: #26362c; font-size: 20px; }
+/* 기다리는 동안 문도봇과 플레이를 고를 수 있다. 위 안내 문구와는 버튼 사이보다 넓게 띄운다 */
+#lobby #lobby-bot { display: none; width: min(320px, 100%); min-height: 58px; margin-top: 20px; padding: 12px; border-width: 3px; border-radius: 16px; background: var(--entry-green); color: #26362c; font-size: 20px; }
 #lobby[data-state="queue"][data-bot="ready"] #lobby-bot { display: block; }
 /* 빠른 대전 준비 대기실: 초대 코드 없이 준비 패널만 */
 #lobby[data-quick] .lobby-room { grid-template-columns: 1fr; }
@@ -751,6 +751,7 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
   #lobby-ready, #lobby-copy { padding-block: 10px; }
   .lobby-actions { margin-top: 8px; }
   #lobby :is(#lobby-leave, #lobby-bot) { min-height: 50px; padding: 8px; }
+  #lobby #lobby-bot { margin-top: 12px; }
   .lobby-error .net-portrait { width: clamp(80px, 27dvh, 150px); margin-bottom: 12px; }
 }
 
