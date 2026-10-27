@@ -305,6 +305,7 @@
       </div>
     </form>
   </dialog>
+  <!-- 동의 팝업 일시 중단: 피드백 수집을 위해 동의 없이 통계 전송
   <dialog id="analytics-consent" class="analytics-consent" aria-labelledby="analytics-consent-title" aria-describedby="analytics-consent-description">
     <div class="consent-summary">
       <h2 id="analytics-consent-title" tabindex="-1" autofocus>문도 피구 개선을 도와주실래요? <span>(선택)</span></h2>
@@ -321,6 +322,7 @@
       <button id="analytics-accept" type="button">동의하고 계속</button>
     </div>
   </dialog>
+  -->
   <dialog id="settings-dialog" class="analytics-consent settings-dialog" aria-labelledby="settings-title">
     <div class="consent-summary">
       <h2 id="settings-title" tabindex="-1" autofocus>설정</h2>
@@ -339,6 +341,7 @@
         <span class="settings-switch-track" aria-hidden="true"></span>
       </button>
     </div>
+    <!-- 플레이 통계 전송 스위치 일시 중단
     <div class="settings-row">
       <span class="settings-label">
         <span id="analytics-label">플레이 통계 전송</span>
@@ -348,6 +351,7 @@
         <span class="settings-switch-track" aria-hidden="true"></span>
       </button>
     </div>
+    -->
     <a class="game-guide-link" href="game-guide.html">게임 소개 · 조작법</a>
   </dialog>
   <dialog id="profile-dialog" aria-labelledby="profile-title">
@@ -418,7 +422,7 @@
     <footer class="shop-footer"><p><span class="coin-icon" aria-hidden="true">C</span> 승리 <b id="shop-reward-win">+100</b> · 패배 <b id="shop-reward-loss">+30</b></p><p id="shop-storage-note">코인과 구매 내역은 이 브라우저에 저장돼요.</p></footer>
     <div id="shop-status" role="status" aria-live="polite" aria-atomic="true"></div>
   </dialog>
-  <script type="module" src="src/consent.js"></script>
+  <!-- <script type="module" src="src/consent.js"></script> -->
   <script type="module" src="src/settings.js"></script>
   <script type="module" src="src/main.js"></script>
   <footer class="music-credit hidden" aria-label="배경음악 출처">

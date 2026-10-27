@@ -32,7 +32,9 @@ export function createTrackingId() {
 }
 
 function startAnalytics() {
-  if (!enabled || consent !== 'accepted' || initialized) return;
+  // 동의 확인 일시 중단: 피드백 수집을 위해 동의 없이 전송
+  // if (!enabled || consent !== 'accepted' || initialized) return;
+  if (!enabled || initialized) return;
   try {
     // Queue initialization and captures while the async SDK loads.
     if (!window.posthog) {
@@ -70,7 +72,8 @@ function startAnalytics() {
 }
 
 export function track(event, properties = {}) {
-  if (!enabled || consent !== 'accepted') return;
+  // if (!enabled || consent !== 'accepted') return;
+  if (!enabled) return;
   try {
     window.posthog?.capture(event, properties);
   } catch {
@@ -96,7 +99,8 @@ export function setAnalyticsConsent(value) {
   applyConsent(value);
 }
 
-window.addEventListener('storage', event => {
-  if (event.key === CONSENT_KEY || event.key === null) applyConsent(readConsent());
-});
+// 동의 확인 일시 중단
+// window.addEventListener('storage', event => {
+//   if (event.key === CONSENT_KEY || event.key === null) applyConsent(readConsent());
+// });
 startAnalytics();
