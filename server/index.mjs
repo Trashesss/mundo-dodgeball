@@ -27,6 +27,18 @@ const rooms = new Map();
 const connsByIp = new Map();
 const ghosts = new GhostStore();
 const quickWaiting = []; // 한 사람이 상대를 기다리는 빠른 대전 방 (먼저 온 순)
+const presence = new Set(); // 사이트를 열어 둔 탭마다 하나씩 있는 동접자 연결 (게임용 연결은 세지 않는다)
+let presenceTimer = null;
+
+// 들어오고 나갈 때마다 바로 보내면 사람이 몰릴 때 메시지가 폭증하므로 1초에 한 번만 알린다
+function announcePresence() {
+  if (presenceTimer) return;
+  presenceTimer = setTimeout(() => {
+    presenceTimer = null;
+    const text = JSON.stringify({ type: 'online', count: presence.size });
+    for (const ws of presence) if (ws.readyState === 1) ws.send(text);
+  }, 1000);
+}
 
 function unqueue(room) {
   const i = quickWaiting.indexOf(room);
@@ -52,7 +64,7 @@ const server = http.createServer((req, res) => {
   // 서버 안에서만 확인용 (nginx 는 /ws 만 넘기므로 외부에 노출되지 않음)
   if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ ok: true, rooms: rooms.size, quickWaiting: quickWaiting.length, ghosts: ghosts.size }));
+    res.end(JSON.stringify({ ok: true, rooms: rooms.size, online: presence.size, quickWaiting: quickWaiting.length, ghosts: ghosts.size }));
     return;
   }
   res.writeHead(404).end();
@@ -144,6 +156,10 @@ wss.on('connection', (ws, req) => {
       if (target.phase !== 'lobby' || target.slots.every(Boolean)) unqueue(target);
       return;
     }
+    if (msg.type === 'presence') {
+      if (!presence.has(ws)) { presence.add(ws); send({ type: 'online', count: presence.size }); announcePresence(); }
+      return;
+    }
     if (msg.type === 'ping' && !conn.room) {
       if (Number.isFinite(msg.c)) send({ type: 'pong', c: msg.c, t: Math.round(performance.now()) });
       return;
@@ -157,6 +173,7 @@ wss.on('connection', (ws, req) => {
   ws.on('close', () => {
     const left = (connsByIp.get(ip) || 1) - 1;
     if (left > 0) connsByIp.set(ip, left); else connsByIp.delete(ip);
+    if (presence.delete(ws)) announcePresence();
     if (conn.room && conn.slot >= 0) conn.room.disconnect(conn.slot, ws);
   });
 });

@@ -1089,3 +1089,6 @@ body.touch .skill.aiming { border-color: #fff; box-shadow: 0 0 14px #5ff4ff; }
   #menu:not(.practice-view) .mode-name { font-size: 22px; }
   #menu:not(.practice-view) .mode-description { font-size: 13px; }
 }
+
+/* 빠른 대전 카드: 나 말고도 접속자가 있으면 설명 대신 접속자 수 */
+.online-count-num { color: var(--entry-green); }

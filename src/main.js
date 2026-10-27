@@ -12,6 +12,7 @@ import { track, createTrackingId, referralContext } from './analytics.js';
 import * as Sim from './sim.js';
 import { NET, unpackChamp, unpackCleaver, cleanLook } from './net-protocol.js';
 import { Online, roomFromUrl } from './online.js';
+import { initPresence } from './presence.js';
 import { isTouchDevice, setupTouchControls } from './touch-controls.js';
 import { initShop } from './shop.js';
 import { getShopState, awardMatch } from './shop-state.js';
@@ -1561,6 +1562,8 @@ Online.hooks = {
   },
 };
 let awayTimer = null;
+
+initPresence();
 
 // 초대 링크(?room=CODE)로 들어오면 메뉴 대신 바로 대기실로
 game.events.once('mundo-ready', () => {
