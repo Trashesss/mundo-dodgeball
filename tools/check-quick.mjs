@@ -1,6 +1,6 @@
 // 빠른 대전 확인: 로컬 서버 + 브라우저 창
 // 두 사람 → 준비 대기실 → 둘 다 준비해야 시작 → KO → 고스트 기록 / 준비 대기실에서 나가면 남은 사람은 다시 큐
-// 혼자 → 시간이 지나도 계속 대기 → 문도봇과 플레이 버튼 → 봇이 움직이고 던짐 → 결과(재대결 없음)·새 상대 찾기
+// 혼자 → 시간이 지나도 계속 대기 → 문도봇과 플레이 버튼 → 봇이 움직이고 던짐 → 결과(재대결 없음)·다시 플레이
 // 대기 취소 → 큐에서 빠짐 / 문도봇 경기는 고스트로 남지 않음
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -179,7 +179,7 @@ try {
   await sleep(2600);
   assert.equal(ghosts().length, 2, 'bot matches are not recorded');
 
-  step('새 상대 찾기 → 대기 → 취소');
+  step('다시 플레이 → 대기 → 취소');
   await solo.click('#requeue-btn');
   await solo.waitForFunction(() => !document.getElementById('lobby').classList.contains('hidden') && document.getElementById('lobby').dataset.state === 'queue');
   await solo.waitForFunction(() => /\d초/.test(document.getElementById('lobby-status').textContent));
