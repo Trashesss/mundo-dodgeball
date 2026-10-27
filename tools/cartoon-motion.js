@@ -2,7 +2,7 @@
 // body parts per frame: every displayed part comes from the painted atlas.
 import { THROW, throwPose } from '../src/throw-motion.js';
 
-export async function loadCartoonMotion({ gripImage = null, bodyImage = null } = {}) {
+export async function loadCartoonMotion({ gripImage = null, bodyImage = null, bodyPadding = null } = {}) {
   const image = new Image();
   image.src = '/assets/cartoon/parts-source.png';
   await image.decode();
@@ -57,12 +57,19 @@ export async function loadCartoonMotion({ gripImage = null, bodyImage = null } =
     // mask extends into the right gutter without shifting or scaling the body.
     const numbers = [[158, 176, 27, 36], [146, 487, 28, 39], [117, 760, 39, 51], [153, 1052, 42, 54]];
     for (const [row, v] of views.entries()) {
-      const p = columns[0][row], rightPadding = row < 2 ? 48 : 0;
-      v.core.width = p.w + rightPadding;
-      v.corePivotX = (p.w / 2) / v.core.width;
+      const p = columns[0][row];
+      const padding = bodyPadding ?? { top: 0, bottom: 0, left: 0, right: row < 2 ? 48 : 0 };
+      v.core.width = p.w + padding.left + padding.right;
+      v.core.height = p.h + padding.top + padding.bottom;
+      v.corePivotX = (p.w / 2 + padding.left) / v.core.width;
+      v.corePivotY = (p.h + padding.top) / v.core.height;
+      v.coreHeight = 104 * v.core.height / p.h;
       const g = v.core.getContext('2d');
       g.clearRect(0, 0, v.core.width, v.core.height);
-      g.drawImage(bodyImage, p.x, p.y, v.core.width, p.h, 0, 0, v.core.width, p.h);
+      g.drawImage(bodyImage, p.x - padding.left, p.y - padding.top, v.core.width, v.core.height, 0, 0, v.core.width, v.core.height);
+      // Costume headroom keeps the original torso scale and shoulder/foot
+      // registration. Only the Ronaldo source needs readable mirrored 7s.
+      if (bodyPadding) continue;
       v.mirroredCore = document.createElement('canvas');
       v.mirroredCore.width = v.core.width; v.mirroredCore.height = v.core.height;
       const ctx = v.mirroredCore.getContext('2d'); ctx.drawImage(v.core, 0, 0);
@@ -175,7 +182,7 @@ export async function loadCartoonMotion({ gripImage = null, bodyImage = null } =
       g.rotate((cast?.lean || 0) * (view === 3 ? -.35 : 1));
       g.translate(0, 22);
       part(g, v.empty, shoulder.far[0], shoulder.far[1] + bob, 71, shoulder.emptyPivot, .12, farAngle);
-      part(g, v.mirroredCore && g.getTransform().a < 0 ? v.mirroredCore : v.core, 0, -13 + bob, 104, v.corePivotX ?? .5, 1);
+      part(g, v.mirroredCore && g.getTransform().a < 0 ? v.mirroredCore : v.core, 0, -13 + bob, v.coreHeight ?? 104, v.corePivotX ?? .5, v.corePivotY ?? 1);
       const weaponAlpha = cast?.released ? ease((f / THROW.fps - .40) / .08) : 1;
       if (weaponAlpha < 1) {
         g.globalAlpha = 1 - weaponAlpha;

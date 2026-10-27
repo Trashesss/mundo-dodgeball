@@ -11,6 +11,7 @@ import { RULES } from '../src/rules.js';
 
 // ONLINE_MAPS=classic,colosseum npm run check:online 로 진영을 바꿔 검사할 수 있다.
 const maps = (process.env.ONLINE_MAPS || 'colosseum,classic').split(',');
+const guestSkin = process.argv.includes('--teemo') ? 'teemo' : 'ronaldo';
 assert.ok(maps.length === 2 && maps.every(id => ['classic', 'colosseum'].includes(id)), 'ONLINE_MAPS must contain two valid map IDs');
 
 const WS_PORT = 3100 + Math.floor(Math.random() * 500);
@@ -46,7 +47,7 @@ const open = async (url, map = 'classic', skin = 'classic', weapon = 'soccer', r
       localStorage.setItem('mundo-shop-v1', JSON.stringify({
         coins: 200, owned: ['classic', 'colosseum'], equipped: id, rewarded: [],
         ownedWeapons: ['cleaver', 'soccer'], equippedWeapon: weapon,
-        ownedSkins: ['classic', 'ronaldo'], equippedSkin: skin,
+        ownedSkins: ['classic', skin], equippedSkin: skin,
       }));
     }
     if (runes && localStorage.getItem('mundo-profile-v1') === null) {
@@ -92,7 +93,7 @@ try {
 
   // 초대 링크로 친구 입장 → 메뉴 없이 바로 대기실
   step('초대 링크로 친구 입장 → 메뉴 없이 바로 대기실');
-  const guest = await open(link, maps[1], 'ronaldo', 'cleaver', { throw: 'base', move: 'iron', util: 'rapid' });
+  const guest = await open(link, maps[1], guestSkin, 'cleaver', { throw: 'base', move: 'iron', util: 'rapid' });
   await guest.waitForFunction(() => document.getElementById('lobby-p1').dataset.state === 'joined');
   await host.waitForFunction(() => document.getElementById('lobby-p1').dataset.state === 'joined');
   assert.ok(await guest.$eval('#menu', (el) => el.classList.contains('hidden')));
@@ -112,7 +113,7 @@ try {
   assert.deepEqual(roles[1].slice(0, 4), [1, 1, true, false]);
   assert.ok(roles.every((r) => r[4] === 14 && r[5] && r[6]), 'no shrink, both champs have thumbs-up emote');
   const looks = 'return s.champs.map(c => [c.skinId, c.weaponId, c.sprite.texture.key]);';
-  const expectedLooks = [['classic', 'soccer', 'mundo-soccer'], ['ronaldo', 'cleaver', 'mundo-ronaldo']];
+  const expectedLooks = [['classic', 'soccer', 'mundo-soccer'], [guestSkin, 'cleaver', `mundo-${guestSkin}`]];
   for (const page of [host, guest]) assert.deepEqual(await evalScene(page, looks), expectedLooks);
   const expectedRunes = [{ throw: 'heavy', move: 'base', util: 'base' }, { throw: 'base', move: 'iron', util: 'rapid' }];
   for (const page of [host, guest]) assert.deepEqual(await evalScene(page, 'return s.champs.map(c => c.runes);'), expectedRunes);

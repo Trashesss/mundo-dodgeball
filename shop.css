@@ -125,7 +125,7 @@
   .shop-wallet strong { min-width: 23px; font-size: 18px; }
   .shop-wallet > span:last-child { display: none; }
   .shop-icon-button { width: 26px; }
-  .shop-body { grid-template-columns: 1fr; grid-template-rows: auto auto auto; }
+  .shop-body { grid-template-columns: 1fr; grid-template-rows: repeat(3, max-content); align-content: start; }
   .shop-catalog { overflow: visible; }
   .shop-category { flex-direction: row; flex-wrap: wrap; gap: 6px; padding: 10px 14px; border-right: 0; border-bottom: 1px solid var(--shop-line); }
   .shop-category-button { flex-direction: row; width: auto; min-height: 38px; padding: 7px 10px; gap: 6px; }

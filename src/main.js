@@ -26,12 +26,14 @@ const BAR_OFF = 154;
 const EMOTE_DELAY = 0.25;
 const EMOTE_DURATION = 1;
 const EMOTE_SIZE = 104;
-const animationPrefix = (skin, weapon) => `${skin === 'ronaldo' ? 'ronaldo-' : ''}${weapon === 'soccer' ? 'soccer-' : ''}`;
+const animationPrefix = (skin, weapon) => `${skin === 'ronaldo' || skin === 'teemo' ? `${skin}-` : ''}${weapon === 'soccer' ? 'soccer-' : ''}`;
 const CHARACTER_ATLASES = [
   { prefix: '', texture: 'mundo', path: '' },
   { prefix: 'soccer-', texture: 'mundo-soccer', path: 'soccer/' },
   { prefix: 'ronaldo-', texture: 'mundo-ronaldo', path: 'ronaldo/' },
   { prefix: 'ronaldo-soccer-', texture: 'mundo-ronaldo-soccer', path: 'ronaldo/soccer/' },
+  { prefix: 'teemo-', texture: 'mundo-teemo', path: 'teemo/' },
+  { prefix: 'teemo-soccer-', texture: 'mundo-teemo-soccer', path: 'teemo/soccer/' },
 ];
 const INTERP_MS = 100; // 대인전 상대 표시 지연: 스냅샷 3개 간격 + 도착 흔들림 여유
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -472,7 +474,7 @@ class GameScene extends Phaser.Scene {
   }
 
   applySkin(id) {
-    this.skinId = id === 'ronaldo' ? 'ronaldo' : 'classic';
+    this.skinId = cleanLook({ skin: id }).skin;
     this.updateMenuAppearance();
   }
 

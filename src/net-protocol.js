@@ -38,7 +38,7 @@ export const unpackCleaver = ([id, team, x, z, dx, dz, dist, speed = RULES.q.spe
 
 // 상대 화면에 보일 외형(스킨·투척 무기)과 룬. 모르는 값은 기본 문도·식칼·기본 룬으로 되돌린다.
 export const cleanLook = (look) => ({
-  skin: look?.skin === 'ronaldo' ? 'ronaldo' : 'classic',
+  skin: look?.skin === 'ronaldo' || look?.skin === 'teemo' ? look.skin : 'classic',
   weapon: look?.weapon === 'soccer' ? 'soccer' : 'cleaver',
   runes: cleanRunes(look?.runes),
 });
