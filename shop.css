@@ -45,7 +45,7 @@
 .shop-section-label h2 { margin: 0; font-size: 19px; font-weight: 400; }
 .shop-section-label > span { color: #95aaa4; font-size: 11px; white-space: nowrap; }
 .shop-catalog-intro { margin: 8px 0 22px; color: var(--shop-muted); font-size: 12px; }
-.shop-map-list { display: grid; grid-template-columns: repeat(2, minmax(0, 180px)); gap: 15px; align-items: start; }
+.shop-map-list { --shop-gap: 15px; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(160px, calc((100% - 2 * var(--shop-gap)) / 3)), 1fr)); gap: var(--shop-gap); align-items: start; }
 .shop-map-card { display: flex; flex-direction: column; min-width: 0; padding: 0; border: 0; border-radius: 7px; background: transparent; color: #dddcc5; text-align: left; }
 .shop-card-art { position: relative; display: block; width: 100%; aspect-ratio: 1.16; overflow: hidden; border: 1px solid #5e7a7880; border-radius: 7px; background: radial-gradient(ellipse at 50% 60%, #3f5c60, #213b44 80%); box-shadow: inset 0 0 0 3px #0c242a99; }
 .shop-map-card[data-map="colosseum"] .shop-card-art { background: radial-gradient(ellipse at 50% 60%, #665540, #2d3e3e 80%); }
@@ -106,7 +106,7 @@
   .shop-body { grid-template-columns: 64px minmax(0, 1fr) 300px; }
   .shop-category-button { width: 48px; font-size: 11px; }
   .shop-catalog-content { padding-inline: 16px; }
-  .shop-map-list { gap: 10px; }
+  .shop-map-list { --shop-gap: 10px; }
   .shop-card-info strong { font-size: 13px; }
   .shop-feature { padding-inline: 16px; }
 }
@@ -133,7 +133,7 @@
   .shop-catalog-content { padding: 16px 18px 18px; }
   .shop-section-label h2 { font-size: 17px; }
   .shop-catalog-intro { margin: 6px 0 15px; font-size: 11px; }
-  .shop-map-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .shop-map-list { --shop-gap: 12px; }
   .shop-card-art { aspect-ratio: 1.4; }
   .shop-map-card img { padding: 8px; }
   .shop-card-info { padding-top: 9px; gap: 5px; }
