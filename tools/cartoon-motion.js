@@ -2,7 +2,7 @@
 // body parts per frame: every displayed part comes from the painted atlas.
 import { THROW, throwPose } from '../src/throw-motion.js';
 
-export async function loadCartoonMotion({ gripImage = null, bodyImage = null, bodyPadding = null } = {}) {
+export async function loadCartoonMotion({ gripImage = null, bodyImage = null, bodyPadding = null, shoulderOffsets = null } = {}) {
   const image = new Image();
   image.src = '/assets/cartoon/parts-source.png';
   await image.decode();
@@ -121,6 +121,13 @@ export async function loadCartoonMotion({ gripImage = null, bodyImage = null, bo
     { near: [28, -84], far: [-27, -83], weaponPivot: .36, emptyPivot: .35 },
     { near: [31, -84], far: [-31, -84], weaponPivot: .40, emptyPivot: .65 },
   ];
+  // Costume shoulder openings can sit below the original vest. Move the
+  // entire attached arm, including its grip and released hand, as one joint.
+  if (shoulderOffsets) for (const [view, offset] of shoulderOffsets.entries()) {
+    for (const side of ['near', 'far']) {
+      shoulders[view][side] = shoulders[view][side].map((value, axis) => value + offset[side][axis]);
+    }
+  }
   if (gripImage) {
     // The edited sheet retains the original layout. Register its shoulder in
     // source coordinates so a round weapon never changes the arm's proportions.

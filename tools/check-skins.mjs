@@ -39,9 +39,9 @@ try {
   await page.goto(url); await ready(page);
   const preserved = await page.evaluate(async skinId => {
     const { loadCartoonMotion } = await import('/tools/cartoon-motion.js');
-    const bodyImage = new Image(); bodyImage.src = skinId === 'teemo' ? '/assets/cartoon/teemo/parts-source-v1.png' : '/assets/cartoon/ronaldo/parts-source-mask-v2.png'; await bodyImage.decode();
-    const bodyPadding = skinId === 'teemo' ? { top: 24, bottom: 12, left: 12, right: 12 } : null;
-    const base = await loadCartoonMotion(), skin = await loadCartoonMotion({ bodyImage, bodyPadding });
+    const bodyImage = new Image(); bodyImage.src = skinId === 'teemo' ? '/assets/cartoon/teemo/parts-source-straps-v2.png' : '/assets/cartoon/ronaldo/parts-source-mask-v2.png'; await bodyImage.decode();
+    const rig = skinId === 'teemo' ? await (await fetch('/assets/cartoon/teemo/rig.json')).json() : {};
+    const base = await loadCartoonMotion(), skin = await loadCartoonMotion({ bodyImage, ...rig });
     const equal = (a, b) => {
       if (a.width !== b.width || a.height !== b.height) return false;
       const aa = a.getContext('2d').getImageData(0, 0, a.width, a.height).data;
@@ -51,7 +51,7 @@ try {
     return base.views.every((v, i) => {
       const other = skin.views[i];
       const scale = (other.coreHeight ?? 104) / other.core.height;
-      const padding = bodyPadding ?? { left: 0, top: 0 };
+      const padding = rig.bodyPadding ?? { left: 0, top: 0 };
       return Math.abs((other.core.width * other.corePivotX - padding.left) * scale - v.core.width / 2 * 104 / v.core.height) < 1e-9
         && Math.abs((other.core.height * other.corePivotY - padding.top) * scale - 104) < 1e-9
         && ['weapon', 'empty', 'unarmed'].every(key => equal(v[key], other[key]))

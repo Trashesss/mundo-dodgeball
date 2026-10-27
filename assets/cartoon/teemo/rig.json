@@ -1,0 +1,9 @@
+{
+  "bodyPadding": { "top": 24, "bottom": 12, "left": 12, "right": 12 },
+  "shoulderOffsets": [
+    { "near": [6, 10], "far": [-3, 3] },
+    { "near": [6, 10], "far": [-3, 3] },
+    { "near": [-3, 6], "far": [3, 3] },
+    { "near": [-3, 6], "far": [3, 3] }
+  ]
+}

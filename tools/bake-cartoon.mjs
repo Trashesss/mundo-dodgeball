@@ -46,10 +46,11 @@ try {
     let bodyImage = null;
     if (ronaldo || teemo) {
       bodyImage = new Image();
-      bodyImage.src = teemo ? '/assets/cartoon/teemo/parts-source-v1.png' : '/assets/cartoon/ronaldo/parts-source-mask-v2.png';
+      bodyImage.src = teemo ? '/assets/cartoon/teemo/parts-source-straps-v2.png' : '/assets/cartoon/ronaldo/parts-source-mask-v2.png';
       await bodyImage.decode();
     }
-    const motion = await loadCartoonMotion({ gripImage, bodyImage, bodyPadding: teemo ? { top: 24, bottom: 12, left: 12, right: 12 } : null });
+    const rig = teemo ? await (await fetch('/assets/cartoon/teemo/rig.json')).json() : {};
+    const motion = await loadCartoonMotion({ gripImage, bodyImage, ...rig });
     const webp = soccer || ronaldo || teemo;
     const { THROW } = await import('/src/throw-motion.js');
     const bakeScale = 1.25;
