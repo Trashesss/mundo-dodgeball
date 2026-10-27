@@ -92,6 +92,14 @@ try {
     assert.ok(await hidden(page, '#again-btn'), 'human quick results hide rematch for both winner and loser');
     assert.ok(!(await hidden(page, '#requeue-btn')), 'quick result offers a new opponent');
   }
+  // 버튼을 우회해 보내도 서버가 빠른 대전 재대결을 받지 않는다
+  await a.evaluate(() => window.__mundoOnline.send({ type: 'rematch' }));
+  await b.evaluate(() => window.__mundoOnline.send({ type: 'rematch' }));
+  await sleep(800);
+  for (const page of [a, b]) {
+    assert.ok(!(await hidden(page, '#result')), 'quick room ignores rematch requests');
+    assert.equal(await text(page, '#share-status'), '', 'no rematch status in quick results');
+  }
   await sleep(2600); // 고스트 저장 디바운스
   const saved = ghosts();
   assert.equal(saved.length, 2, 'both humans recorded as ghosts');
@@ -115,6 +123,9 @@ try {
   assert.ok(await hidden(solo, '#humiliate-btn'), 'no humiliation against the bot');
   assert.ok(await hidden(solo, '#again-btn'), 'no rematch against the bot');
   assert.ok(!(await hidden(solo, '#requeue-btn')), 'bot result offers a new opponent');
+  await solo.evaluate(() => window.__mundoOnline.send({ type: 'rematch' }));
+  await sleep(800);
+  assert.ok(!(await hidden(solo, '#result')), 'bot room ignores a rematch request');
   await sleep(2600);
   assert.equal(ghosts().length, 2, 'bot matches are not recorded');
 
@@ -131,7 +142,7 @@ try {
   assert.equal((await health()).rooms, 0, 'cancelled room never gets a bot');
 
   assert.deepEqual(errors, []);
-  console.log(`Quick match (${map}): human pairing without ready, ghost recording, 문도봇 fallback with moving/throwing bot, bot result without rematch, requeue and cancel passed.`);
+  console.log(`Quick match (${map}): human pairing without ready, ghost recording, 문도봇 fallback with moving/throwing bot, server-side rematch blocked for humans and bot, requeue and cancel passed.`);
 } finally {
   await Promise.all(browsers.map((b) => b.close().catch(() => {})));
   web.close();

@@ -1,5 +1,5 @@
 // 1대1 방: 대기실 → 카운트다운 → 경기 → 결과/재대결. 서버가 src/sim.js 로 최종 판정한다.
-// 빠른 대전 방(quick)은 준비 없이 바로 시작하고, 사람이 안 오면 문도봇(고스트)이 한 자리를 채운다.
+// 빠른 대전 방(quick)은 준비 없이 바로 시작하고, 사람이 안 오면 문도봇(고스트)이 한 자리를 채운다. 재대결은 없다.
 import { randomUUID } from 'node:crypto';
 import { RULES } from '../src/rules.js';
 import { NET, packChamp, packCleaver, cleanLook } from '../src/net-protocol.js';
@@ -51,7 +51,7 @@ export class Room {
   addBot(diff, runes) {
     const slot = this.slots.findIndex(s => !s);
     if (slot < 0 || this.phase !== 'lobby') return false;
-    this.slots[slot] = { bot: true, diff, look: cleanLook({ runes }), token: null, connected: true, ready: true, rematch: true, ack: 0, grace: null };
+    this.slots[slot] = { bot: true, diff, look: cleanLook({ runes }), token: null, connected: true, ready: true, rematch: false, ack: 0, grace: null };
     this.broadcast({ type: 'matched', bot: true });
     this.startMatch();
     return true;
@@ -75,7 +75,7 @@ export class Room {
       this.sendSnap();
     } else if (this.phase === 'over') {
       this.send(slot, { type: 'over', winner: this.winner, reason: 'ko' });
-      this.broadcastRematch();
+      if (!this.quick) this.broadcastRematch();
     } else this.broadcastLobby();
     return slot;
   }
@@ -129,7 +129,7 @@ export class Room {
         return;
       case 'input': return this.input(slot, msg);
       case 'rematch':
-        if (this.phase !== 'over' || !this.slots.every(Boolean)) return;
+        if (this.quick || this.phase !== 'over' || !this.slots.every(Boolean)) return;
         s.rematch = true;
         this.broadcastRematch();
         if (this.slots.every(x => x.rematch)) this.startMatch();
@@ -168,7 +168,7 @@ export class Room {
     this.world.champs = this.slots.map((s, i) => createChamp(i, s.look.runes));
     this.round = 0;
     this.winner = null;
-    for (const s of this.slots) Object.assign(s, { ready: !!s.bot, rematch: !!s.bot });
+    for (const s of this.slots) Object.assign(s, { ready: !!s.bot, rematch: false });
     this.bots = this.slots.flatMap((s, i) => s.bot
       ? [{ c: this.world.champs[i], diff: s.diff, game: botGame(this.world, this.world.champs[i], this.world.champs[1 - i]) }] : []);
     this.observer = this.ghosts && !this.bots.length ? new GhostObserver(this.world) : null;

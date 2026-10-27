@@ -1430,6 +1430,7 @@ const rematchStatus = (kind) => {
 };
 $('again-btn').addEventListener('click', () => {
   if (scene().mode === 'online') {
+    if (Online.isQuick) return;
     track('online_rematch_clicked', scene().analyticsMatch);
     $('again-btn').disabled = true;
     HUD.resultStatus(rematchStatus('waiting'));
@@ -1512,7 +1513,7 @@ Online.hooks = {
   onRoundEnd: (winner) => scene().onlineRoundEnd(winner),
   onOver: (winner) => scene().onlineOver(winner),
   onRematch: (want) => {
-    if (scene().mode !== 'online' || $('result').classList.contains('hidden')) return;
+    if (scene().mode !== 'online' || Online.isQuick || $('result').classList.contains('hidden')) return;
     const mine = want[Online.slot], theirs = want[1 - Online.slot];
     if (theirs && !mine) HUD.resultStatus(rematchStatus('wanted'));
     else if (mine && !theirs) HUD.resultStatus(rematchStatus('waiting'));
