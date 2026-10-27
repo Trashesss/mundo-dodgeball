@@ -100,6 +100,11 @@ try {
     assert.ok(!(await hidden(page, '#result')), 'quick room ignores rematch requests');
     assert.equal(await text(page, '#share-status'), '', 'no rematch status in quick results');
   }
+  // 결과가 나온 뒤 상대가 나가도 승패 화면이 '상대가 나갔어요'로 바뀌지 않는다
+  await b.click('#menu-btn');
+  await sleep(800);
+  assert.ok(!(await hidden(a, '#result')));
+  assert.equal(await text(a, '#result-title'), '승리!', 'quick result stays after the opponent leaves');
   await sleep(2600); // 고스트 저장 디바운스
   const saved = ghosts();
   assert.equal(saved.length, 2, 'both humans recorded as ghosts');

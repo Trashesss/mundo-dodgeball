@@ -1065,6 +1065,8 @@ class GameScene extends Phaser.Scene {
   onlineOpponentLeft() {
     if (this.mode !== 'online') return;
     const wasOver = this.state === 'over';
+    // 빠른 대전은 재대결이 없으니 결과가 나온 뒤 상대가 나가도 결과 화면을 그대로 둔다
+    if (wasOver && Online.isQuick) return;
     this.state = 'over';
     this.netPaused = false;
     HUD.banner(null);
