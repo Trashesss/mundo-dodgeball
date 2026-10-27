@@ -120,7 +120,7 @@ wss.on('connection', (ws, req) => {
       room.quickTimer = setTimeout(() => {
         unqueue(room);
         // 기다리던 사람이 끊긴 채면 봇을 붙이지 않고 방을 닫는다
-        if (room.slots.some(x => x?.connected)) { const { diff, runes } = ghosts.pick(); room.addBot(diff, runes); }
+        if (room.slots.some(x => x?.connected)) room.addBot(ghosts.pick());
         else room.close();
       }, QUICK_WAIT_MS);
       send({ type: 'queue', waitMs: QUICK_WAIT_MS });

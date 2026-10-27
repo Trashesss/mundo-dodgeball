@@ -4,7 +4,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SEEDS, profileToDiff } from '../src/ghost.js';
-import { cleanRunes } from '../src/rules.js';
 
 const MAX = 300;
 const REAL_SHARE = 0.7; // 실제 고스트가 있을 때 기본 성향 대신 고를 비율
@@ -45,11 +44,10 @@ export class GhostStore {
     }
   }
 
-  // 봇 하나: diff 는 src/bot.js initBot 에 그대로 넘기고, runes 는 기록한 사람의 룬 (기본 성향·예전 기록은 기본 룬)
+  // 봇 수치 하나 (src/bot.js initBot 에 그대로 넘긴다)
   pick() {
     const real = this.list.length && Math.random() < REAL_SHARE;
     const pool = real ? this.list : SEEDS;
-    const profile = pool[Math.floor(Math.random() * pool.length)];
-    return { diff: profileToDiff(profile), runes: cleanRunes(profile.runes) };
+    return profileToDiff(pool[Math.floor(Math.random() * pool.length)]);
   }
 }

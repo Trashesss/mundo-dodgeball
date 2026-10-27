@@ -1,7 +1,6 @@
 // 브라우저 없이 src/sim.js 판정 확인 (서버와 봇전이 같은 계산을 쓰는지)
 import assert from 'node:assert/strict';
-import { RULES, RUNES, RUNE_SLOTS, DEFAULT_RUNES, cleanRunes, runeMods } from '../src/rules.js';
-import { packCleaver, unpackCleaver, cleanLook } from '../src/net-protocol.js';
+import { RULES } from '../src/rules.js';
 import * as Sim from '../src/sim.js';
 
 const world = (opts) => {
@@ -127,83 +126,4 @@ const run = (w, seconds) => { for (let t = 0; t < seconds; t += 1 / 60) Sim.step
   assert.equal(a.pending, null);
 }
 
-// 룬: 기본은 기존 수치 그대로, 칸별 장단점이 판정에 반영된다
-{
-  assert.deepEqual(runeMods(DEFAULT_RUNES), {
-    qSpeed: 1, dmg: 1, move: 1, taken: 1, qCd: RULES.q.cd, qCost: RULES.q.cost, slowDur: RULES.q.slowDur,
-    regen: RULES.regen, lifesteal: 0, flashCd: RULES.flash.cd, ghostDur: RULES.ghost.dur, ghostCd: RULES.ghost.cd,
-  });
-  assert.deepEqual(cleanRunes({ throw: 'nope', move: 'swift', util: 42 }), { throw: 'base', move: 'swift', util: 'base' });
-  assert.deepEqual(cleanLook({ runes: { throw: 'heavy', util: '__proto__' } }).runes, { throw: 'heavy', move: 'base', util: 'base' });
-  for (const slot of RUNE_SLOTS) assert.equal(RUNES[slot][0].id, 'base');
-  const withRunes = (r0, r1) => {
-    const w = Sim.createWorld();
-    w.champs = [Sim.createChamp(0, r0), Sim.createChamp(1, r1)];
-    Sim.resetChamp(w.champs[0], -6.5, 0);
-    Sim.resetChamp(w.champs[1], 6.5, 0);
-    return w;
-  };
-  const hitTime = (runes) => {
-    const w = withRunes(runes, null);
-    const [a, b] = w.champs;
-    a.qCd = 0; b.qCd = 99;
-    Sim.castQ(w, a, b.x, b.z);
-    for (let t = 0; t < 2; t += 1 / 60) {
-      Sim.stepWorld(w, 1 / 60);
-      if (w.feed.some(e => e.type === 'hit')) return t;
-    }
-    return Infinity;
-  };
-  const base = hitTime(null), fast = hitTime({ throw: 'fastball' }), slow = hitTime({ throw: 'heavy' });
-  assert.ok(fast < base && base < slow, `ball speed ${fast} < ${base} < ${slow}`);
-
-  const damage = (r0, r1) => {
-    const w = withRunes(r0, r1);
-    const [a, b] = w.champs;
-    Sim.hit(w, b, { owner: a, paid: 0, dx: 1, dz: 0, id: 1 });
-    return w.feed.find(e => e.type === 'hit').dmg;
-  };
-  const d = Math.round(RULES.maxHp * RULES.q.dmgPct);
-  assert.equal(damage(null, null), d);
-  assert.equal(damage({ throw: 'fastball' }, null), Math.round(d * 0.8));
-  assert.equal(damage({ throw: 'heavy' }, { move: 'iron' }), Math.round(d * 1.25 * 0.85));
-  assert.equal(damage(null, { move: 'swift' }), Math.round(d * 1.15));
-
-  const w = withRunes({ move: 'swift', util: 'rapid' }, { move: 'iron', util: 'regen' });
-  const [a, b] = w.champs;
-  assert.ok(Math.abs(Sim.champSpeed(a) - RULES.moveSpeed * 1.12) < 1e-9);
-  assert.ok(Math.abs(Sim.champSpeed(b) - RULES.moveSpeed * 0.9) < 1e-9);
-  a.qCd = 0;
-  Sim.castQ(w, a, 6, 0);
-  assert.equal(a.qCd, 3);
-  assert.equal(a.hp, RULES.maxHp - 80);
-  Sim.castFlash(w, b, 4, 0);
-  assert.equal(b.flashCd, 20);
-  b.hp = 300; a.hp = 300;
-  Sim.updateChamp(w, b, 1); Sim.updateChamp(w, a, 1);
-  assert.equal(b.hp, 312);
-  assert.equal(a.hp, 300 + RULES.regen);
-
-  // 서리 칼날 둔화·흡혈 회복·유령 걸음 유체화
-  {
-    const w2 = withRunes({ throw: 'frost', util: 'vamp' }, { move: 'phantom' });
-    const [k, v] = w2.champs;
-    k.hp = 300;
-    Sim.hit(w2, v, { owner: k, paid: 50, dx: 1, dz: 0, id: 1 });
-    assert.equal(v.slowT, 3);
-    assert.equal(k.hp, 300 + 50 + 30);
-    assert.equal(w2.feed.at(-1).dmg, Math.round(d * 0.85));
-    Sim.castGhost(w2, v);
-    assert.deepEqual([v.ghostT, v.ghostCd], [7, 32]);
-    k.hp = 300;
-    Sim.updateChamp(w2, k, 1);
-    assert.equal(k.hp, 304);
-  }
-
-  // 식칼 속도는 스냅샷에 실리고, 예전 형식은 기본 속도로 읽는다
-  const cl = { id: 1, team: 0, x: 0, z: 0, dx: 1, dz: 0, dist: 0, speed: RULES.q.speed * 1.25 };
-  assert.equal(unpackCleaver(packCleaver(cl)).speed, cl.speed);
-  assert.equal(unpackCleaver([1, 0, 0, 0, 1, 0, 0]).speed, RULES.q.speed);
-}
-
-console.log('Sim: movement limits, Q damage/refund/slow, cooldowns, countdown lock, flash, knockouts, draw, no-shrink PvP, prediction mode and runes passed.');
+console.log('Sim: movement limits, Q damage/refund/slow, cooldowns, countdown lock, flash, knockouts, draw, no-shrink PvP and prediction mode passed.');

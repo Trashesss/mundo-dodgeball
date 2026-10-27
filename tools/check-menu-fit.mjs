@@ -26,7 +26,7 @@ try {
     await page.waitForSelector('#menu:not(.hidden)');
     await new Promise((r) => setTimeout(r, 600)); // 등장 애니메이션
     const { scroll, client } = await page.$eval('#menu', (el) => ({ scroll: el.scrollHeight, client: el.clientHeight }));
-    // 모드 카드 바로 위 버튼 줄(숙련도/룬 설정·상점·설정)이 화면 안에 한 줄로, 서로·모드 카드와 겹치지 않는지
+    // 모드 카드 바로 위 버튼 줄(숙련도·상점·설정)이 화면 안에 한 줄로, 서로·모드 카드와 겹치지 않는지
     const clear = await page.evaluate(() => {
       const nav = [...document.querySelectorAll('.menu-nav > :is(#profile-open, #shop-open)')].map(el => el.getBoundingClientRect());
       const modes = document.getElementById('mode-select').getBoundingClientRect();

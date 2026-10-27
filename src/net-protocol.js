@@ -1,5 +1,4 @@
 // 온라인 1대1 서버와 브라우저가 공유하는 상수와 상태 압축 형식.
-import { RULES, cleanRunes } from './rules.js';
 export const NET = {
   TICK_HZ: 60,          // 서버 계산 주기
   SNAP_HZ: 30,          // 스냅샷 전송 주기
@@ -33,12 +32,11 @@ export function unpackChamp(a) {
   };
 }
 
-export const packCleaver = (p) => [p.id, p.team, r2(p.x), r2(p.z), r2(p.dx), r2(p.dz), r2(p.dist), r2(p.speed)];
-export const unpackCleaver = ([id, team, x, z, dx, dz, dist, speed = RULES.q.speed]) => ({ id, team, x, z, dx, dz, dist, speed });
+export const packCleaver = (p) => [p.id, p.team, r2(p.x), r2(p.z), r2(p.dx), r2(p.dz), r2(p.dist)];
+export const unpackCleaver = ([id, team, x, z, dx, dz, dist]) => ({ id, team, x, z, dx, dz, dist });
 
-// 상대 화면에 보일 외형(스킨·투척 무기)과 룬. 모르는 값은 기본 문도·식칼·기본 룬으로 되돌린다.
+// 상대 화면에 보일 외형(스킨·투척 무기). 모르는 값은 기본 문도·식칼로 되돌린다.
 export const cleanLook = (look) => ({
   skin: look?.skin === 'ronaldo' || look?.skin === 'teemo' ? look.skin : 'classic',
   weapon: look?.weapon === 'soccer' ? 'soccer' : 'cleaver',
-  runes: cleanRunes(look?.runes),
 });

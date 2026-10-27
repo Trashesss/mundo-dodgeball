@@ -191,9 +191,9 @@ export const HUD = {
 
   _prev: {},
   update(p) {
-    this._prev.q = this._skill('sk-q', p.qCd, p.mods?.qCd ?? RULES.q.cd, this._prev.q);
-    this._prev.d = this._skill('sk-d', p.flashCd, p.mods?.flashCd ?? RULES.flash.cd, this._prev.d);
-    this._prev.f = this._skill('sk-f', p.ghostCd, p.mods?.ghostCd ?? RULES.ghost.cd, this._prev.f);
+    this._prev.q = this._skill('sk-q', p.qCd, RULES.q.cd, this._prev.q);
+    this._prev.d = this._skill('sk-d', p.flashCd, RULES.flash.cd, this._prev.d);
+    this._prev.f = this._skill('sk-f', p.ghostCd, RULES.ghost.cd, this._prev.f);
     $('hud').classList.toggle('unavailable', !p.alive);
   },
 

@@ -1,6 +1,6 @@
-/* 프로필 창: 상점과 같은 청록·크림 톤. 룬 카드는 장점 초록, 단점 붉은 글씨. */
+/* 프로필 창: 상점과 같은 청록·크림 톤. */
 
-/* 모드 카드 위 한 줄의 작은 보조 버튼: 왼쪽에 숙련도·룬 설정과 상점(알약), 오른쪽 끝에 점멸 장난 버튼(알약)과 설정(동그라미).
+/* 모드 카드 위 한 줄의 작은 보조 버튼: 왼쪽에 숙련도와 상점(알약), 오른쪽 끝에 점멸 장난 버튼(알약)과 설정(동그라미).
    얇고 흐린 테두리로 모드 카드보다 덜 눈에 띄게. shop.css·style.css 의 고정 위치 버튼 규칙보다 우선하도록 :is(#id) 로 쓴다. */
 .menu-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
 #menu.practice-view .menu-nav { display: none; }
@@ -26,12 +26,11 @@
 .profile-nav-icon { display: block; flex: 0 0 auto; object-fit: cover; background: #152e38; }
 .menu-nav :is(.profile-nav-info, .shop-nav-info) { display: flex; flex-direction: row; align-items: center; gap: 8px; }
 .profile-nav-level { color: #b9e39e; font-variant-numeric: tabular-nums; }
-.profile-nav-sep { color: #6f8a90; }
 .menu-nav .shop-nav-coins { font-size: 14px; line-height: 1; }
 @media (hover: hover) {
   .menu-nav > :is(#profile-open, #shop-open, #analytics-settings):hover, #menu:not(.practice-view) .menu-nav #flash-swap-btn:hover { background: #2f4853; border-color: #88a9a5; color: var(--entry-text); }
 }
-/* 휴대폰: 알약 버튼은 그림을 빼고 "숙련도/룬 설정 · 상점 · 설정"을 한 줄에, 점멸 장난 버튼만 다음 줄 가운데에 작게.
+/* 휴대폰: 알약 버튼은 그림을 빼고 "숙련도 · 상점 · 설정"을 한 줄에, 점멸 장난 버튼만 다음 줄 가운데에 작게.
    shop.css 의 모바일 #shop-open 그림 크기 규칙보다 우선하도록 #id 를 함께 쓴다. */
 @media (max-width: 560px) {
   .menu-nav { flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
@@ -83,34 +82,11 @@
 .profile-xp-note { margin: 0; color: #80999b; font-size: 12px; }
 .profile-xp-note b { color: #cab784; font-weight: 400; }
 
-.profile-runes { margin-top: 18px; }
-.profile-runes-head h2 { margin: 0 0 4px; font-size: 20px; font-weight: 400; }
-.profile-runes-head p { margin: 0 0 12px; color: var(--profile-muted); font-size: 13px; line-height: 1.5; word-break: keep-all; }
-.profile-rune-slots { display: grid; gap: 12px; }
-.profile-rune-slot { margin: 0; padding: 0; border: 0; min-width: 0; }
-.profile-rune-slot legend { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; padding: 0; font-size: 16px; }
-.profile-rune-slot legend small { color: #80999b; font-size: 12px; }
-.profile-rune-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.profile-rune {
-  position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-height: 84px; padding: 10px 30px 10px 12px;
-  border: 2px solid #3e5a62; border-radius: 10px; background: #1b343c; color: var(--entry-text); text-align: left;
-  transition: border-color .15s, background .15s;
-}
-.profile-rune strong { font-size: 16px; font-weight: 400; }
-.profile-rune-effects { display: flex; flex-direction: column; gap: 2px; font-size: 12px; line-height: 1.35; word-break: keep-all; }
-.rune-pro { color: #a8dd8c; }
-.rune-con { color: #f0a597; }
-.rune-neutral { color: #80999b; }
-.profile-rune-check { position: absolute; top: 10px; right: 10px; width: 16px; height: 16px; border: 2px solid #56727a; border-radius: 50%; }
-.profile-rune[aria-pressed="true"] { border-color: #b9e39e; background: #284641; }
-.profile-rune[aria-pressed="true"] .profile-rune-check { border-color: #b9e39e; background: radial-gradient(circle, #b9e39e 45%, transparent 50%); }
-
 .profile-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px 16px; padding: 12px 24px; border-top: 1px solid var(--profile-line); background: #172f37; }
 .profile-footer p { margin: 0; color: #80999b; font-size: 12px; }
 
 @media (hover: hover) {
   .profile-close:hover { background: #2c474d; color: var(--entry-text); }
-  .profile-rune:hover { border-color: #88a9a5; }
 }
 @media (max-width: 650px) {
   #profile-dialog { width: calc(100% - 20px); max-height: calc(100dvh - 20px); border-radius: 10px; }
@@ -118,12 +94,9 @@
   .profile-avatar { width: 38px; height: 38px; }
   #profile-title { font-size: 21px; }
   .profile-body { padding: 14px; }
-  .profile-rune-options { grid-template-columns: 1fr; gap: 6px; }
-  .profile-rune { min-height: 0; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 9px 32px 9px 12px; }
-  .profile-rune-effects { flex-direction: row; flex-wrap: wrap; gap: 2px 8px; }
   .profile-footer { padding: 10px 14px; }
 }
-/* 휴대폰 가로처럼 낮은 화면: 머리말·레벨을 줄여 룬 카드가 첫 화면에 보이게 */
+/* 휴대폰 가로처럼 낮은 화면: 머리말·레벨을 줄인다 */
 @media (max-height: 500px) {
   #profile-dialog { max-height: calc(100dvh - 16px); }
   .profile-header { padding: 8px 16px; }
@@ -134,21 +107,8 @@
   .profile-level { padding: 8px 12px; }
   .profile-level h2 strong { font-size: 20px; }
   .profile-xp-bar { height: 8px; margin: 6px 0 5px; }
-  .profile-runes { margin-top: 10px; }
-  .profile-runes-head p { display: none; }
-  .profile-runes-head h2 { margin-bottom: 6px; font-size: 17px; }
-  .profile-rune-slots { gap: 8px; }
-  .profile-rune-slot legend { margin-bottom: 4px; font-size: 14px; }
-  .profile-rune { min-height: 0; gap: 3px; padding: 7px 26px 7px 10px; }
-  .profile-rune strong { font-size: 14px; }
-  .profile-rune-effects { font-size: 11px; }
-  .profile-rune-check { top: 8px; right: 8px; width: 13px; height: 13px; }
   .profile-footer { padding: 7px 16px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .menu-nav > :is(#profile-open, #shop-open, #analytics-settings), .profile-rune, #profile-xp-fill { transition: none; }
+  .menu-nav > :is(#profile-open, #shop-open, #analytics-settings), #profile-xp-fill { transition: none; }
 }
-
-/* 친구 대기실의 참가자 룬 요약 */
-.lobby-player-build { color: #93acaf; font-size: 11px; line-height: 1.3; word-break: keep-all; }
-.lobby-player-build:empty { display: none; }

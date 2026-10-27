@@ -3,8 +3,6 @@
 import { NET, isRoomCode } from './net-protocol.js';
 import { track } from './analytics.js';
 import { getShopState } from './shop-state.js';
-import { getProfile } from './profile-state.js';
-import { runeSummary } from './rules.js';
 
 const $ = (id) => document.getElementById(id);
 const DEFAULT_SERVER = 'wss://3.37.101.179/ws';
@@ -107,10 +105,10 @@ export const Online = {
     });
   },
 
-  // 상대 화면에 보일 내 외형과 서버가 판정에 쓸 룬
+  // 상대 화면에 보일 내 외형
   look() {
     const shop = getShopState();
-    return { skin: shop.equippedSkin, weapon: shop.equippedWeapon, runes: getProfile().runes };
+    return { skin: shop.equippedSkin, weapon: shop.equippedWeapon };
   },
 
   send(msg) {
@@ -412,7 +410,6 @@ export const Online = {
       el.querySelector('.lobby-player-status').textContent = {
         empty: '기다리는 중', away: '연결 끊김', ready: '준비 완료', joined: '준비 중',
       }[state];
-      el.querySelector('.lobby-player-build').textContent = p?.runes ? `룬: ${runeSummary(p.runes)}` : '';
     });
     $('lobby-ready').textContent = me?.ready ? '준비 취소' : '준비';
     $('lobby-ready').classList.toggle('on', !!me?.ready);

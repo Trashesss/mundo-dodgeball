@@ -76,7 +76,6 @@ export class GhostObserver {
         flashPerMin: r3(s.flash / min),
         ghostPerMin: r3(s.ghost / min),
         depth: r3(s.depthSum / Math.max(1, s.depthN)),
-        runes: c.runes, // 성향은 이 룬으로 잰 값이라 고스트도 같은 룬을 쓴다
         seconds: Math.round(this.time),
         at: Date.now(),
       }];

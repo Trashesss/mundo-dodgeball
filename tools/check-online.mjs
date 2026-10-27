@@ -30,8 +30,7 @@ const browsers = [];
 const step = (name) => process.env.DEBUG && console.log('step:', name);
 const errors = [];
 // 방장은 기본 문도 + 축구공, 친구는 호날두 문도 + 식칼: 서로의 외형이 상대 화면에 그대로 보여야 한다.
-// 룬도 방장은 묵직한 한 방, 친구는 강철 피부 + 연사로 달리 골라 서버 판정에 반영되는지 본다.
-const open = async (url, map = 'classic', skin = 'classic', weapon = 'soccer', runes = null) => {
+const open = async (url, map = 'classic', skin = 'classic', weapon = 'soccer') => {
   const browser = await puppeteer.launch({
     executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
     headless: true,
@@ -42,7 +41,7 @@ const open = async (url, map = 'classic', skin = 'classic', weapon = 'soccer', r
   page.on('pageerror', (error) => errors.push(error.message));
   await page.setViewport({ width: 1200, height: 800 });
   await skipConsent(page);
-  await page.evaluateOnNewDocument((id, skin, weapon, runes) => {
+  await page.evaluateOnNewDocument((id, skin, weapon) => {
     if (localStorage.getItem('mundo-shop-v1') === null) {
       localStorage.setItem('mundo-shop-v1', JSON.stringify({
         coins: 200, owned: ['classic', 'colosseum'], equipped: id, rewarded: [],
@@ -50,10 +49,7 @@ const open = async (url, map = 'classic', skin = 'classic', weapon = 'soccer', r
         ownedSkins: ['classic', skin], equippedSkin: skin,
       }));
     }
-    if (runes && localStorage.getItem('mundo-profile-v1') === null) {
-      localStorage.setItem('mundo-profile-v1', JSON.stringify({ xp: 0, runes, rewarded: [] }));
-    }
-  }, map, skin, weapon, runes);
+  }, map, skin, weapon);
   await page.goto(url);
   return page;
 };
@@ -78,7 +74,7 @@ try {
   fs.mkdirSync('output', { recursive: true });
   // 방 만들기
   step('방 만들기');
-  const host = await open(base, maps[0], 'classic', 'soccer', { throw: 'heavy', move: 'base', util: 'base' });
+  const host = await open(base, maps[0]);
   await waitScene(host, "s.state === 'menu'");
   // 좁은 봇전에서 돌아온 뒤에도 온라인에는 축소 규칙이 남지 않아야 한다.
   await evalScene(host, `s.startMatch({ diff: 'faker' });`);
@@ -93,13 +89,11 @@ try {
 
   // 초대 링크로 친구 입장 → 메뉴 없이 바로 대기실
   step('초대 링크로 친구 입장 → 메뉴 없이 바로 대기실');
-  const guest = await open(link, maps[1], guestSkin, 'cleaver', { throw: 'base', move: 'iron', util: 'rapid' });
+  const guest = await open(link, maps[1], guestSkin, 'cleaver');
   await guest.waitForFunction(() => document.getElementById('lobby-p1').dataset.state === 'joined');
   await host.waitForFunction(() => document.getElementById('lobby-p1').dataset.state === 'joined');
   assert.ok(await guest.$eval('#menu', (el) => el.classList.contains('hidden')));
   assert.match(await guest.$eval('#lobby-p1 .lobby-role', (el) => el.textContent), /\(나\)/);
-  assert.equal(await host.$eval('#lobby-p1 .lobby-player-build', (el) => el.textContent), '룬: 기본 · 강철 피부 · 연사');
-  assert.equal(await guest.$eval('#lobby-p0 .lobby-player-build', (el) => el.textContent), '룬: 묵직한 한 방 · 기본 · 기본');
 
   // 둘 다 준비 → 카운트다운 → 시작
   step('둘 다 준비 → 카운트다운 → 시작');
@@ -115,8 +109,6 @@ try {
   const looks = 'return s.champs.map(c => [c.skinId, c.weaponId, c.sprite.texture.key]);';
   const expectedLooks = [['classic', 'soccer', 'mundo-soccer'], [guestSkin, 'cleaver', `mundo-${guestSkin}`]];
   for (const page of [host, guest]) assert.deepEqual(await evalScene(page, looks), expectedLooks);
-  const expectedRunes = [{ throw: 'heavy', move: 'base', util: 'base' }, { throw: 'base', move: 'iron', util: 'rapid' }];
-  for (const page of [host, guest]) assert.deepEqual(await evalScene(page, 'return s.champs.map(c => c.runes);'), expectedRunes);
   assert.equal(await host.$eval('#player-name', (el) => el.textContent), '나');
   assert.equal(await guest.$eval('#player-name', (el) => el.textContent), '상대방');
   for (const [i, page] of [host, guest].entries()) {
@@ -159,8 +151,6 @@ try {
   await evalScene(host, 's.player.qCd = 0; s.lastCastSeq = 0; if (s.castQ(s.player, s.enemy.x, s.enemy.z)) s.sendInput({ cast: "q", tx: s.enemy.x, tz: s.enemy.z });');
   await waitScene(host, 's.cleavers.some(cl => cl.team === 0 && cl.view?.img.texture.key === "soccer-ball")');
   await waitScene(guest, 's.cleavers.some(cl => cl.team === 0 && cl.view?.img.texture.key === "soccer-ball")');
-  // 묵직한 한 방: 서버가 정한 느린 공 속도가 양쪽 화면에 그대로 온다
-  for (const page of [host, guest]) await waitScene(page, `s.cleavers.some(cl => cl.team === 0 && Math.abs(cl.speed - ${RULES.q.speed * 0.8}) < .01)`);
   await evalScene(guest, 's.player.qCd = 0; s.lastCastSeq = 0; if (s.castQ(s.player, s.enemy.x, s.enemy.z)) s.sendInput({ cast: "q", tx: s.enemy.x, tz: s.enemy.z });');
   await waitScene(guest, 's.cleavers.some(cl => cl.team === 1 && cl.view?.img.texture.key === "cleaver")');
   await waitScene(host, 's.cleavers.some(cl => cl.team === 1 && cl.view?.img.texture.key === "cleaver")');
@@ -168,8 +158,6 @@ try {
     await waitScene(page, 's.champs[1].hp < 600 && s.champs[0].stats.hits === 1', 4000);
     await waitScene(page, 's.champs[0].emote.visible', 2000);
   }
-  // 연사: 친구의 쿨다운은 3초 이하로 서버에서 시작한다
-  await waitScene(host, 's.champs[1].qCd > 0 && s.champs[1].qCd <= 3');
   await host.screenshot({ path: 'output/online-hit-host.png' });
   await guest.screenshot({ path: 'output/online-hit-guest.png' });
 

@@ -139,7 +139,7 @@
       <nav class="menu-nav" aria-label="내 정보">
         <button id="profile-open" type="button" aria-haspopup="dialog" aria-controls="profile-dialog">
           <img class="profile-nav-icon" src="assets/cartoon/mundo-profile-icon-v1.png" alt="" width="256" height="256" />
-          <span class="profile-nav-info"><span><span class="profile-nav-label">숙련도 </span><span class="profile-nav-level">Lv.<span id="menu-level">1</span></span></span><span class="profile-nav-sep" aria-hidden="true">/</span><span>룬 설정</span></span>
+          <span class="profile-nav-info"><span><span class="profile-nav-label">숙련도 </span><span class="profile-nav-level">Lv.<span id="menu-level">1</span></span></span></span>
         </button>
         <button id="shop-open" type="button" aria-haspopup="dialog" aria-controls="shop-dialog">
           <img class="shop-keeper-icon" src="assets/cartoon/mundo-shop-icon-v1.png" alt="" width="256" height="256" />
@@ -257,8 +257,8 @@
         <section class="lobby-panel lobby-match" aria-labelledby="lobby-players-title">
         <h2 id="lobby-players-title">대전 준비</h2>
         <ul class="lobby-players" aria-label="참가자">
-          <li id="lobby-p0" data-state="empty"><span class="lobby-role">방장</span><span class="lobby-player-status">기다리는 중</span><span class="lobby-player-build"></span></li>
-          <li id="lobby-p1" data-state="empty"><span class="lobby-role">상대방</span><span class="lobby-player-status">기다리는 중</span><span class="lobby-player-build"></span></li>
+          <li id="lobby-p0" data-state="empty"><span class="lobby-role">방장</span><span class="lobby-player-status">기다리는 중</span></li>
+          <li id="lobby-p1" data-state="empty"><span class="lobby-role">상대방</span><span class="lobby-player-status">기다리는 중</span></li>
         </ul>
         <button id="lobby-ready" type="button">준비</button>
         </section>
@@ -355,7 +355,7 @@
       <img class="profile-avatar" src="assets/cartoon/mundo-profile-icon-v1.png" alt="" width="256" height="256" />
       <div class="profile-heading">
         <p class="profile-eyebrow">MY MUNDO</p>
-        <h1 id="profile-title">룬 설정</h1>
+        <h1 id="profile-title">나의 문도</h1>
       </div>
       <button id="profile-close" class="profile-close" type="button" aria-label="프로필 닫기">×</button>
     </header>
@@ -368,16 +368,9 @@
         <div id="profile-xp-bar" class="profile-xp-bar" role="progressbar" aria-labelledby="profile-level-title" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="profile-xp-fill"></div></div>
         <p class="profile-xp-note">승리 <b id="profile-xp-win">+100</b> · 패배 <b id="profile-xp-loss">+40</b> 경험치</p>
       </section>
-      <section class="profile-runes" aria-labelledby="profile-runes-title">
-        <div class="profile-runes-head">
-          <h2 id="profile-runes-title">룬</h2>
-          <p>칸마다 하나씩 골라 나만의 빌드를 만들어 보세요.</p>
-        </div>
-        <div id="profile-rune-slots" class="profile-rune-slots"></div>
-      </section>
     </div>
     <footer class="profile-footer">
-      <p id="profile-storage-note">경험치와 룬은 이 브라우저에 저장돼요.</p>
+      <p id="profile-storage-note">경험치는 이 브라우저에 저장돼요.</p>
     </footer>
   </dialog>
   <dialog id="shop-dialog" aria-labelledby="shop-title">

@@ -1,10 +1,9 @@
-// 프로필: 경험치·숙련도(레벨, 표시용)와 룬 선택. 로컬 저장만 쓴다 (src/shop-state.js 와 같은 방식).
-import { RUNES, RUNE_SLOTS, DEFAULT_RUNES, cleanRunes } from './rules.js';
+// 프로필: 경험치·숙련도(레벨, 표시용). 로컬 저장만 쓴다 (src/shop-state.js 와 같은 방식).
 
 export const PROFILE_KEY = 'mundo-profile-v1';
 export const XP_REWARDS = Object.freeze({ win: 100, loss: 40 });
 const XP_MAX = 1_000_000_000;
-const fresh = () => ({ xp: 0, runes: { ...DEFAULT_RUNES }, rewarded: [] });
+const fresh = () => ({ xp: 0, rewarded: [] });
 let state = fresh();
 let persistent = true;
 
@@ -26,7 +25,6 @@ function read() {
     if (!data || typeof data !== 'object') return state;
     return {
       xp: Number.isSafeInteger(data.xp) && data.xp >= 0 ? Math.min(data.xp, XP_MAX) : 0,
-      runes: cleanRunes(data.runes),
       rewarded: Array.isArray(data.rewarded) ? data.rewarded.filter(id => typeof id === 'string').slice(-100) : [],
     };
   } catch { return state; }
@@ -40,14 +38,7 @@ state = read();
 save();
 
 export function getProfile() {
-  return { ...state, runes: { ...state.runes }, rewarded: [...state.rewarded], ...levelInfo(state.xp), persistent };
-}
-export function setRune(slot, id) {
-  state = read();
-  if (!RUNE_SLOTS.includes(slot) || !RUNES[slot].some(r => r.id === id)) return false;
-  state.runes = { ...state.runes, [slot]: id };
-  save();
-  return true;
+  return { ...state, rewarded: [...state.rewarded], ...levelInfo(state.xp), persistent };
 }
 // 반환값: 이번에 받은 경험치 (이미 받은 판이면 0)
 export function awardXp(id, win) {
