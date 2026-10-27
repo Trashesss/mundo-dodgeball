@@ -13,7 +13,7 @@ const IDLE_MS = 10 * 60 * 1000;
 const MAX_MSGS_PER_SEC = 120;
 const MAX_CONNS_PER_IP = 8;     // 한 사람이 방을 잔뜩 만들어 서버를 채우지 못하게
 const MAX_FAILED_JOINS = 10;    // 방 코드 무작위 대입 방지 (연결당)
-// 빠른 대전: 이만큼 기다려도 사람이 안 오면 문도봇과 붙인다 (검사용 서버만 줄일 수 있음)
+// 빠른 대전: 이만큼 기다리면 '문도봇과 플레이'를 고를 수 있다 (검사용 서버만 줄일 수 있음)
 const QUICK_WAIT_MS = (process.env.MUNDO_TEST === '1' && Number(process.env.QUICK_WAIT_MS)) || 15000;
 // 배포 서버(NODE_ENV=production)는 게임 사이트만 허용한다. localhost 페이지는 로컬 개발 서버에서만 허용.
 const PRODUCTION = process.env.NODE_ENV === 'production';
@@ -29,7 +29,6 @@ const ghosts = new GhostStore();
 const quickWaiting = []; // 한 사람이 상대를 기다리는 빠른 대전 방 (먼저 온 순)
 
 function unqueue(room) {
-  clearTimeout(room.quickTimer);
   const i = quickWaiting.indexOf(room);
   if (i >= 0) quickWaiting.splice(i, 1);
 }
@@ -83,7 +82,16 @@ wss.on('connection', (ws, req) => {
     conn.room = null; conn.slot = -1;
   };
   const openRoom = (opts = {}) => {
-    const room = new Room(newCode(), { ...opts, ghosts, onEmpty: (r) => { rooms.delete(r.code); unqueue(r); } });
+    const room = new Room(newCode(), {
+      ...opts, ghosts, quickWaitMs: QUICK_WAIT_MS,
+      onEmpty: (r) => { rooms.delete(r.code); unqueue(r); },
+      onBot: (r) => { unqueue(r); r.addBot(ghosts.pick()); },
+      // 준비 대기실에서 상대가 나감: 남은 사람은 다시 큐에 서고, 이미 기다린 만큼 봇 대기 시간이 줄어든다
+      onRequeue: (r) => {
+        if (!quickWaiting.includes(r)) quickWaiting.push(r);
+        r.slots.forEach((s, i) => s && r.send(i, { type: 'queue', waitMs: Math.max(0, QUICK_WAIT_MS - (Date.now() - s.queuedAt)) }));
+      },
+    });
     rooms.set(room.code, room);
     return room;
   };
@@ -105,7 +113,7 @@ wss.on('connection', (ws, req) => {
     }
     if (msg.type === 'quick') {
       detach();
-      const waiting = quickWaiting.find(r => r.slots.some(x => x?.connected));
+      const waiting = quickWaiting.find(r => r.slots.some(x => x?.connected) && r.slots.some(x => !x));
       if (waiting) {
         unqueue(waiting);
         conn.room = waiting;
@@ -117,12 +125,6 @@ wss.on('connection', (ws, req) => {
       conn.room = room;
       conn.slot = room.add(ws, msg.look);
       quickWaiting.push(room);
-      room.quickTimer = setTimeout(() => {
-        unqueue(room);
-        // 기다리던 사람이 끊긴 채면 봇을 붙이지 않고 방을 닫는다
-        if (room.slots.some(x => x?.connected)) room.addBot(ghosts.pick());
-        else room.close();
-      }, QUICK_WAIT_MS);
       send({ type: 'queue', waitMs: QUICK_WAIT_MS });
       return;
     }
@@ -139,7 +141,7 @@ wss.on('connection', (ws, req) => {
       if (s < 0) s = target.add(ws, msg.look);
       if (s < 0) { send({ type: 'error', code: target.phase === 'lobby' ? 'full' : 'started' }); return; }
       conn.room = target; conn.slot = s;
-      if (target.phase !== 'lobby') unqueue(target);
+      if (target.phase !== 'lobby' || target.slots.every(Boolean)) unqueue(target);
       return;
     }
     if (msg.type === 'ping' && !conn.room) {

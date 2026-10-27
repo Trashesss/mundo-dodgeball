@@ -135,6 +135,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #05080d; col
 @keyframes ready { 50% { box-shadow: 0 0 18px #fff; } }
 .q-icon { background-image: url('assets/cartoon/cleaver-throw-icon-v1.png'); }
 .q-icon.soccer-icon { background-image: url('assets/cartoon/soccer-throw-icon-v1.png'); }
+.q-icon.mushroom-icon { background-image: url('assets/cartoon/teemo-mushroom-throw-icon-v1.png'); }
 .d-icon { background-image: url('assets/cartoon/flash.png'); }
 .f-icon { background-image: url('assets/cartoon/ghost.png'); }
 
@@ -628,7 +629,7 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 #lobby-title { grid-area: title; margin: 0; font-size: 34px; line-height: 1.2; font-weight: 400; }
 .lobby-brand-image { grid-area: art; justify-self: end; display: block; width: 280px; height: 128px; object-fit: cover; }
 /* 빠른 대전 그림은 정사각형이지만 위아래가 투명 여백이라 3:2로 여백만 잘라낸다 */
-#lobby[data-state="queue"] .lobby-brand-image { width: 192px; }
+#lobby:is([data-state="queue"], [data-quick]) .lobby-brand-image { width: 192px; }
 .practice-view .setup-intro, .practice-view .setup-controls { display: none; }
 .lobby-status { min-height: 24px; margin: 0 0 14px; color: var(--entry-muted); font-size: 16px; line-height: 1.5; word-break: keep-all; }
 #lobby:is([data-state="entry"], [data-state="creating"]) .lobby-status, .lobby-status:empty { display: none; }
@@ -681,8 +682,14 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
 /* 설명은 위 안내와 떨어뜨리고 취소 버튼 쪽에 붙인다 */
 .queue-note { margin-top: 22px; color: var(--entry-muted); font-size: 13px; line-height: 1.4; opacity: .75; word-break: keep-all; }
 .queue-sub b { color: var(--entry-green); font-weight: 400; font-variant-numeric: tabular-nums; }
-#lobby[data-state="queue"] .lobby-actions { justify-content: center; }
+#lobby[data-state="queue"] .lobby-actions { flex-direction: column; align-items: center; gap: 10px; }
 #lobby[data-state="queue"] #lobby-leave { width: min(320px, 100%); }
+/* 기다린 시간이 지나야 문도봇과 플레이를 고를 수 있다 */
+#lobby #lobby-bot { display: none; width: min(320px, 100%); min-height: 58px; padding: 12px; border-width: 3px; border-radius: 16px; background: var(--entry-green); color: #26362c; font-size: 20px; }
+#lobby[data-state="queue"][data-bot="ready"] #lobby-bot { display: block; }
+/* 빠른 대전 준비 대기실: 초대 코드 없이 준비 패널만 */
+#lobby[data-quick] .lobby-room { grid-template-columns: 1fr; }
+#lobby[data-quick] .lobby-invite { display: none; }
 #lobby #lobby-leave { width: 100%; min-width: 100px; min-height: 58px; padding: 12px; border-width: 3px; border-radius: 16px; background: #35434b; color: var(--entry-muted); font-size: 20px; }
 .practice-view #mode-back-btn { width: 100%; margin-top: 0; padding: 16px 12px; border: 3px solid var(--entry-ink); border-radius: 16px; background: #35434b; color: var(--entry-muted); font-size: 20px; box-shadow: inset 0 3px #ffffff18; transition: transform .15s, background .15s; }
 @media (hover: hover) {
@@ -696,7 +703,7 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
   .lobby-card { display: flex; flex-direction: column; width: min(420px, 100%); min-height: 100%; }
   .lobby-heading { grid-template-columns: 1fr; grid-template-areas: 'art' 'brand' 'title'; justify-items: center; gap: 0; margin: auto 0 28px; text-align: center; }
   .lobby-brand-image { justify-self: center; width: min(240px, 64vw); height: auto; aspect-ratio: 2 / 1; margin-bottom: 10px; }
-  #lobby[data-state="queue"] .lobby-brand-image { width: min(180px, 48vw); aspect-ratio: 3 / 2; }
+  #lobby:is([data-state="queue"], [data-quick]) .lobby-brand-image { width: min(180px, 48vw); aspect-ratio: 3 / 2; }
   .lobby-card .setup-brand { font-size: 18px; }
   #lobby-title { font-size: 32px; text-shadow: 0 4px #08171f; }
   .lobby-status { font-size: 14px; margin-bottom: 10px; text-align: center; }
@@ -735,7 +742,7 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
   #lobby-title { font-size: 26px; }
   .lobby-heading { margin-bottom: 8px; }
   .lobby-brand-image { width: min(176px, 100%); height: 80px; }
-  #lobby[data-state="queue"] .lobby-brand-image { width: 120px; }
+  #lobby:is([data-state="queue"], [data-quick]) .lobby-brand-image { width: 120px; }
   .lobby-status { margin-bottom: 8px; }
   .lobby-panel { padding: 12px; }
   .lobby-panel h2, #lobby-join-form label { margin-bottom: 8px; }
@@ -743,7 +750,7 @@ button:focus-visible { outline: 3px solid #fff3bd; outline-offset: 4px; }
   .lobby-players li { padding-block: 8px; gap: 4px; }
   #lobby-ready, #lobby-copy { padding-block: 10px; }
   .lobby-actions { margin-top: 8px; }
-  #lobby #lobby-leave { min-height: 50px; padding: 8px; }
+  #lobby :is(#lobby-leave, #lobby-bot) { min-height: 50px; padding: 8px; }
   .lobby-error .net-portrait { width: clamp(80px, 27dvh, 150px); margin-bottom: 12px; }
 }
 

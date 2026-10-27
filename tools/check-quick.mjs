@@ -1,5 +1,6 @@
 // 빠른 대전 확인: 로컬 서버 + 브라우저 창
-// 두 사람 → 바로 매칭(준비 없음) → KO → 고스트 기록 / 혼자 → 문도봇 매칭 → 봇이 움직이고 던짐 → 결과(재대결 없음)·새 상대 찾기
+// 두 사람 → 준비 대기실 → 둘 다 준비해야 시작 → KO → 고스트 기록 / 준비 대기실에서 나가면 남은 사람은 다시 큐
+// 혼자 → 시간이 지나도 계속 대기 → 문도봇과 플레이 버튼 → 봇이 움직이고 던짐 → 결과(재대결 없음)·새 상대 찾기
 // 대기 취소 → 큐에서 빠짐 / 문도봇 경기는 고스트로 남지 않음
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -59,6 +60,8 @@ const scene = 'window.__game.scene.getScene("game")';
 const waitScene = (page, expr, timeout = 10000) => page.waitForFunction(`(() => { const s = ${scene}; return ${expr}; })()`, { timeout });
 const text = (page, sel) => page.$eval(sel, (el) => el.textContent);
 const hidden = (page, sel) => page.$eval(sel, (el) => el.classList.contains('hidden'));
+const visible = (page, sel) => page.$eval(sel, (el) => getComputedStyle(el).display !== 'none');
+const lobbyState = (page) => page.$eval('#lobby', (el) => el.dataset.state);
 const health = () => fetch(`http://127.0.0.1:${WS_PORT}/health`).then((r) => r.json());
 const ghosts = () => (fs.existsSync(ghostFile) ? JSON.parse(fs.readFileSync(ghostFile, 'utf8')) : []);
 // 상대에게 식칼 한 번 (서버 판정). spread 만큼 비켜 던지면 빗나간다.
@@ -69,13 +72,31 @@ const throwAt = (page, spread = 0) => page.evaluate(`(() => {
 })()`);
 
 try {
-  step('사람 둘: 바로 매칭');
+  step('사람 둘: 준비 대기실');
   const [a, b] = await Promise.all([open(), open()]);
   await a.click('#quick-btn');
   await a.waitForFunction(() => document.getElementById('lobby').dataset.state === 'queue');
   assert.equal(await text(a, '#lobby-title'), '빠른 대전');
-  await a.waitForFunction(() => /초 뒤에는 문도봇/.test(document.getElementById('lobby-status').textContent));
+  await a.waitForFunction(() => /초 뒤에 문도봇과 플레이/.test(document.getElementById('lobby-status').textContent));
+  assert.ok(!(await visible(a, '#lobby-bot')), 'bot button waits for the timer');
+  // 시간 전에 보낸 문도봇 요청은 서버가 무시한다
+  await a.evaluate(() => window.__mundoOnline.send({ type: 'bot' }));
   await b.click('#quick-btn');
+  for (const page of [a, b]) {
+    await page.waitForFunction(() => document.getElementById('lobby').dataset.state === 'room' && document.getElementById('lobby-p1').dataset.state === 'joined');
+    assert.equal(await text(page, '#lobby-title'), '빠른 대전');
+    assert.ok(!(await visible(page, '.lobby-invite')), 'quick ready room has no invite code');
+    assert.equal(await text(page, '#lobby-leave'), '나가기');
+  }
+  assert.equal((await health()).quickWaiting, 0);
+  await sleep(WAIT_MS + 300);
+  assert.notEqual(await a.evaluate(`${scene}.mode`), 'online', 'humans do not start before both are ready');
+  assert.equal(await lobbyState(a), 'room', 'matched room never turns into a bot match');
+  await a.click('#lobby-ready');
+  await b.waitForFunction(() => document.querySelector('#lobby-p0 .lobby-player-status').textContent === '준비 완료');
+  await sleep(500);
+  assert.notEqual(await a.evaluate(`${scene}.mode`), 'online', 'one ready player does not start the match');
+  await b.click('#lobby-ready');
   await waitScene(a, "s.mode === 'online' && s.state === 'play'");
   await waitScene(b, "s.mode === 'online' && s.state === 'play'");
   for (const page of [a, b]) assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').arenaId), map);
@@ -111,11 +132,35 @@ try {
   assert.ok(saved.every((g) => typeof g.acc === 'number' && typeof g.wait === 'number' && !('room' in g)));
   for (const p of [a, b]) await p.browser().close();
 
-  step('혼자: 문도봇');
+  step('준비 대기실에서 나가기 → 남은 사람은 다시 큐');
+  const [c, d] = await Promise.all([open(), open()]);
+  await c.click('#quick-btn');
+  await c.waitForFunction(() => /\d초/.test(document.getElementById('lobby-status').textContent));
+  await d.click('#quick-btn');
+  await c.waitForFunction(() => document.getElementById('lobby').dataset.state === 'room');
+  await c.click('#lobby-ready');
+  await d.click('#lobby-leave');
+  await d.waitForFunction(() => !document.getElementById('menu').classList.contains('hidden'));
+  await c.waitForFunction(() => document.getElementById('lobby').dataset.state === 'queue');
+  assert.equal((await health()).quickWaiting, 1, 'remaining player is back in the queue');
+  await c.waitForFunction(() => getComputedStyle(document.getElementById('lobby-bot')).display !== 'none', { timeout: WAIT_MS + 3000 });
+  await c.click('#lobby-leave');
+  await c.waitForFunction(() => !document.getElementById('menu').classList.contains('hidden'));
+  for (const p of [c, d]) await p.browser().close();
+
+  step('혼자: 계속 기다리다 문도봇과 플레이');
   const solo = await open();
   await solo.click('#quick-btn');
   await solo.waitForFunction(() => /\d초/.test(document.getElementById('lobby-status').textContent));
-  await waitScene(solo, "s.mode === 'online' && s.state === 'play'", WAIT_MS + 8000);
+  await solo.waitForFunction(() => getComputedStyle(document.getElementById('lobby-bot')).display !== 'none', { timeout: WAIT_MS + 3000 });
+  await sleep(1000);
+  assert.equal(await lobbyState(solo), 'queue', 'still waiting for a human after the timer');
+  assert.notEqual(await solo.evaluate(`${scene}.mode`), 'online');
+  assert.match(await text(solo, '#lobby-status'), /상대를 찾는 중/);
+  assert.equal((await health()).quickWaiting, 1);
+  await solo.click('#lobby-bot');
+  await waitScene(solo, "s.mode === 'online' && s.state === 'play'", 8000);
+  assert.equal((await health()).quickWaiting, 0, 'bot match leaves the queue');
   assert.equal(await solo.evaluate(() => window.__game.scene.getScene('game').arenaId), map);
   assert.equal(await text(solo, '#enemy-name'), '문도봇');
   assert.equal(await text(solo, '#enemy-tag'), 'BOT');
@@ -138,16 +183,17 @@ try {
   await solo.click('#requeue-btn');
   await solo.waitForFunction(() => !document.getElementById('lobby').classList.contains('hidden') && document.getElementById('lobby').dataset.state === 'queue');
   await solo.waitForFunction(() => /\d초/.test(document.getElementById('lobby-status').textContent));
+  assert.ok(!(await visible(solo, '#lobby-bot')), 'requeue restarts the bot timer');
   assert.equal((await health()).quickWaiting, 1);
   await solo.click('#lobby-leave');
   await solo.waitForFunction(() => !document.getElementById('menu').classList.contains('hidden'));
   await sleep(300);
   assert.equal((await health()).quickWaiting, 0, 'cancel leaves the queue');
   await sleep(WAIT_MS + 500);
-  assert.equal((await health()).rooms, 0, 'cancelled room never gets a bot');
+  assert.equal((await health()).rooms, 0, 'cancelled room is closed');
 
   assert.deepEqual(errors, []);
-  console.log(`Quick match (${map}): human pairing without ready, ghost recording, 문도봇 fallback with moving/throwing bot, server-side rematch blocked for humans and bot, requeue and cancel passed.`);
+  console.log(`Quick match (${map}): human ready room, requeue after a leave, ghost recording, 문도봇 button after waiting with moving/throwing bot, server-side rematch blocked for humans and bot, requeue and cancel passed.`);
 } finally {
   await Promise.all(browsers.map((b) => b.close().catch(() => {})));
   web.close();

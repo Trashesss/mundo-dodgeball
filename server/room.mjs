@@ -1,5 +1,5 @@
 // 1대1 방: 대기실 → 카운트다운 → 경기 → 결과/재대결. 서버가 src/sim.js 로 최종 판정한다.
-// 빠른 대전 방(quick)은 준비 없이 바로 시작하고, 사람이 안 오면 문도봇(고스트)이 한 자리를 채운다. 재대결은 없다.
+// 빠른 대전 방(quick)도 사람끼리는 둘 다 준비해야 시작한다. 혼자 일정 시간 기다리면 '문도봇과 플레이'로 문도봇(고스트)이 한 자리를 채운다. 재대결은 없다.
 import { randomUUID } from 'node:crypto';
 import { RULES } from '../src/rules.js';
 import { NET, packChamp, packCleaver, cleanLook } from '../src/net-protocol.js';
@@ -17,10 +17,14 @@ const num = (v) => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <=
 
 export class Room {
   // ghosts: 사람끼리 끝난 경기의 성향을 남길 저장소 (server/ghosts.mjs)
-  constructor(code, { onEmpty, now = () => performance.now(), quick = false, ghosts = null }) {
+  // onBot: 혼자 기다리던 사람이 문도봇을 부름 / onRequeue: 준비 대기실에서 상대가 나가 다시 사람을 기다림
+  constructor(code, { onEmpty, now = () => performance.now(), quick = false, quickWaitMs = 0, onBot = null, onRequeue = null, ghosts = null }) {
     this.code = code;
     this.onEmpty = onEmpty;
     this.quick = quick;
+    this.quickWaitMs = quickWaitMs;
+    this.onBot = onBot;
+    this.onRequeue = onRequeue;
     this.ghosts = ghosts;
     this.now = now;
     this.slots = [null, null];
@@ -37,13 +41,10 @@ export class Room {
   add(ws, look) {
     const slot = this.slots.findIndex(s => !s);
     if (slot < 0 || this.phase !== 'lobby') return -1;
-    this.slots[slot] = { ws, look: cleanLook(look), token: randomUUID(), connected: true, ready: false, rematch: false, ack: 0, grace: null };
+    this.slots[slot] = { ws, look: cleanLook(look), token: randomUUID(), connected: true, ready: false, rematch: false, ack: 0, grace: null, queuedAt: Date.now() };
     this.welcome(slot);
     this.broadcastLobby();
-    if (this.quick && this.slots.every(Boolean)) {
-      this.broadcast({ type: 'matched', bot: false });
-      this.startMatch();
-    }
+    if (this.quick && this.slots.every(Boolean)) this.broadcast({ type: 'matched', bot: false });
     return slot;
   }
 
@@ -103,8 +104,12 @@ export class Room {
       this.stopLoop();
       this.phase = 'over';
       if (other) this.send(1 - slot, { type: 'opponentLeft', reason });
-    } else this.broadcastLobby();
-    if (!this.slots.some(s => s && !s.bot)) this.close();
+    } else {
+      if (other && this.quick) other.ready = false;
+      this.broadcastLobby();
+    }
+    if (!this.slots.some(s => s && !s.bot)) { this.close(); return; }
+    if (this.quick && this.phase === 'lobby') this.onRequeue?.(this);
   }
 
   close() {
@@ -126,6 +131,9 @@ export class Room {
         s.ready = !!msg.ready;
         this.broadcastLobby();
         if (this.slots.every(x => x?.connected && x.ready)) this.startMatch();
+        return;
+      case 'bot':
+        if (this.quick && this.phase === 'lobby' && !this.slots[1 - slot] && Date.now() - s.queuedAt >= this.quickWaitMs) this.onBot?.(this);
         return;
       case 'input': return this.input(slot, msg);
       case 'rematch':
