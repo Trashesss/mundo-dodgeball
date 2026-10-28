@@ -1,5 +1,7 @@
 // Browser helpers for previews and checks: load a body or arm layer and draw
 // one pose the way the game stacks them (arm over body, shifted per body).
+import { armFrameName } from '../src/character-frames.js';
+
 export async function loadLayer(layer, id) {
   const dir = `/assets/cartoon/${layer}/${id}/`;
   const atlas = await (await fetch(`${dir}atlas.json`)).json();
@@ -24,7 +26,7 @@ export function drawPose(ctx, meta, body, arm, key, direction, f, x, y, scale = 
   const name = frameName(meta, key, direction, f);
   const layers = [[body, [0, 0]], ...(arm ? [[arm, armShift(body, name)]] : [])];
   for (const [layer, [ox, oy]] of layers) {
-    const entry = layer.frames.get(name), r = entry.frame, s = entry.spriteSourceSize;
+    const entry = layer.frames.get(layer === arm ? armFrameName(name, body.offsets.frameAliases) : name), r = entry.frame, s = entry.spriteSourceSize;
     ctx.drawImage(entry.image, r.x, r.y, r.w, r.h,
       x + (s.x + ox - meta.frameW / 2) * scale, y + (s.y + oy - meta.frameH * meta.anchor) * scale, s.w * scale, s.h * scale);
   }

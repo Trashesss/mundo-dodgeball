@@ -1,3 +1,12 @@
 {
-  "bodyPadding": { "top": 12, "bottom": 12, "left": 12, "right": 12 }
+  "bodyPadding": { "top": 12, "bottom": 12, "left": 12, "right": 12 },
+  "bodySkinColorOffset": [0, 0, 8],
+  "bodyCoreViews": [1, 1, 2, 3],
+  "bodyArmViews": [1, 1, 2, 3],
+  "shoulderOffsets": [
+    { "near": [6, 0], "far": [0, 0] },
+    { "near": [6, 0], "far": [0, 0] },
+    { "near": [0, 0], "far": [0, 0] },
+    { "near": [0, 0], "far": [0, 0] }
+  ]
 }

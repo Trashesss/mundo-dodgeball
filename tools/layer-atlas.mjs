@@ -31,6 +31,13 @@ export function checkLayerAtlas(layer, id) {
   if (layer === 'body') {
     const offsets = JSON.parse(fs.readFileSync(`${dir}arm-offsets.json`));
     for (const [key, shift] of Object.entries(offsets)) {
+      if (key === 'frameAliases') {
+        for (const [from, to] of Object.entries(shift)) {
+          assert.ok(bakedDirections.includes(+from) && bakedDirections.includes(to) && +from !== to);
+          assert.ok(!(to in shift), `${layer}/${id}: chained arm alias`);
+        }
+        continue;
+      }
       const [anim, d] = key.split('_');
       assert.ok(meta.anims[anim] && bakedDirections.includes(+d), `${layer}/${id}: offset for unknown ${key}`);
       if (Array.isArray(shift[0])) assert.equal(shift.length, meta.anims[anim].frames, `${layer}/${id}: ${key} offsets`);

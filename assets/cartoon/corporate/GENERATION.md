@@ -13,9 +13,21 @@ Generated with the built-in `image_gen` tool (no CLI fallback), using the user's
 
 The skin uses only the four head/torso cutouts in column one. The original purple skin, short proportions, arms, hands, feet, animation timing and weapon grips are preserved by the rig. The costume adds slick black hair, black sunglasses, a dark navy pinstripe suit torso, white collar, blue tie, gold tie clip and gold buttons. This deliberately follows the current skin-body + shared weapon-arm renderer: arm artwork in the generated sheet is registration context and is not consumed. Suited sleeves and the reference's briefcase/phone are not part of this body skin.
 
-`rig.json` adds 12 source pixels of transparent padding on every side, compensating the core pivot and height to preserve the original body scale and joint registration. The original shoulder positions are used. All five states and eight directions use the existing rig. All three shared weapons work with this body.
+`rig.json` adds 12 source pixels of transparent padding on every side, compensating the core pivot and height to preserve the body scale and foot registration. Front near arms use the configured six-unit outward shoulder adjustment. All five states and eight directions use the existing rig. All three shared weapons work with this body.
 
-`npm run bake:corporate` generates `../body/corporate/` and `shop-v3.png` from the actual rig. The game catalog offers CEO 문도 for 1,000 coins with separate purchase/equip, persistence, and online appearance support. No real-money checkout is added.
+`npm run bake:corporate` generates `../body/corporate/` and `shop-v4.png` from the actual rig. The game catalog offers CEO 문도 for 1,000 coins with separate purchase/equip, persistence, and online appearance support. No real-money checkout is added.
+
+## Skin palette correction · 2026-10-28
+
+The generated core lost blue relative to the original shared arms: a representative jaw pixel was RGB(179,129,204), while the original arm is RGB(180,129,211). `rig.json` now adds eight blue levels only to purple skin in the core during baking. Suit, hair, black glasses, ivory tooth and tongue retain their colors. The generated source remains unchanged; all original shared arm, weapon and foot files remain unchanged. The same corrected core feeds every baked animation and the shop image. `check:corporate` verifies the skin-only adjustment and unchanged alpha/non-skin colors alongside the original limb identity checks.
+
+## Face consistency while turning · 2026-10-28
+
+The supplied gameplay recording showed repeated direction changes swapping between two independently generated front faces with different sunglasses and jaw proportions. `bodyCoreViews: [1, 1, 2, 3]` now uses the same front three-quarter core in both front-view rig slots, so all five front-facing directions retain one face and scale (mirrored for leftward facings). Rear views still use their original cores. Each direction retains its own original arm/leg cutouts, joints and animation timing. `check:corporate` checks that both front cores are pixel-identical and that body registration follows the selected core while all limbs remain unchanged.
+
+## Arm consistency while turning · 2026-10-28
+
+After the face fix, neighboring front directions still switched between different original arm silhouettes and shoulder joints. `bodyArmViews: [1, 1, 2, 3]` now shares the front three-quarter arm pose and shoulder registration too. Legs retain their original directional cutouts. The bake writes `frameAliases` into the body's arm-offset metadata (`0 → 1`, `4 → 3`), and both the game and preview select the corresponding frames from the unchanged shared weapon atlases. Animation state/frame, throw release, mirrored facings and alpha merging remain synchronized. The original shared arm files are not rewritten. `check:corporate` compares the front arm drawings, checks actual live arm frame selection across all five states/eight directions with cleaver, soccer and mushroom, and verifies real projectile hits.
 
 Validation: `npm run check:corporate` covers atlas completeness/bounds, original limbs and registration, insufficient funds, exact-price purchase, duplicate purchase, equip/reload, mobile layouts, projectile hits, both local online slots, and classic restoration. `npm run check:online -- --corporate` checks two real peers, rematches and reconnects.
 

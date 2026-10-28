@@ -18,6 +18,7 @@ import { initShop } from './shop.js';
 import { getShopState, awardMatch } from './shop-state.js';
 import { awardXp } from './profile-state.js';
 import { initProfile } from './profile.js';
+import { armFrameName } from './character-frames.js';
 
 const { PPU, SIN, COS } = PROJ;
 const sx = (x) => x * PPU;
@@ -129,7 +130,8 @@ class Mundo {
   follow() {
     const { body, arm } = this;
     const name = body.frame.name;
-    if (arm.frame.name !== name) arm.setFrame(name);
+    const armName = armFrameName(name, this.offsets.frameAliases);
+    if (arm.frame.name !== armName) arm.setFrame(armName);
     // 의상 어깨가 원래 자리와 다른 스킨은 팔 레이어를 프레임마다 그만큼 옮긴다
     const [key, dir, frame] = name.split('_');
     const shift = this.offsets[`${key}_${dir}`];

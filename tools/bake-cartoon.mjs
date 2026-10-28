@@ -11,7 +11,7 @@ const SKINS = {
   classic: {},
   ronaldo: { body: 'assets/cartoon/ronaldo/parts-source-mask-v2.png', shop: 'assets/cartoon/ronaldo/shop-v5.png' },
   teemo: { body: 'assets/cartoon/teemo/parts-source-straps-v2.png', rig: 'assets/cartoon/teemo/rig.json', shop: 'assets/cartoon/teemo/shop-v1.png' },
-  corporate: { body: 'assets/cartoon/corporate/parts-source-ivory-v3.png', rig: 'assets/cartoon/corporate/rig.json', shop: 'assets/cartoon/corporate/shop-v3.png' },
+  corporate: { body: 'assets/cartoon/corporate/parts-source-ivory-v3.png', rig: 'assets/cartoon/corporate/rig.json', shop: 'assets/cartoon/corporate/shop-v4.png' },
 };
 const WEAPONS = {
   cleaver: {},
@@ -112,6 +112,17 @@ try {
       // Frame-pixel shift of the arm layer on this body, per `${anim}_${facing}`:
       // one [x, y] when constant, or one per frame while the throw leans.
       const armOffsets = {};
+      if (layer === 'body' && rig.bodyArmViews) {
+        const aliases = {};
+        for (const d of baked) {
+          const view = rig.bodyArmViews[directions[d]];
+          if (view === directions[d]) continue;
+          const target = baked.find(other => directions[other] === view && mirrored(other) === mirrored(d));
+          if (target === undefined) throw new Error(`No shared arm direction for ${id}/${d}`);
+          aliases[d] = target;
+        }
+        armOffsets.frameAliases = aliases;
+      }
       for (const [key, anim] of Object.entries(anims)) {
         const items = [];
         for (const d of baked) {

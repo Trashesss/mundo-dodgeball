@@ -2,7 +2,7 @@
 // body parts per frame: every displayed part comes from the painted atlas.
 import { THROW, throwPose } from '../src/throw-motion.js';
 
-export async function loadCartoonMotion({ gripImage = null, bodyImage = null, bodyPadding = null, shoulderOffsets = null } = {}) {
+export async function loadCartoonMotion({ gripImage = null, bodyImage = null, bodyPadding = null, shoulderOffsets = null, bodySkinColorOffset = null, bodyCoreViews = null, bodyArmViews = null } = {}) {
   const image = new Image();
   image.src = '/assets/cartoon/parts-source.png';
   await image.decode();
@@ -57,7 +57,10 @@ export async function loadCartoonMotion({ gripImage = null, bodyImage = null, bo
     // mask extends into the right gutter without shifting or scaling the body.
     const numbers = [[158, 176, 27, 36], [146, 487, 28, 39], [117, 760, 39, 51], [153, 1052, 42, 54]];
     for (const [row, v] of views.entries()) {
-      const p = columns[0][row];
+      // A costume can share its front core across neighboring directions to
+      // keep one face, without changing either direction's arms or legs.
+      const coreView = bodyCoreViews?.[row] ?? row;
+      const p = columns[0][coreView];
       const padding = bodyPadding ?? { top: 0, bottom: 0, left: 0, right: row < 2 ? 48 : 0 };
       v.core.width = p.w + padding.left + padding.right;
       v.core.height = p.h + padding.top + padding.bottom;
@@ -67,13 +70,24 @@ export async function loadCartoonMotion({ gripImage = null, bodyImage = null, bo
       const g = v.core.getContext('2d');
       g.clearRect(0, 0, v.core.width, v.core.height);
       g.drawImage(bodyImage, p.x - padding.left, p.y - padding.top, v.core.width, v.core.height, 0, 0, v.core.width, v.core.height);
+      // Generated costumes can shift the skin palette. Correct only the
+      // purple core pixels so they join the untouched shared arms and feet.
+      if (bodySkinColorOffset) {
+        const core = g.getImageData(0, 0, v.core.width, v.core.height);
+        for (let i = 0; i < core.data.length; i += 4) {
+          const [r, green, b, alpha] = core.data.subarray(i, i + 4);
+          if (!alpha || r < 80 || r <= green + 20 || b <= r + 12) continue;
+          for (let channel = 0; channel < 3; channel++) core.data[i + channel] += bodySkinColorOffset[channel];
+        }
+        g.putImageData(core, 0, 0);
+      }
       // Costume headroom keeps the original torso scale and shoulder/foot
       // registration. Only the Ronaldo source needs readable mirrored 7s.
       if (bodyPadding) continue;
       v.mirroredCore = document.createElement('canvas');
       v.mirroredCore.width = v.core.width; v.mirroredCore.height = v.core.height;
       const ctx = v.mirroredCore.getContext('2d'); ctx.drawImage(v.core, 0, 0);
-      const [x, y, w, h] = numbers[row], dx = x - p.x, dy = y - p.y;
+      const [x, y, w, h] = numbers[coreView], dx = x - p.x, dy = y - p.y;
       ctx.clearRect(dx, dy, w, h);
       ctx.save(); ctx.translate(dx + w, dy); ctx.scale(-1, 1);
       ctx.drawImage(bodyImage, x, y, w, h, 0, 0, w, h); ctx.restore();
@@ -154,14 +168,15 @@ export async function loadCartoonMotion({ gripImage = null, bodyImage = null, bo
     // original rig. This is the shift the game applies to that layer, in rig
     // units before mirroring, including the throw lean around the hips.
     armShift(key, view, f) {
-      const [x, y] = shoulderOffsets?.[view]?.near ?? [0, 0];
+      const [x, y] = shoulderOffsets?.[bodyArmViews?.[view] ?? view]?.near ?? [0, 0];
       const lean = (key === 'throw' ? throwPose(f / THROW.fps).lean || 0 : 0) * (view === 3 ? -.35 : 1);
       return [x * Math.cos(lean) - y * Math.sin(lean), x * Math.sin(lean) + y * Math.cos(lean)];
     },
     // layer 'body' draws legs, far arm and torso; 'arm' draws only the near
     // arm, which always sits on top. Together they equal the full drawing.
     draw(g, key, view, f, frames, layer = 'all') {
-      const v = views[view], shoulder = shoulders[view];
+      const v = views[view], armView = bodyArmViews?.[view] ?? view;
+      const arms = views[armView], shoulder = shoulders[armView];
       const phase = f / frames * Math.PI * 2;
       const running = key === 'run', dance = key === 'dance', throwing = key === 'throw';
       const cast = throwing ? throwPose(f / THROW.fps) : null;
@@ -199,7 +214,7 @@ export async function loadCartoonMotion({ gripImage = null, bodyImage = null, bo
       g.rotate((cast?.lean || 0) * (view === 3 ? -.35 : 1));
       g.translate(0, 22);
       if (layer !== 'arm') {
-        part(g, v.empty, shoulder.far[0], shoulder.far[1] + bob, 71, shoulder.emptyPivot, .12, farAngle);
+        part(g, arms.empty, shoulder.far[0], shoulder.far[1] + bob, 71, shoulder.emptyPivot, .12, farAngle);
         part(g, v.mirroredCore && g.getTransform().a < 0 ? v.mirroredCore : v.core, 0, -13 + bob, v.coreHeight ?? 104, v.corePivotX ?? .5, v.corePivotY ?? 1);
       }
       if (layer === 'body') { g.restore(); return; }
@@ -207,14 +222,14 @@ export async function loadCartoonMotion({ gripImage = null, bodyImage = null, bo
       if (weaponAlpha < 1) {
         g.globalAlpha = 1 - weaponAlpha;
         const pivot = view === 2 ? shoulder.emptyPivot : 1 - shoulder.emptyPivot;
-        part(g, v.unarmed, shoulder.near[0], shoulder.near[1] + bob, 68, pivot, .12, nearAngle);
+        part(g, arms.unarmed, shoulder.near[0], shoulder.near[1] + bob, 68, pivot, .12, nearAngle);
       }
       if (weaponAlpha > 0) {
         g.globalAlpha = weaponAlpha;
         // Hand/ball overlap is painted into the source cutout, so occlusion
         // stays correct while the entire arm rotates around its shoulder.
-        part(g, v.grip || v.weapon, shoulder.near[0], shoulder.near[1] + bob,
-          v.gripPose?.height ?? 85, v.gripPose?.pivotX ?? shoulder.weaponPivot, v.gripPose?.pivotY ?? .12, nearAngle);
+        part(g, arms.grip || arms.weapon, shoulder.near[0], shoulder.near[1] + bob,
+          arms.gripPose?.height ?? 85, arms.gripPose?.pivotX ?? shoulder.weaponPivot, arms.gripPose?.pivotY ?? .12, nearAngle);
       }
       g.restore();
     },
