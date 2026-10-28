@@ -4,6 +4,7 @@ export const COIN_REWARDS = Object.freeze({ firstVisit: 100, win: 100, loss: 30 
 export const MAPS = [
   { id: 'classic', name: '바위 협곡', subtitle: '익숙한 곳에서, 가볍게 한 판.', price: 0, image: 'assets/cartoon/arena.png', tag: '기본 맵', description: '둥근 바위와 잔잔한 물결. 문도들의 첫 번째 경기장입니다.' },
   { id: 'colosseum', name: '문도 콜로세움', subtitle: '모래 위에서 실력을 증명해.', price: 1500, image: 'assets/cartoon/colosseum-selected-v1.png', tag: '새로운 경기장', description: '황금빛 모래, 겹겹이 둘러선 석조 관중석, 붉은 깃발. 오늘의 주인공은 문도입니다.' },
+  { id: 'football', name: '문도 축구장', subtitle: '문도, 잔디 위에서도 한 판!', price: 500, image: 'assets/cartoon/football-selected-v1.png', tag: '새로운 경기장', description: '초록 잔디와 양쪽 골대가 있는 원형 축구장! 깔끔한 필드와 파란 관중석, 조명탑 사이에서 신나게 던져보세요.' },
 ];
 export const WEAPONS = [
   { id: 'cleaver', name: '문도의 식칼', subtitle: '익숙한 손맛, 묵직한 한 방.', price: 0, image: 'assets/cartoon/cleaver-icon.png', description: '문도와 함께해 온 기본 투척 무기. 언제든 다시 장착할 수 있어요.' },

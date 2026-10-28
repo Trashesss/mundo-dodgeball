@@ -49,6 +49,7 @@
 .shop-map-card { display: flex; flex-direction: column; min-width: 0; padding: 0; border: 0; border-radius: 7px; background: transparent; color: #dddcc5; text-align: left; }
 .shop-card-art { position: relative; display: block; width: 100%; aspect-ratio: 1.16; overflow: hidden; border: 1px solid #5e7a7880; border-radius: 7px; background: radial-gradient(ellipse at 50% 60%, #3f5c60, #213b44 80%); box-shadow: inset 0 0 0 3px #0c242a99; }
 .shop-map-card[data-map="colosseum"] .shop-card-art { background: radial-gradient(ellipse at 50% 60%, #665540, #2d3e3e 80%); }
+.shop-map-card[data-map="football"] .shop-card-art { background: radial-gradient(ellipse at 50% 60%, #456746, #263e39 80%); }
 .shop-map-card[data-weapon] img { padding: 24px; }
 .shop-map-card[data-skin] img { padding: 10px; object-fit: contain; }
 #shop-dialog[data-category="skins"] .shop-art img { padding: 0; }

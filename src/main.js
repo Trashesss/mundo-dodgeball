@@ -308,6 +308,8 @@ class GameScene extends Phaser.Scene {
     this.load.image('arena', 'assets/cartoon/arena.png');
     this.load.image('colosseum', 'assets/cartoon/colosseum-selected-v1.png');
     this.load.json('colosseumMeta', 'assets/cartoon/colosseum-selected-v1.json');
+    this.load.image('football', 'assets/cartoon/football-selected-v1.png');
+    this.load.json('footballMeta', 'assets/cartoon/football-selected-v1.json');
     this.load.image('baron-cute', 'assets/cartoon/baron-cute.png');
     this.load.image('mundo-emote', 'assets/cartoon/mundo-thumbs-up-emote-v1.png');
   }
@@ -362,6 +364,11 @@ class GameScene extends Phaser.Scene {
       g.fillStyle = '#574438'; g.fillRect(0, 0, w, h);
       g.fillStyle = '#604c3c';
       for (let i = 0; i < 110; i++) g.fillRect((i * 73) % w, (i * 137) % h, 4, 2);
+    });
+    canvasTex('grass-bank', 256, 256, (g, w, h) => {
+      g.fillStyle = '#294537'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#304d3b';
+      for (let i = 0; i < 110; i++) g.fillRect((i * 73) % w, (i * 137) % h, 3, 2);
     });
     canvasTex('shadow', 64, 64, (g) => {
       const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
@@ -526,31 +533,33 @@ class GameScene extends Phaser.Scene {
 
   applyArena(id) {
     if (this.arenaId === id) return;
-    this.arenaId = id === 'colosseum' ? id : 'classic';
+    this.arenaId = id === 'colosseum' || id === 'football' ? id : 'classic';
     const sand = this.arenaId === 'colosseum';
-    const meta = this.cache.json.get(sand ? 'colosseumMeta' : 'arenaMeta');
-    this.arenaImage.setTexture(sand ? 'colosseum' : 'arena');
+    const football = this.arenaId === 'football';
+    const ground = sand || football;
+    const meta = this.cache.json.get(ground ? `${this.arenaId}Meta` : 'arenaMeta');
+    this.arenaImage.setTexture(ground ? this.arenaId : 'arena');
     // Preserve the artwork's proportions. The playable ellipse is drawn separately;
     // its fixed projection must never stretch the architecture in a generated image.
-    const scale = sand ? Math.max(sx(ARENA.R) / meta.groundRadiusX, sy(ARENA.R) / meta.groundRadiusY) : 1;
+    const scale = ground ? Math.max(sx(ARENA.R) / meta.groundRadiusX, sy(ARENA.R) / meta.groundRadiusY) : 1;
     this.arenaImage.setOrigin(meta.originX / meta.width, meta.originY / meta.height)
       .setScale(scale);
-    this.bank.setTexture(sand ? 'sand-bank' : 'bank');
-    this.water.setVisible(!sand);
-    this.baron.root.setVisible(!sand);
-    this.fx.mote.setVisible(!sand);
-    this.sandBoundary.setVisible(sand);
+    this.bank.setTexture(football ? 'grass-bank' : sand ? 'sand-bank' : 'bank');
+    this.water.setVisible(!ground);
+    this.baron.root.setVisible(!ground);
+    this.fx.mote.setVisible(!ground);
+    this.sandBoundary.setVisible(ground);
     this.drawSandBoundary();
     this.updateCamera();
   }
 
   drawSandBoundary() {
-    if (this.arenaId !== 'colosseum') return;
+    if (this.arenaId === 'classic') return;
     const g = this.sandBoundary;
     g.clear();
     const r = this.arenaR, initial = RULES.arenaR;
     // The painted rim is decoration; this line marks the exact movement boundary.
-    g.lineStyle(3, 0xb78648, .9).strokeEllipse(0, 0, sx(initial) * 2, sy(initial) * 2, 128);
+    g.lineStyle(3, this.arenaId === 'football' ? 0xe4edd0 : 0xb78648, .9).strokeEllipse(0, 0, sx(initial) * 2, sy(initial) * 2, 128);
     const half = (radius, start, end) => Array.from({ length: 65 }, (_, i) => {
       const a = start + (end - start) * i / 64;
       return { x: sx(Math.cos(a) * radius), y: sy(Math.sin(a) * radius) };
@@ -1297,7 +1306,7 @@ class GameScene extends Phaser.Scene {
       if (c.rippleT <= 0) {
         c.rippleT = 0.26;
         this.ripple(c.x, c.z);
-        this.fx.splash.explode(3, sx(c.x) + rand(-8, 8), sy(c.z));
+        if (this.arenaId !== 'football') this.fx.splash.explode(3, sx(c.x) + rand(-8, 8), sy(c.z));
       }
       if (c.ghostT > 0) this.fx.ghost.emitParticleAt(sx(c.x) + rand(-12, 12), sy(c.z, rand(0.3, 2)), 1);
     }
@@ -1316,7 +1325,7 @@ class GameScene extends Phaser.Scene {
   // 빗나간 식칼: 사거리 끝에서 물보라와 물결(암벽이면 불꽃)과 소리만 낸다
   missFx(x, z, rock) {
     const X = sx(x), Y = sy(z), vol = this.volAt(x, z);
-    if (this.arenaId === 'colosseum' && !rock) {
+    if ((this.arenaId === 'colosseum' || this.arenaId === 'football') && !rock) {
       this.ripple(x, z);
       return;
     }
@@ -1334,12 +1343,13 @@ class GameScene extends Phaser.Scene {
   ripple(x, z) {
     const r = this.add.image(sx(x), sy(z), 'ripple').setDepth(DEPTH.decal - 1).setAlpha(0.45);
     if (this.arenaId === 'colosseum') r.setTint(0xa97a45);
+    if (this.arenaId === 'football') r.setTint(0xb4ce85);
     r.setScale(0.25, 0.25 * SIN);
     this.tweens.add({ targets: r, scaleX: 0.75, scaleY: 0.75 * SIN, alpha: 0, duration: 750, onComplete: () => r.destroy() });
   }
 
   updateCamera(dt = 0) {
-    // 모든 맵에서 같은 플레이 영역과 캐릭터 크기를 유지한다.
+    // All maps share this camera so character and movement-area sizes stay identical.
     const cam = this.cameras.main;
     // 터치 가로 화면은 상단바·조이스틱·스킬이 양옆 구석에 있으니 위아래를 거의 비우지 않는다
     const landscape = this.touchMode && cam.width > cam.height;

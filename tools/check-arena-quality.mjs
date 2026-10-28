@@ -25,7 +25,7 @@ try {
       await new Promise(requestAnimationFrame);
       await new Promise(requestAnimationFrame);
       const gl = game.renderer.gl;
-      const textures = ['arena', 'colosseum', 'mundo'].map(key => {
+      const textures = ['arena', 'colosseum', 'football', 'mundo'].map(key => {
         const texture = scene.textures.get(key);
         return { key, filters: texture.source.map(source => ({
           min: source.glTexture.minFilter, mag: source.glTexture.magFilter,
@@ -56,7 +56,7 @@ try {
       await page.screenshot({ path: 'output/arena-quality/after-crop.png', clip: { x: 90, y: 260, width: 240, height: 450 } });
     }
     assert.deepEqual(errors, []);
-    console.log(`Arena quality DPR ${dpr}: physical-resolution canvas, no pixel-art CSS, LINEAR filters on both maps and all character atlases.`);
+    console.log(`Arena quality DPR ${dpr}: physical-resolution canvas, no pixel-art CSS, LINEAR filters on all maps and character atlases.`);
     await page.close();
   }
 } finally { await browser.close(); server.close(); }

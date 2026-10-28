@@ -13,7 +13,7 @@ import { RULES } from '../src/rules.js';
 const maps = (process.env.ONLINE_MAPS || 'colosseum,classic').split(',');
 const guestSkin = process.argv.includes('--teemo') ? 'teemo' : 'ronaldo';
 const guestWeapon = process.argv.includes('--mushroom') ? 'mushroom' : 'cleaver';
-assert.ok(maps.length === 2 && maps.every(id => ['classic', 'colosseum'].includes(id)), 'ONLINE_MAPS must contain two valid map IDs');
+assert.ok(maps.length === 2 && maps.every(id => ['classic', 'colosseum', 'football'].includes(id)), 'ONLINE_MAPS must contain two valid map IDs');
 
 const WS_PORT = 3100 + Math.floor(Math.random() * 500);
 const gameServer = spawn(process.execPath, ['server/index.mjs'], {
@@ -45,7 +45,7 @@ const open = async (url, map = 'classic', skin = 'classic', weapon = 'soccer') =
   await page.evaluateOnNewDocument((id, skin, weapon) => {
     if (localStorage.getItem('mundo-shop-v1') === null) {
       localStorage.setItem('mundo-shop-v1', JSON.stringify({
-        coins: 200, owned: ['classic', 'colosseum'], equipped: id, rewarded: [],
+        coins: 200, owned: ['classic', 'colosseum', 'football'], equipped: id, rewarded: [],
         ownedWeapons: ['cleaver', 'soccer', 'mushroom'], equippedWeapon: weapon,
         ownedSkins: ['classic', skin], equippedSkin: skin,
       }));
@@ -65,8 +65,8 @@ const checkMap = async (page, expected) => {
     shrinkTeam: s.shrinkTeam,
   };`);
   assert.deepEqual(state, {
-    id: expected, texture: expected === 'classic' ? 'arena' : 'colosseum',
-    water: expected === 'classic', boundary: expected === 'colosseum',
+    id: expected, texture: expected === 'classic' ? 'arena' : expected,
+    water: expected === 'classic', boundary: expected !== 'classic',
     radius: RULES.arenaR, fixed: null, shrinkTeam: null,
   });
 };

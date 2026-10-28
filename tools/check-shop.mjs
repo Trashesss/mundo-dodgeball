@@ -8,7 +8,7 @@ const server = await serve(0);
 const browser = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
 const url = `http://localhost:${server.address().port}/`;
 const errors = [];
-const ready = page => page.waitForFunction(() => window.__game?.scene.getScene('game').state === 'menu' && document.querySelector('#shop-map-list').children.length === 2);
+const ready = page => page.waitForFunction(() => window.__game?.scene.getScene('game').state === 'menu' && document.querySelector('[data-map="football"]'));
 try {
   fs.mkdirSync('output/shop', { recursive: true });
   const page = await browser.newPage();
