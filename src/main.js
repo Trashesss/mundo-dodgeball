@@ -39,7 +39,7 @@ const CHARACTER_ATLASES = [
   { prefix: 'ronaldo-mushroom-', texture: 'mundo-ronaldo-mushroom', path: 'ronaldo/mushroom/' },
   { prefix: 'teemo-mushroom-', texture: 'mundo-teemo-mushroom', path: 'teemo/mushroom/' },
 ];
-const INTERP_MS = 100; // 대인전 상대 표시 지연: 스냅샷 3개 간격 + 도착 흔들림 여유
+const INTERP_MS = 50; // 대인전 상대 표시 지연: 스냅샷(60Hz) 3개 간격 + 도착 흔들림 여유
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 // Render at the display's physical pixel density so Retina screens are not upscaled.
@@ -1160,7 +1160,7 @@ class GameScene extends Phaser.Scene {
     for (const cl of [...this.cleavers]) if (!ids.has(cl.id)) this.removeCleaver(cl.id);
   }
 
-  // 상대는 ~100ms 이전 시점을 두 스냅샷 사이에서 보간해 부드럽게 그린다.
+  // 상대는 ~50ms 이전 시점을 두 스냅샷 사이에서 보간해 부드럽게 그린다.
   interpolateOpponent(dt) {
     const e = this.enemy, buf = this.snaps;
     if (!buf.length) return;

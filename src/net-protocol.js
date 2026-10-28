@@ -1,7 +1,7 @@
 // 온라인 1대1 서버와 브라우저가 공유하는 상수와 상태 압축 형식.
 export const NET = {
   TICK_HZ: 60,          // 서버 계산 주기
-  SNAP_HZ: 30,          // 스냅샷 전송 주기
+  SNAP_HZ: 60,          // 스냅샷 전송 주기 (매 틱)
   COUNTDOWN_MS: 3000,
   ROUND_END_MS: 3400,   // 결과 연출 (봇전 endT 와 같음)
   GRACE_MS: 15000,      // 연결 끊김 재접속 대기
