@@ -1179,8 +1179,10 @@ class GameScene extends Phaser.Scene {
       hp: latest.hp, qCd: latest.qCd, flashCd: latest.flashCd, ghostCd: latest.ghostCd,
       ghostT: b.s.ghostT, slowT: b.s.slowT, celebrate: b.s.celebrate,
     });
-    if (e.actionT <= 0 && Math.hypot(e.vx, e.vz) > 0.4) e.facing = Math.atan2(e.vz, e.vx);
-    else if (e.actionT <= 0 && !e.celebrate) e.facing = b.s.facing;
+    // 달리기·방향은 서버 상태를 따른다. 보간 위치의 프레임별 속도는 60Hz 스냅샷의 좌표 반올림·도착 흔들림에
+    // 기준값 근처를 오가며 달리기↔대기 동작을 번갈아 다시 틀어 깜빡이게 한다.
+    e.netMoving = !!b.s.moveTarget && b.s.castT <= 0 && this.state === 'play';
+    if (e.actionT <= 0 && !e.celebrate) e.facing = b.s.facing;
     if (e.alive && !latest.alive) { e.alive = false; e.hp = 0; this.knockOut(e); }
   }
 
@@ -1285,7 +1287,7 @@ class GameScene extends Phaser.Scene {
     if (this.mode === 'online' && c !== this.player) {
       // 상대는 서버 스냅샷 보간으로 움직인다
       c.actionT = Math.max(0, c.actionT - dt);
-      moving = Math.hypot(c.vx, c.vz) > 0.4;
+      moving = !!c.netMoving;
     } else {
       moving = Sim.updateChamp(this, c, dt);
       this.flushFeed();
