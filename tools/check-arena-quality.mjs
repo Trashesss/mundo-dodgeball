@@ -25,7 +25,7 @@ try {
       await new Promise(requestAnimationFrame);
       await new Promise(requestAnimationFrame);
       const gl = game.renderer.gl;
-      const textures = ['arena', 'colosseum', 'football', 'mundo'].map(key => {
+      const textures = ['arena', 'colosseum', 'football', 'mundo-body-classic', 'mundo-arm-cleaver'].map(key => {
         const texture = scene.textures.get(key);
         return { key, filters: texture.source.map(source => ({
           min: source.glTexture.minFilter, mag: source.glTexture.magFilter,

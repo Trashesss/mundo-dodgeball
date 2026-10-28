@@ -1,8 +1,11 @@
 {
   "frameW": 320,
-  "frameH": 280,
+  "frameH": 320,
   "anchor": 0.76,
   "scale": 0.8,
+  "aliases": {
+    "2": 1
+  },
   "anims": {
     "idle": {
       "frames": 48,

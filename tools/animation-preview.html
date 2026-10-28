@@ -4,20 +4,14 @@
 <h2>문도 움직임</h2><p>게임에서 사용하는 최종 프레임 · 대기 / 달리기 / 투척 / 춤 / 쓰러짐</p>
 <div id="buttons"></div><canvas id="preview" width="880" height="240"></canvas>
 <script type="module">
+import { loadLayer, drawPose } from '/tools/character-layers.js';
 const meta = await (await fetch('/assets/cartoon/meta.json')).json();
-const atlas = await (await fetch('/assets/cartoon/atlas.json')).json();
-const frames = new Map();
-for (const texture of atlas.textures) {
-  const image = new Image(); image.src = '/assets/cartoon/' + texture.image; await image.decode();
-  for (const frame of texture.frames) frames.set(frame.filename, { image, ...frame });
-}
+const [body, arm] = await Promise.all([loadLayer('body', 'classic'), loadLayer('arm', 'cleaver')]);
 const canvas = document.querySelector('canvas'), g = canvas.getContext('2d');
 const labels = { idle:'대기', run:'달리기', throw:'투척', dance:'춤', death:'쓰러짐' };
 let selected = 'run', started = performance.now();
 function pose(ctx, key, direction, f, x, y, scale = .8) {
-  const entry = frames.get(`${key}_${direction}_${f}`), a = entry.frame, s = entry.spriteSourceSize;
-  ctx.drawImage(entry.image, a.x, a.y, a.w, a.h,
-    x + (s.x - meta.frameW / 2) * scale, y + (s.y - meta.frameH * meta.anchor) * scale, s.w * scale, s.h * scale);
+  drawPose(ctx, meta, body, arm, key, direction, f, x, y, scale);
 }
 function render(key, seconds) {
   const anim = meta.anims[key];

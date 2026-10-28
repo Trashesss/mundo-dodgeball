@@ -5,6 +5,7 @@ import { serve } from './serve.mjs';
 import { skipConsent } from './skip-consent.mjs';
 import { RULES } from '../src/rules.js';
 import { cleanLook } from '../src/net-protocol.js';
+import { waitMenuLook } from './layer-atlas.mjs';
 
 assert.deepEqual(cleanLook({ skin: 'teemo', weapon: 'mushroom' }), { skin: 'teemo', weapon: 'mushroom' });
 for (const weapon of [null, {}, 'missing', '__proto__']) assert.equal(cleanLook({ weapon }).weapon, 'cleaver');
@@ -48,7 +49,7 @@ try {
   });
   assert.deepEqual(purchase, { equipped: 'cleaver', duplicate: false, coins: 0 });
   await page.click('#shop-action');
-  assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').menuMundos[0].texture.key), 'mundo-mushroom');
+  await waitMenuLook(page, 'classic', 'mushroom');
   assert.equal(await page.$eval('#sk-q', el => el.getAttribute('aria-label')), 'Q 버섯 투척');
   assert.ok((await page.$eval('.q-icon', el => getComputedStyle(el).backgroundImage)).includes('teemo-mushroom-throw-icon-v1.png'));
   await page.screenshot({ path: 'output/mushroom/shop-desktop.png' });
@@ -74,7 +75,7 @@ try {
       const s = window.__game.scene.getScene('game'); s.startMatch({ diff: 'easy' }); s.scene.pause();
       const p = s.player, e = s.enemy, textures = [];
       for (const state of ['idle', 'run', 'throw', 'dance', 'death']) for (let d = 0; d < 8; d++) {
-        p.facing = d * Math.PI / 4; p.visualDir = null; p.setAnim(state, true); textures.push(p.sprite.texture.key);
+        p.facing = d * Math.PI / 4; p.visualDir = null; p.setAnim(state, true); textures.push(`${p.sprite.texture.key}+${p.mundo.arm.texture.key}`);
       }
       p.qCd = 0; p.actionT = 0; p.facing = 0; p.visualDir = null;
       const cast = s.castQ(p, e.x, e.z); s.updateChamp(p, .15);
@@ -89,7 +90,7 @@ try {
       document.querySelector('#menu').classList.add('hidden');
       return { cast, textures, texture, enemyTexture, cooldown, travel, hit, hp };
     }, skin);
-    assert.ok(result.cast); assert.ok(result.textures.every(texture => texture === `mundo-${skin === 'classic' ? '' : `${skin}-`}mushroom`));
+    assert.ok(result.cast); assert.ok(result.textures.every(texture => texture === `mundo-body-${skin}+mundo-arm-mushroom`));
     assert.equal(result.texture, 'mushroom'); assert.equal(result.enemyTexture, 'cleaver');
     assert.ok(Math.abs(result.travel - RULES.q.speed * .1) < .001);
     assert.ok(Math.abs(result.cooldown - (RULES.q.cd - .15)) < .001);
@@ -107,9 +108,9 @@ try {
       s.setupOnlineMatch(slot, 'online', [{ skin: 'teemo', weapon: 'mushroom' }, { skin: 'teemo', weapon: 'mushroom' }]);
       s.champs.forEach((c, i) => c.reset(i ? 6.5 : -6.5, 0)); s.scene.pause();
       for (let team = 0; team < 2; team++) s.showEvent({ type: 'throw', ci: team, id: 900 + team, x: team ? 5 : -5, z: 0, dx: team ? -1 : 1, dz: 0 }, true);
-      return { own: s.cleavers.find(cl => cl.team === slot).view.img.texture.key, other: s.cleavers.find(cl => cl.team !== slot).view.img.texture.key, enemy: s.enemy.sprite.texture.key };
+      return { own: s.cleavers.find(cl => cl.team === slot).view.img.texture.key, other: s.cleavers.find(cl => cl.team !== slot).view.img.texture.key, enemy: `${s.enemy.sprite.texture.key}+${s.enemy.mundo.arm.texture.key}` };
     }, slot);
-    assert.deepEqual(online, { own: 'cleaver', other: 'mushroom', enemy: 'mundo-teemo-mushroom' });
+    assert.deepEqual(online, { own: 'cleaver', other: 'mushroom', enemy: 'mundo-body-teemo+mundo-arm-mushroom' });
   }
   await page.evaluate(() => { const s = window.__game.scene.getScene('game'); s.backToMenu(); s.scene.resume(); });
   for (const weapon of ['mushroom', 'cleaver']) {

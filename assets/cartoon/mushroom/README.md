@@ -11,15 +11,14 @@
 | 투척물·상점 상품 이미지 | `assets/cartoon/teemo-mushroom-v1.png` |
 | Q 투척 스킬 아이콘 | `assets/cartoon/teemo-mushroom-throw-icon-v1.png` |
 | 네 방향의 버섯을 쥔 팔 원화 | `assets/cartoon/teemo-mushroom-parts-v1.png` |
-| 기본 문도 애니메이션 | `assets/cartoon/mushroom/atlas.json` + 같은 폴더의 WebP |
-| 호날두 문도 애니메이션 | `assets/cartoon/ronaldo/mushroom/atlas.json` + 같은 폴더의 WebP |
-| 티모 문도 애니메이션 | `assets/cartoon/teemo/mushroom/atlas.json` + 같은 폴더의 WebP |
+| 버섯을 든 팔 레이어 | `assets/cartoon/arm/mushroom/atlas.json` + 같은 폴더의 WebP |
+| 스킨별 몸통 레이어 (무기와 공용) | `assets/cartoon/body/{classic,ronaldo,teemo}/atlas.json` |
 
 세 PNG는 1254 × 1254다. 버섯 본체와 팔 원화는 투명 배경이고, 스킬 아이콘은 배경까지 채운 정사각형이다. 상점에는 투척물 이미지를 함께 사용하며, 기존 화면이 스킬 프레임과 Q 글자를 그린다.
 
 ## 애니메이션
 
-모든 스킨은 아래 다섯 동작을 각각 8방향으로 제공한다. 스킨당 1,712프레임, 전체 5,136프레임이다.
+팔 레이어는 아래 다섯 동작을 각각 8방향으로 제공하고, 게임이 장착한 스킨의 몸통 레이어 위에 겹쳐 그린다. 방향 2는 방향 1과 같은 그림이라 방향 1의 프레임을 함께 써서, 굽는 프레임은 1,498개다.
 
 | 동작 | 방향당 프레임 | 재생 속도 | 반복 |
 | --- | ---: | ---: | --- |
@@ -31,19 +30,19 @@
 
 프레임 이름은 기존과 같은 `{동작}_{방향 0~7}_{프레임 0부터}`다. 방향 배치는 기존 캐릭터와 같고, 좌측 방향에는 동일한 좌우 반전을 사용한다.
 
-각 폴더의 `meta.json`을 기준으로 원본 프레임 320 × 320, origin `(0.5, 0.76)`, scale `0.8`을 사용한다. WebP는 투명 여백을 잘라 2048 × 2048 이하의 여러 페이지에 배치한 Phaser multi-atlas다. `sourceSize`와 `spriteSourceSize`를 보존해야 손·발 위치가 유지된다.
+`assets/cartoon/meta.json`을 기준으로 원본 프레임 320 × 320, origin `(0.5, 0.76)`, scale `0.8`을 사용한다. WebP는 투명 여백을 잘라 2048 × 2048 이하의 여러 페이지에 배치한 Phaser multi-atlas다. `sourceSize`와 `spriteSourceSize`를 보존해야 손·발 위치가 유지된다.
 
 투척은 기존 동작과 동일하게 0.14초에 버섯을 놓으며, 0.5초에 끝난다. 0부터 센 60fps 프레임 번호 기준으로 9번부터 빈손이며, 25번부터 회복 구간에서 버섯이 다시 나타난다. 버섯은 팔의 일부로 함께 회전하고, 발사 후 공중 투척물에는 별도의 본체 이미지를 사용한다.
 
 ## 적용 시 참고
 
-`asset-set.json`의 `characters` 항목에는 기본·호날두·티모 각각에 대응하는 atlas, meta, texture, animationPrefix를 기록했다. 무기 ID는 `mushroom`이고 본체의 표시 크기는 기존 축구공과 같은 48 × 48이다. `src/main.js`가 atlas·투척물·스킬 표시를 로드하고 `src/shop-state.js`가 구매·장착을 저장한다. `src/net-protocol.js`의 외형 검증을 서버와 브라우저가 함께 사용한다.
+`asset-set.json`의 `arm` 항목에 팔 레이어의 atlas, meta, texture를, `skins`에 함께 쓰는 세 스킨을 기록했다. 무기 ID는 `mushroom`이고 본체의 표시 크기는 기존 축구공과 같은 48 × 48이다. `src/main.js`가 atlas·투척물·스킬 표시를 로드하고 `src/shop-state.js`가 구매·장착을 저장한다. `src/net-protocol.js`의 외형 검증을 서버와 브라우저가 함께 사용한다.
 
 이 세트는 기존 투척 무기의 외형을 바꾸기 위한 에셋이다. 별도의 독·설치·폭발 기능은 포함하지 않는다. 기존 그림자·적중 효과·투척 판정을 재사용할 때 별도 효과 원화는 필요하지 않다.
 
 ## 다시 만들기와 확인
 
-- `npm run bake:mushroom`: 기존 몸체·빈손·다리와 새 버섯 팔을 결합해 세 스킨을 모두 다시 내보낸다. 기존 식칼·축구공 에셋은 덮어쓰지 않는다.
+- `npm run bake:mushroom`: 버섯 팔 레이어만 다시 내보낸다. 몸통 레이어와 다른 무기는 덮어쓰지 않는다.
 - `npm run check:mushroom`: 프레임 완전성, 이미지 디코딩, 투명 배경, 잘림, 팔 영역, 발사·회복 시점에 이어 실제 구매·장착·저장·모바일·세 스킨의 동작·명중·공격 성능·온라인 양쪽 진영의 상대 외형을 검사한다. `output/mushroom/`에 미리보기·상점·대전 스크린샷을 저장한다.
 - `npm run check:online -- --teemo --mushroom`: 실제 서버와 두 브라우저로 축구공과 티모 버섯을 함께 사용하고, 양쪽 화면의 투척물·피격·재대결·재접속 외형을 확인한다.
 - `npm start` 후 `/tools/mushroom-preview.html`: 캐릭터·동작을 바꾸거나 프레임을 멈추며 실제 WebP 프레임을 살펴볼 수 있다.

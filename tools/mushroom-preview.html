@@ -31,26 +31,22 @@
 </div>
 </main>
 <script type="module">
+import { loadLayer, drawPose } from '/tools/character-layers.js';
 const manifest = await (await fetch('/assets/cartoon/mushroom/asset-set.json')).json();
+const meta = await (await fetch('/' + manifest.arm.meta)).json();
+// 게임과 같이 스킨별 몸통 레이어 위에 버섯 팔 레이어를 겹쳐 그린다
+const arm = await loadLayer('arm', manifest.id);
 const sets = new Map();
-for (const character of manifest.characters) {
-  const [meta, atlas] = await Promise.all([character.meta, character.atlas].map(async path => (await fetch('/' + path)).json()));
-  const frames = new Map();
-  for (const texture of atlas.textures) {
-    const image = new Image(); image.src = '/' + character.atlas.replace('atlas.json', texture.image); await image.decode();
-    for (const frame of texture.frames) frames.set(frame.filename, { image, ...frame });
-  }
-  sets.set(character.skin, { ...character, meta, frames });
-  document.querySelector('#skin').add(new Option(character.name, character.skin));
+for (const { skin, name } of manifest.skins) {
+  sets.set(skin, { skin, name, meta, body: await loadLayer('body', skin) });
+  document.querySelector('#skin').add(new Option(name, skin));
 }
 const canvas = document.querySelector('canvas'), g = canvas.getContext('2d');
 const skin = document.querySelector('#skin'), state = document.querySelector('#state'), slider = document.querySelector('#frame');
 const pause = document.querySelector('#pause'), progress = document.querySelector('#progress'), status = document.querySelector('#status');
 let paused = false, started = performance.now(), selectedFrame = 0;
 function pose(ctx, skinId, key, direction, index, x, y, scale = .9) {
-  const set = sets.get(skinId), entry = set.frames.get(`${key}_${direction}_${index}`);
-  const r = entry.frame, s = entry.spriteSourceSize, meta = set.meta;
-  ctx.drawImage(entry.image, r.x, r.y, r.w, r.h, x + (s.x - meta.frameW / 2) * scale, y + (s.y - meta.frameH * meta.anchor) * scale, s.w * scale, s.h * scale);
+  drawPose(ctx, meta, sets.get(skinId).body, arm, key, direction, index, x, y, scale);
 }
 function render(index) {
   const anim = sets.get(skin.value).meta.anims[state.value];
@@ -79,7 +75,7 @@ function tick(now) {
   }
   requestAnimationFrame(tick);
 }
-window.mushroomPreview = { manifest, sets, pose, render, pause: () => setPaused(true) };
+window.mushroomPreview = { manifest, meta, arm, sets, pose, render, pause: () => setPaused(true) };
 render(0); requestAnimationFrame(tick);
 </script>
 </html>

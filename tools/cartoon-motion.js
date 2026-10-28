@@ -150,7 +150,17 @@ export async function loadCartoonMotion({ gripImage = null, bodyImage = null, bo
   }
   return {
     views,
-    draw(g, key, view, f, frames) {
+    // Costume shoulders move the near arm, but the arm layer is baked on the
+    // original rig. This is the shift the game applies to that layer, in rig
+    // units before mirroring, including the throw lean around the hips.
+    armShift(key, view, f) {
+      const [x, y] = shoulderOffsets?.[view]?.near ?? [0, 0];
+      const lean = (key === 'throw' ? throwPose(f / THROW.fps).lean || 0 : 0) * (view === 3 ? -.35 : 1);
+      return [x * Math.cos(lean) - y * Math.sin(lean), x * Math.sin(lean) + y * Math.cos(lean)];
+    },
+    // layer 'body' draws legs, far arm and torso; 'arm' draws only the near
+    // arm, which always sits on top. Together they equal the full drawing.
+    draw(g, key, view, f, frames, layer = 'all') {
       const v = views[view], shoulder = shoulders[view];
       const phase = f / frames * Math.PI * 2;
       const running = key === 'run', dance = key === 'dance', throwing = key === 'throw';
@@ -172,7 +182,7 @@ export async function loadCartoonMotion({ gripImage = null, bodyImage = null, bo
       }
       nearAngle -= falling * .3;
       farAngle += falling * .25;
-      for (let i = 0; i < 2; i++) {
+      for (let i = 0; i < 2 && layer !== 'arm'; i++) {
         const step = stride * (i ? -1 : 1);
         const travel = running ? step * (view === 0 || view === 2 ? 8 : 5)
           : dance ? stride * (i ? 2 : -2) : 0;
@@ -188,8 +198,11 @@ export async function loadCartoonMotion({ gripImage = null, bodyImage = null, bo
       g.translate(0, -22);
       g.rotate((cast?.lean || 0) * (view === 3 ? -.35 : 1));
       g.translate(0, 22);
-      part(g, v.empty, shoulder.far[0], shoulder.far[1] + bob, 71, shoulder.emptyPivot, .12, farAngle);
-      part(g, v.mirroredCore && g.getTransform().a < 0 ? v.mirroredCore : v.core, 0, -13 + bob, v.coreHeight ?? 104, v.corePivotX ?? .5, v.corePivotY ?? 1);
+      if (layer !== 'arm') {
+        part(g, v.empty, shoulder.far[0], shoulder.far[1] + bob, 71, shoulder.emptyPivot, .12, farAngle);
+        part(g, v.mirroredCore && g.getTransform().a < 0 ? v.mirroredCore : v.core, 0, -13 + bob, v.coreHeight ?? 104, v.corePivotX ?? .5, v.corePivotY ?? 1);
+      }
+      if (layer === 'body') { g.restore(); return; }
       const weaponAlpha = cast?.released ? ease((f / THROW.fps - .40) / .08) : 1;
       if (weaponAlpha < 1) {
         g.globalAlpha = 1 - weaponAlpha;

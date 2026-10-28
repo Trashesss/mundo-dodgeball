@@ -4,22 +4,12 @@ import puppeteer from 'puppeteer-core';
 import { serve } from './serve.mjs';
 import { skipConsent } from './skip-consent.mjs';
 import { RULES } from '../src/rules.js';
+import { checkLayerAtlas, waitMenuLook } from './layer-atlas.mjs';
 
 const skinId = process.argv.includes('--teemo') ? 'teemo' : 'ronaldo';
 const skinPrice = skinId === 'teemo' ? 600 : 777;
 const output = `output/skins/${skinId}`;
-const meta = JSON.parse(fs.readFileSync('assets/cartoon/meta.json'));
-for (const folder of [skinId, `${skinId}/soccer`]) {
-  const atlas = JSON.parse(fs.readFileSync(`assets/cartoon/${folder}/atlas.json`));
-  const frames = new Set(atlas.textures.flatMap(texture => texture.frames.map(frame => frame.filename)));
-  for (const [key, anim] of Object.entries(meta.anims)) for (let d = 0; d < 8; d++) for (let f = 0; f < anim.frames; f++) {
-    assert.ok(frames.has(`${key}_${d}_${f}`), `missing ${folder} ${key}_${d}_${f}`);
-  }
-  for (const texture of atlas.textures) for (const frame of texture.frames) {
-    const s = frame.spriteSourceSize;
-    assert.ok(s.x > 0 && s.y > 0 && s.x + s.w < frame.sourceSize.w && s.y + s.h < frame.sourceSize.h, `${folder} must not clip`);
-  }
-}
+checkLayerAtlas('body', skinId);
 
 const server = await serve(0);
 const browser = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
@@ -85,7 +75,7 @@ try {
   assert.equal(await page.evaluate(async skinId => (await import('/src/shop-state.js')).buySkin(skinId).ok, skinId), false);
   await page.click('#shop-action');
   assert.ok(await page.$eval('#shop-action', el => el.disabled));
-  assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').menuMundos[0].texture.key), `mundo-${skinId}-soccer`);
+  await waitMenuLook(page, skinId, 'soccer');
   await page.screenshot({ path: `${output}/shop-desktop.png` });
   for (const [width, height] of [[390, 844], [320, 568], [844, 390]]) {
     await page.setViewport({ width, height });
@@ -117,7 +107,7 @@ try {
       const textures = [];
       for (const key of ['idle', 'run', 'throw', 'dance', 'death']) for (let d = 0; d < 8; d++) {
         p.facing = d * Math.PI / 4; p.visualDir = null; p.setAnim(key, true);
-        textures.push(p.sprite.texture.key);
+        textures.push(`${p.sprite.texture.key}+${p.mundo.arm.texture.key}`);
       }
       p.facing = 0; p.visualDir = null; p.qCd = 0;
       s.castQ(p, e.x, e.z); s.updateChamp(p, .15);
@@ -126,10 +116,10 @@ try {
       for (let i = 0; i < 150 && projectile.alive; i++) s.updateCleaver(projectile, .01);
       p.actionT = 0; p.setAnim('idle', true); p.sync(); e.sync();
       document.querySelector('#menu').classList.add('hidden');
-      return { textures, enemy: e.sprite.texture.key, projectileTexture, hits: p.stats.hits, enemyHp: e.hp };
+      return { textures, enemy: `${e.sprite.texture.key}+${e.mundo.arm.texture.key}`, projectileTexture, hits: p.stats.hits, enemyHp: e.hp };
     }, weapon);
-    assert.ok(result.textures.every(texture => texture === `mundo-${skinId}${weapon === 'soccer' ? '-soccer' : ''}`));
-    assert.equal(result.enemy, 'mundo');
+    assert.ok(result.textures.every(texture => texture === `mundo-body-${skinId}+mundo-arm-${weapon}`));
+    assert.equal(result.enemy, 'mundo-body-classic+mundo-arm-cleaver');
     assert.equal(result.projectileTexture, weapon === 'soccer' ? 'soccer-ball' : 'cleaver');
     assert.equal(result.hits, 1); assert.equal(result.enemyHp, RULES.maxHp * (1 - RULES.q.dmgPct));
     await page.evaluate(() => { const s = window.__game.scene.getScene('game'); s.scene.resume(); });
@@ -149,36 +139,33 @@ try {
     const online = await page.evaluate(slot => {
       const s = window.__game.scene.getScene('game');
       s.setupOnlineMatch(slot); s.champs.forEach((c, i) => c.reset(i ? 6.5 : -6.5, 0)); s.scene.pause();
-      return { player: s.player.skinId, texture: s.player.sprite.texture.key, enemy: s.enemy.skinId, enemyTexture: s.enemy.sprite.texture.key };
+      const look = c => `${c.sprite.texture.key}+${c.mundo.arm.texture.key}`;
+      return { player: s.player.skinId, texture: look(s.player), enemy: s.enemy.skinId, enemyTexture: look(s.enemy) };
     }, slot);
-    assert.deepEqual(online, { player: skinId, texture: `mundo-${skinId}-soccer`, enemy: 'classic', enemyTexture: 'mundo' });
+    assert.deepEqual(online, { player: skinId, texture: `mundo-body-${skinId}+mundo-arm-soccer`, enemy: 'classic', enemyTexture: 'mundo-body-classic+mundo-arm-cleaver' });
   }
   await page.evaluate(() => { const s = window.__game.scene.getScene('game'); s.backToMenu(); s.scene.resume(); document.querySelector('#menu').classList.remove('hidden'); });
   await page.click('#shop-open'); await page.click('[data-shop-category="skins"]');
   await page.click('[data-skin="classic"]'); await page.click('#shop-action');
-  assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').menuMundos[0].texture.key), 'mundo-soccer');
+  await waitMenuLook(page, 'classic', 'soccer');
   await page.click('[data-shop-category="weapons"]'); await page.click('[data-weapon="cleaver"]'); await page.click('#shop-action');
-  assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').menuMundos[0].texture.key), 'mundo');
+  await waitMenuLook(page, 'classic', 'cleaver');
 
   // A contact sheet uses the actual baked frames, including mirrored numerals.
   const sheets = await page.evaluate(async skinId => {
     const sheets = [];
-    for (const folder of [skinId, `${skinId}/soccer`]) {
-      const atlas = await (await fetch(`/assets/cartoon/${folder}/atlas.json`)).json();
-      const frames = new Map();
-      for (const texture of atlas.textures) {
-        const img = new Image(); img.src = `/assets/cartoon/${folder}/${texture.image}`; await img.decode();
-        for (const f of texture.frames) frames.set(f.filename, { img, ...f });
-      }
+    const { loadLayer, drawPose } = await import('/tools/character-layers.js');
+    const meta = await (await fetch('/assets/cartoon/meta.json')).json(), body = await loadLayer('body', skinId);
+    for (const weapon of ['cleaver', 'soccer']) {
+      const arm = await loadLayer('arm', weapon);
       const c = Object.assign(document.createElement('canvas'), { width: 1600, height: 1100 });
       const g = c.getContext('2d'); g.fillStyle = '#304e5c'; g.fillRect(0, 0, c.width, c.height);
       const poses = [['idle', 0], ['run', 7], ['throw', 14], ['dance', 30], ['death', 45]];
       for (const [row, [key, index]] of poses.entries()) for (let d = 0; d < 8; d++) {
-        const f = frames.get(`${key}_${d}_${index}`), s = f.spriteSourceSize, r = f.frame;
         g.fillStyle = '#e1dfc7'; g.font = '14px sans-serif'; g.fillText(`${key} / ${d}`, d * 200 + 14, row * 220 + 22);
-        g.drawImage(f.img, r.x, r.y, r.w, r.h, d * 200 + 100 + (s.x - f.sourceSize.w / 2), row * 220 + 192 + s.y - f.sourceSize.h * .76, s.w, s.h);
+        drawPose(g, meta, body, arm, key, d, index, d * 200 + 100, row * 220 + 192);
       }
-      sheets.push({ name: folder.replace('/', '-'), data: c.toDataURL() });
+      sheets.push({ name: weapon === 'cleaver' ? skinId : `${skinId}-${weapon}`, data: c.toDataURL() });
     }
     return sheets;
   }, skinId);

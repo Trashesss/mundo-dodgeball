@@ -3,34 +3,16 @@ import fs from 'node:fs';
 import puppeteer from 'puppeteer-core';
 import { serve } from './serve.mjs';
 import { THROW } from '../src/throw-motion.js';
+import { SKINS, meta, checkLayerAtlas } from './layer-atlas.mjs';
 
 const manifest = JSON.parse(fs.readFileSync('assets/cartoon/mushroom/asset-set.json'));
-const expected = JSON.parse(fs.readFileSync('assets/cartoon/meta.json')).anims;
 assert.equal(manifest.throw.releaseSeconds, THROW.release);
 assert.equal(manifest.throw.durationSeconds, THROW.duration);
-for (const file of [manifest.projectile.image, manifest.shopImage, manifest.abilityIcon, manifest.gripSource]) assert.ok(fs.existsSync(file), file);
-for (const character of manifest.characters) {
-  const meta = JSON.parse(fs.readFileSync(character.meta));
-  const atlas = JSON.parse(fs.readFileSync(character.atlas));
-  assert.deepEqual(meta.anims, expected);
-  assert.deepEqual([meta.frameW, meta.frameH, meta.anchor, meta.scale], [320, 320, .76, .8]);
-  const entries = atlas.textures.flatMap(texture => texture.frames);
-  const names = new Set(entries.map(frame => frame.filename));
-  const count = Object.values(expected).reduce((sum, anim) => sum + anim.frames * 8, 0);
-  assert.equal(entries.length, count); assert.equal(names.size, count);
-  for (const [key, anim] of Object.entries(expected)) for (let d = 0; d < 8; d++) for (let f = 0; f < anim.frames; f++) {
-    assert.ok(names.has(`${key}_${d}_${f}`), `${character.skin}: missing ${key}_${d}_${f}`);
-  }
-  for (const texture of atlas.textures) {
-    assert.ok(fs.existsSync(character.atlas.replace('atlas.json', texture.image)));
-    assert.ok(texture.size.w <= 2048 && texture.size.h <= 2048);
-    for (const { filename, frame: r, spriteSourceSize: s, sourceSize } of texture.frames) {
-      assert.ok(r.x >= 0 && r.y >= 0 && r.x + r.w <= texture.size.w && r.y + r.h <= texture.size.h, filename);
-      assert.deepEqual(sourceSize, { w: meta.frameW, h: meta.frameH });
-      assert.ok(s.x > 0 && s.y > 0 && s.x + s.w < sourceSize.w && s.y + s.h < sourceSize.h, `${character.skin}: clipped ${filename}`);
-    }
-  }
-}
+for (const file of [manifest.projectile.image, manifest.shopImage, manifest.abilityIcon, manifest.gripSource, manifest.arm.atlas, manifest.arm.meta]) assert.ok(fs.existsSync(file), file);
+assert.deepEqual([meta.frameW, meta.frameH, meta.anchor, meta.scale], [320, 320, .76, .8]);
+checkLayerAtlas('arm', manifest.id);
+assert.deepEqual(manifest.skins.map(s => s.skin), SKINS);
+for (const skin of SKINS) checkLayerAtlas('body', skin);
 
 const server = await serve(0);
 const browser = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
@@ -47,25 +29,26 @@ try {
     const canvas = Object.assign(document.createElement('canvas'), { width: 320, height: 320 });
     const g = canvas.getContext('2d', { willReadFrequently: true });
     const failures = [], totals = [];
-    for (const set of p.sets.values()) {
-      const images = new Set([...set.frames.values()].map(entry => entry.image));
+    for (const layer of [p.arm, ...[...p.sets.values()].map(set => set.body)]) {
+      const label = `${layer.layer}/${layer.id}`;
+      const images = new Set([...layer.frames.values()].map(entry => entry.image));
       for (const image of images) {
         const sheet = Object.assign(document.createElement('canvas'), { width: image.naturalWidth, height: image.naturalHeight });
         const ctx = sheet.getContext('2d'); ctx.drawImage(image, 0, 0);
         const alpha = ctx.getImageData(0, 0, sheet.width, sheet.height).data;
-        if (!alpha.some((value, i) => i % 4 === 3 && value === 0)) failures.push(`${set.skin}: lost transparency`);
+        if (!alpha.some((value, i) => i % 4 === 3 && value === 0)) failures.push(`${label}: lost transparency`);
       }
-      for (const [name, entry] of set.frames) {
+      for (const [name, entry] of layer.frames) {
         const r = entry.frame, s = entry.spriteSourceSize;
-        if (entry.image.naturalWidth < r.x + r.w || entry.image.naturalHeight < r.y + r.h) failures.push(`${set.skin}: invalid encoded bounds ${name}`);
+        if (entry.image.naturalWidth < r.x + r.w || entry.image.naturalHeight < r.y + r.h) failures.push(`${label}: invalid encoded bounds ${name}`);
         g.clearRect(0, 0, 320, 320);
         g.drawImage(entry.image, r.x, r.y, r.w, r.h, s.x, s.y, s.w, s.h);
         const pixels = g.getImageData(0, 0, 320, 320).data;
         let visible = 0;
         for (let i = 3; i < pixels.length; i += 4) if (pixels[i] > 40) visible++;
-        if (visible < 1000) failures.push(`${set.skin}: empty frame ${name}`);
+        if (visible < (layer.layer === 'arm' ? 300 : 1000)) failures.push(`${label}: empty frame ${name}`);
       }
-      totals.push({ skin: set.skin, frames: set.frames.size, pages: images.size });
+      totals.push({ layer: label, frames: layer.frames.size, pages: images.size });
     }
     const { loadCartoonMotion } = await import('/tools/cartoon-motion.js');
     const gripImage = new Image(); gripImage.src = '/' + p.manifest.gripSource; await gripImage.decode();
@@ -105,7 +88,7 @@ try {
   await page.screenshot({ path: 'output/mushroom/preview.png', fullPage: true });
   assert.deepEqual(errors, []);
   assert.deepEqual(result.failures, []);
-  console.log(JSON.stringify({ characters: result.totals, verified: ['all 5,136 frames decode', 'eight directions and five states per skin', 'transparent sheets', 'unclipped source frames', 'registered four-view grip', 'empty hand at release and grip restored at recovery'] }, null, 2));
+  console.log(JSON.stringify({ layers: result.totals, verified: ['mushroom arm and all three bodies decode', 'every baked direction and five states per layer', 'transparent sheets', 'unclipped source frames', 'registered four-view grip', 'empty hand at release and grip restored at recovery'] }, null, 2));
 } finally {
   await browser.close(); server.close();
 }

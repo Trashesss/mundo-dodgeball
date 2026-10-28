@@ -27,18 +27,11 @@ const BAR_OFF = 154;
 const EMOTE_DELAY = 0.25;
 const EMOTE_DURATION = 1;
 const EMOTE_SIZE = 104;
-const animationPrefix = (skin, weapon) => `${skin === 'ronaldo' || skin === 'teemo' ? `${skin}-` : ''}${weapon === 'soccer' || weapon === 'mushroom' ? `${weapon}-` : ''}`;
-const CHARACTER_ATLASES = [
-  { prefix: '', texture: 'mundo', path: '' },
-  { prefix: 'soccer-', texture: 'mundo-soccer', path: 'soccer/' },
-  { prefix: 'ronaldo-', texture: 'mundo-ronaldo', path: 'ronaldo/' },
-  { prefix: 'ronaldo-soccer-', texture: 'mundo-ronaldo-soccer', path: 'ronaldo/soccer/' },
-  { prefix: 'teemo-', texture: 'mundo-teemo', path: 'teemo/' },
-  { prefix: 'teemo-soccer-', texture: 'mundo-teemo-soccer', path: 'teemo/soccer/' },
-  { prefix: 'mushroom-', texture: 'mundo-mushroom', path: 'mushroom/' },
-  { prefix: 'ronaldo-mushroom-', texture: 'mundo-ronaldo-mushroom', path: 'ronaldo/mushroom/' },
-  { prefix: 'teemo-mushroom-', texture: 'mundo-teemo-mushroom', path: 'teemo/mushroom/' },
-];
+// 캐릭터는 스킨별 몸통 레이어 위에 무기별 팔 레이어를 겹쳐 그린다. 조합마다 따로 굽지 않는다.
+const SKIN_IDS = ['classic', 'ronaldo', 'teemo'];
+const WEAPON_IDS = ['cleaver', 'soccer', 'mushroom'];
+const bodyTexture = (skin) => `mundo-body-${skin}`;
+const armTexture = (weapon) => `mundo-arm-${weapon}`;
 const INTERP_MS = 100; // 대인전 상대 표시 지연: 와이파이에서 스냅샷이 ~100ms씩 끊겼다 몰려 와도 멈추지 않게
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -91,6 +84,85 @@ void main() {
 `;
 
 // ---------------------------------------------------------------------------
+// 캐릭터 한 명의 그림. 몸통 스프라이트가 애니메이션을 돌리고, 팔 스프라이트는 장면의
+// postupdate 에서 몸통의 프레임·위치·깊이·투명도·색조를 따라간다.
+// 반투명(유체화)일 때는 두 레이어를 한 장으로 합친 뒤 투명도를 줘서, 겹친 곳에 몸통이 비치지 않게 한다.
+class Mundo {
+  constructor(scene, x, y, skin, weapon) {
+    const { anchor, scale } = scene.meta;
+    this.scene = scene;
+    this.skin = skin;
+    this.weapon = weapon;
+    this.offsets = scene.cache.json.get(`${bodyTexture(skin)}-arm`);
+    this.body = scene.add.sprite(x, y, bodyTexture(skin), 'idle_1_0').setOrigin(0.5, anchor).setScale(scale);
+    this.arm = scene.add.sprite(x, y, armTexture(weapon), 'idle_1_0').setOrigin(0.5, anchor).setScale(scale);
+    scene.mundos.add(this);
+    this.follow();
+  }
+
+  setLook(skin, weapon) {
+    if (weapon !== this.weapon) {
+      this.weapon = weapon;
+      this.arm.setTexture(armTexture(weapon), this.body.frame.name);
+    }
+    if (skin !== this.skin) {
+      const anims = this.body.anims, current = anims.currentAnim;
+      const { accumulator, timeScale } = anims;
+      const startFrame = current ? Math.max(0, current.frames.indexOf(anims.currentFrame)) : 0;
+      this.body.setTexture(bodyTexture(skin), this.body.frame.name);
+      // 같은 동작의 같은 프레임에서 이어서 재생한다
+      if (current) {
+        this.body.play({ key: current.key.replace(`${this.skin}:`, `${skin}:`), startFrame });
+        Object.assign(anims, { accumulator, timeScale });
+      }
+      this.skin = skin;
+      this.offsets = this.scene.cache.json.get(`${bodyTexture(skin)}-arm`);
+    }
+    this.follow();
+  }
+
+  play(key) {
+    this.body.play(`${this.skin}:${key}`);
+    return this;
+  }
+
+  follow() {
+    const { body, arm } = this;
+    const name = body.frame.name;
+    if (arm.frame.name !== name) arm.setFrame(name);
+    // 의상 어깨가 원래 자리와 다른 스킨은 팔 레이어를 프레임마다 그만큼 옮긴다
+    const [key, dir, frame] = name.split('_');
+    const shift = this.offsets[`${key}_${dir}`];
+    const [ox, oy] = !shift ? [0, 0] : Array.isArray(shift[0]) ? shift[frame] : shift;
+    arm.setPosition(body.x + ox * body.scaleX, body.y + oy * body.scaleY).setDepth(body.depth).setAlpha(body.alpha);
+    if (body.isTinted) arm.setTint(body.tintTopLeft);
+    else if (arm.isTinted) arm.clearTint();
+    const merged = body.alpha < 1;
+    body.setVisible(!merged);
+    arm.setVisible(!merged);
+    if (merged) this.drawMerged(ox, oy);
+    else this.merged?.setVisible(false);
+  }
+
+  drawMerged(ox, oy) {
+    const { body, arm } = this, { frameW, frameH, anchor } = this.scene.meta;
+    this.merged ??= this.scene.add.renderTexture(0, 0, frameW, frameH).setOrigin(0.5, anchor);
+    const stamp = { originX: 0.5, originY: anchor, tint: body.isTinted ? body.tintTopLeft : 0xffffff };
+    this.merged.clear()
+      .stamp(body.texture.key, body.frame.name, frameW / 2, frameH * anchor, stamp)
+      .stamp(arm.texture.key, arm.frame.name, frameW / 2 + ox, frameH * anchor + oy, stamp);
+    this.merged.setPosition(body.x, body.y).setScale(body.scaleX, body.scaleY)
+      .setDepth(body.depth).setAlpha(body.alpha).setVisible(true);
+  }
+
+  destroy() {
+    this.scene.mundos.delete(this);
+    this.body.destroy();
+    this.arm.destroy();
+    this.merged?.destroy();
+  }
+}
+
 class Champ {
   // emote: 적중 시 따봉 표시 (봇전은 봇만, 대인전은 양쪽 모두)
   // look: 온라인 상대의 외형. 없으면 내 캐릭터는 장착한 외형, 봇은 기본 외형
@@ -104,14 +176,14 @@ class Champ {
     this.color = isPlayer ? 0x5ee05e : 0xff4040;
     this.barColor = isPlayer ? 0x48c848 : 0xd83838;
 
-    const meta = scene.meta;
     this.shadow = scene.add.image(0, 0, 'shadow').setDepth(DEPTH.decal);
     this.shadow.setDisplaySize(RULES.champR * 3 * PPU, RULES.champR * 3 * PPU * SIN);
     this.ring = scene.add.graphics().setDepth(DEPTH.ring);
     const rw = RULES.champR * 2.3 * PPU, rh = rw * SIN;
     this.ring.fillStyle(this.color, 0.12).fillEllipse(0, 0, rw, rh);
     this.ring.lineStyle(isPlayer ? 3 : 2, this.color, 0.95).strokeEllipse(0, 0, rw, rh);
-    this.sprite = scene.add.sprite(0, 0, 'mundo', 'idle_2_0').setOrigin(0.5, meta.anchor).setScale(meta.scale);
+    this.mundo = new Mundo(scene, 0, 0, this.skinId, this.weaponId);
+    this.sprite = this.mundo.body;
     this.bar = scene.add.graphics().setDepth(DEPTH.ui);
     if (emote) {
       this.emote = scene.add.image(0, 0, 'mundo-emote')
@@ -165,7 +237,7 @@ class Champ {
   }
 
   setAnim(key, force = false) {
-    const full = `${animationPrefix(this.skinId, this.weaponId)}${key}_${this.dirIndex()}`;
+    const full = `${this.mundo.skin}:${key}_${this.dirIndex()}`;
     const anims = this.sprite.anims;
     if (!force && anims.currentAnim?.key === full && anims.isPlaying) return;
     if (!force && anims.currentAnim?.key === full && key === 'death') return;
@@ -238,7 +310,7 @@ class Champ {
 
   destroy() {
     this.emote?.destroy();
-    for (const o of [this.sprite, this.shadow, this.ring, this.bar]) o.destroy();
+    for (const o of [this.mundo, this.shadow, this.ring, this.bar]) o.destroy();
   }
 }
 
@@ -298,8 +370,12 @@ class GameScene extends Phaser.Scene {
       document.getElementById('load-progress').setAttribute('aria-valuenow', percent);
       document.getElementById('load-text').textContent = percent < 100 ? '경기장 준비하는 중…' : '문도, 준비 끝!';
     });
-    for (const { texture, path } of CHARACTER_ATLASES) {
-      this.load.multiatlas(texture, `assets/cartoon/${path}atlas.json`, `assets/cartoon/${path}`);
+    for (const [layer, ids] of [['body', SKIN_IDS], ['arm', WEAPON_IDS]]) {
+      for (const id of ids) {
+        const key = `mundo-${layer}-${id}`, dir = `assets/cartoon/${layer}/${id}/`;
+        this.load.multiatlas(key, `${dir}atlas.json`, dir);
+        if (layer === 'body') this.load.json(`${key}-arm`, `${dir}arm-offsets.json`);
+      }
     }
     this.load.image('soccer-ball', 'assets/cartoon/soccer-ball-v2.png');
     this.load.image('mushroom', 'assets/cartoon/teemo-mushroom-v1.png');
@@ -316,6 +392,8 @@ class GameScene extends Phaser.Scene {
 
   create() {
     this.meta = this.cache.json.get('meta');
+    this.mundos = new Set();
+    this.events.on('postupdate', () => { for (const m of this.mundos) m.follow(); });
     this.makeTextures();
     this.makeAnims();
     this.buildArena();
@@ -459,13 +537,17 @@ class GameScene extends Phaser.Scene {
     });
   }
 
+  // 팔 레이어는 몸통 프레임을 따라가므로 애니메이션은 몸통 레이어에만 만든다
   makeAnims() {
-    for (const { prefix, texture } of CHARACTER_ATLASES) {
+    for (const skin of SKIN_IDS) {
+      const texture = bodyTexture(skin);
       for (const [key, a] of Object.entries(this.meta.anims)) {
         for (let d = 0; d < 8; d++) {
+          // 같은 그림인 방향은 한쪽 프레임만 구워 두고 같이 쓴다
+          const frames = this.meta.aliases?.[d] ?? d;
           this.anims.create({
-            key: `${prefix}${key}_${d}`,
-            frames: this.anims.generateFrameNames(texture, { prefix: `${key}_${d}_`, start: 0, end: a.frames - 1 }),
+            key: `${skin}:${key}_${d}`,
+            frames: this.anims.generateFrameNames(texture, { prefix: `${key}_${frames}_`, start: 0, end: a.frames - 1 }),
             frameRate: a.fps,
             repeat: a.loop ? -1 : 0,
           });
@@ -491,10 +573,7 @@ class GameScene extends Phaser.Scene {
   }
 
   updateMenuAppearance() {
-    if (this.menuMundos) {
-      const key = `${animationPrefix(this.skinId, this.weaponId)}dance_1`;
-      if (this.menuMundos[0].anims.currentAnim?.key !== key) this.menuMundos[0].play(key);
-    }
+    this.menuMundos?.[0].setLook(this.skinId, this.weaponId);
   }
 
   buildArena() {
@@ -887,10 +966,10 @@ class GameScene extends Phaser.Scene {
   // ---------- 매치 흐름 ----------
   spawnMenuMundos() {
     this.menuMundos = [
-      this.add.sprite(sx(-8.5), sy(1.5), 'mundo').setOrigin(0.5, this.meta.anchor).setScale(this.meta.scale).play(`${animationPrefix(this.skinId, this.weaponId)}dance_1`),
-      this.add.sprite(sx(8.5), sy(1.5), 'mundo').setOrigin(0.5, this.meta.anchor).setScale(this.meta.scale).play('dance_3'),
+      new Mundo(this, sx(-8.5), sy(1.5), this.skinId, this.weaponId).play('dance_1'),
+      new Mundo(this, sx(8.5), sy(1.5), 'classic', 'cleaver').play('dance_3'),
     ];
-    this.menuMundos.forEach((s) => s.setDepth(s.y));
+    this.menuMundos.forEach((m) => m.body.setDepth(m.body.y));
   }
 
   // diff: easy | normal | hard | faker | twins(보통 봇 둘)

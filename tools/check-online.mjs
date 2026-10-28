@@ -107,8 +107,8 @@ try {
   assert.deepEqual(roles[0].slice(0, 4), [0, 0, true, false]);
   assert.deepEqual(roles[1].slice(0, 4), [1, 1, true, false]);
   assert.ok(roles.every((r) => r[4] === 14 && r[5] && r[6]), 'no shrink, both champs have thumbs-up emote');
-  const looks = 'return s.champs.map(c => [c.skinId, c.weaponId, c.sprite.texture.key]);';
-  const expectedLooks = [['classic', 'soccer', 'mundo-soccer'], [guestSkin, guestWeapon, `mundo-${guestSkin}${guestWeapon === 'mushroom' ? '-mushroom' : ''}`]];
+  const looks = 'return s.champs.map(c => [c.skinId, c.weaponId, c.sprite.texture.key, c.mundo.arm.texture.key]);';
+  const expectedLooks = [['classic', 'soccer', 'mundo-body-classic', 'mundo-arm-soccer'], [guestSkin, guestWeapon, `mundo-body-${guestSkin}`, `mundo-arm-${guestWeapon}`]];
   for (const page of [host, guest]) assert.deepEqual(await evalScene(page, looks), expectedLooks);
   assert.equal(await host.$eval('#player-name', (el) => el.textContent), '나');
   assert.equal(await guest.$eval('#player-name', (el) => el.textContent), '상대방');

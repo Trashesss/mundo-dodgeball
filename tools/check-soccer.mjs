@@ -4,19 +4,9 @@ import puppeteer from 'puppeteer-core';
 import { serve } from './serve.mjs';
 import { skipConsent } from './skip-consent.mjs';
 import { RULES } from '../src/rules.js';
+import { checkLayerAtlas, waitMenuLook } from './layer-atlas.mjs';
 
-const meta = JSON.parse(fs.readFileSync('assets/cartoon/meta.json'));
-const atlas = JSON.parse(fs.readFileSync('assets/cartoon/soccer/atlas.json'));
-const frames = new Set(atlas.textures.flatMap(texture => texture.frames.map(frame => frame.filename)));
-for (const [key, anim] of Object.entries(meta.anims)) {
-  for (let d = 0; d < 8; d++) for (let f = 0; f < anim.frames; f++) {
-    assert.ok(frames.has(`${key}_${d}_${f}`), `missing soccer pose ${key}_${d}_${f}`);
-  }
-}
-for (const texture of atlas.textures) for (const frame of texture.frames) {
-  const s = frame.spriteSourceSize;
-  assert.ok(s.x > 0 && s.y > 0 && s.x + s.w < frame.sourceSize.w && s.y + s.h < frame.sourceSize.h, 'soccer artwork must not be clipped');
-}
+checkLayerAtlas('arm', 'soccer');
 
 const server = await serve(0);
 const browser = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
@@ -49,7 +39,7 @@ try {
   assert.equal(await page.evaluate(async () => (await import('/src/shop-state.js')).buyWeapon('soccer').ok), false, 'duplicate purchase must not charge');
   await page.click('#shop-action');
   assert.ok(await page.$eval('#shop-action', el => el.disabled));
-  assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').menuMundos[0].texture.key), 'mundo-soccer');
+  await waitMenuLook(page, 'classic', 'soccer');
   for (const [width, height] of [[390, 844], [320, 568], [844, 390]]) {
     await page.setViewport({ width, height });
     for (const category of ['maps', 'weapons']) {
@@ -68,7 +58,7 @@ try {
     s.startMatch({ diff: 'easy' }); s.scene.pause();
     const p = s.player, e = s.enemy;
     p.qCd = 0; e.qCd = 0;
-    const playerTexture = p.sprite.texture.key, enemyTexture = e.sprite.texture.key;
+    const playerTexture = p.mundo.arm.texture.key, enemyTexture = e.mundo.arm.texture.key;
     const cast = s.castQ(p, e.x, e.z);
     s.updateChamp(p, .15);
     const ball = s.cleavers[0], texture = ball.view.img.texture.key;
@@ -85,7 +75,7 @@ try {
     return { cast, playerTexture, enemyTexture, texture, travel, hit, hp, enemyProjectile };
   });
   assert.ok(result.cast);
-  assert.equal(result.playerTexture, 'mundo-soccer'); assert.equal(result.enemyTexture, 'mundo');
+  assert.equal(result.playerTexture, 'mundo-arm-soccer'); assert.equal(result.enemyTexture, 'mundo-arm-cleaver');
   assert.equal(result.texture, 'soccer-ball'); assert.equal(result.enemyProjectile, 'cleaver');
   assert.ok(Math.abs(result.travel - RULES.q.speed * .1) < .001);
   assert.equal(result.hit, 1); assert.equal(result.hp, RULES.maxHp * (1 - RULES.q.dmgPct));
@@ -106,7 +96,7 @@ try {
   await page.evaluate(() => { const s = window.__game.scene.getScene('game'); s.backToMenu(); s.scene.resume(); document.querySelector('#menu').classList.remove('hidden'); });
   await page.click('#shop-open'); await page.click('[data-shop-category="weapons"]');
   await page.click('[data-weapon="cleaver"]'); await page.click('#shop-action');
-  assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').menuMundos[0].texture.key), 'mundo');
+  await waitMenuLook(page, 'classic', 'cleaver');
   assert.equal(await page.$eval('#sk-q', el => el.getAttribute('aria-label')), 'Q 식칼 투척');
   assert.deepEqual(errors, []);
   console.log('Soccer: atlas completeness, save migration, purchase/equip/reload, duplicate prevention, mobile layouts, held ball, actual throw/movement/hit, both online slots and cleaver restore passed.');
