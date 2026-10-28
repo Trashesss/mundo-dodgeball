@@ -11,6 +11,7 @@ const SKINS = {
   classic: {},
   ronaldo: { body: 'assets/cartoon/ronaldo/parts-source-mask-v2.png', shop: 'assets/cartoon/ronaldo/shop-v5.png' },
   teemo: { body: 'assets/cartoon/teemo/parts-source-straps-v2.png', rig: 'assets/cartoon/teemo/rig.json', shop: 'assets/cartoon/teemo/shop-v1.png' },
+  corporate: { body: 'assets/cartoon/corporate/parts-source-ivory-v3.png', rig: 'assets/cartoon/corporate/rig.json', shop: 'assets/cartoon/corporate/shop-v3.png' },
 };
 const WEAPONS = {
   cleaver: {},

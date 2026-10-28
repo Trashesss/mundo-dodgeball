@@ -17,6 +17,8 @@
     "check:mushroom": "node tools/check-mushroom.mjs && node tools/check-mushroom-game.mjs",
     "bake:ronaldo": "node tools/bake-cartoon.mjs body:ronaldo",
     "bake:teemo": "node tools/bake-cartoon.mjs body:teemo",
+    "bake:corporate": "node tools/bake-cartoon.mjs body:corporate",
+    "check:corporate": "node tools/check-skins.mjs --corporate",
     "check:skins": "node tools/check-skins.mjs",
     "check:teemo": "node tools/check-skins.mjs --teemo",
     "check:cartoon": "node tools/check-cartoon.mjs",

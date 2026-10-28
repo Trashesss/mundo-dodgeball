@@ -11,7 +11,7 @@ import { RULES } from '../src/rules.js';
 
 // ONLINE_MAPS=classic,colosseum npm run check:online 로 진영을 바꿔 검사할 수 있다.
 const maps = (process.env.ONLINE_MAPS || 'colosseum,classic').split(',');
-const guestSkin = process.argv.includes('--teemo') ? 'teemo' : 'ronaldo';
+const guestSkin = process.argv.includes('--corporate') ? 'corporate' : process.argv.includes('--teemo') ? 'teemo' : 'ronaldo';
 const guestWeapon = process.argv.includes('--mushroom') ? 'mushroom' : 'cleaver';
 assert.ok(maps.length === 2 && maps.every(id => ['classic', 'colosseum', 'football'].includes(id)), 'ONLINE_MAPS must contain two valid map IDs');
 

@@ -28,7 +28,7 @@ const EMOTE_DELAY = 0.25;
 const EMOTE_DURATION = 1;
 const EMOTE_SIZE = 104;
 // 캐릭터는 스킨별 몸통 레이어 위에 무기별 팔 레이어를 겹쳐 그린다. 조합마다 따로 굽지 않는다.
-const SKIN_IDS = ['classic', 'ronaldo', 'teemo'];
+const SKIN_IDS = ['classic', 'ronaldo', 'teemo', 'corporate'];
 const WEAPON_IDS = ['cleaver', 'soccer', 'mushroom'];
 const bodyTexture = (skin) => `mundo-body-${skin}`;
 const armTexture = (weapon) => `mundo-arm-${weapon}`;

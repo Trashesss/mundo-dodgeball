@@ -18,6 +18,7 @@
   "skins": [
     { "skin": "classic", "name": "기본 문도" },
     { "skin": "ronaldo", "name": "호날두 문도" },
-    { "skin": "teemo", "name": "티모 문도" }
+    { "skin": "teemo", "name": "티모 문도" },
+    { "skin": "corporate", "name": "CEO 문도" }
   ]
 }

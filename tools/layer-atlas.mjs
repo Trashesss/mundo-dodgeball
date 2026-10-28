@@ -3,7 +3,7 @@ import fs from 'node:fs';
 
 // Structural checks shared by the character checks: every baked pose of one
 // body or arm layer exists, decodes from a listed page and is not clipped.
-export const SKINS = ['classic', 'ronaldo', 'teemo'];
+export const SKINS = ['classic', 'ronaldo', 'teemo', 'corporate'];
 export const WEAPONS = ['cleaver', 'soccer', 'mushroom'];
 export const meta = JSON.parse(fs.readFileSync('assets/cartoon/meta.json'));
 // Facings that reuse another facing's frames are not baked.

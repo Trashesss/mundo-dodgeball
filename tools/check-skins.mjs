@@ -6,8 +6,10 @@ import { skipConsent } from './skip-consent.mjs';
 import { RULES } from '../src/rules.js';
 import { checkLayerAtlas, waitMenuLook } from './layer-atlas.mjs';
 
-const skinId = process.argv.includes('--teemo') ? 'teemo' : 'ronaldo';
-const skinPrice = skinId === 'teemo' ? 600 : 777;
+const skinId = process.argv.includes('--corporate') ? 'corporate' : process.argv.includes('--teemo') ? 'teemo' : 'ronaldo';
+const skinPrice = { corporate: 1000, teemo: 600, ronaldo: 777 }[skinId];
+const winCount = Math.max(7, Math.ceil((skinPrice - 100) / 100));
+const earnedCoins = 100 + winCount * 100;
 const output = `output/skins/${skinId}`;
 checkLayerAtlas('body', skinId);
 
@@ -15,7 +17,7 @@ const server = await serve(0);
 const browser = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
 const url = `http://localhost:${server.address().port}/`;
 const errors = [];
-const ready = page => page.waitForFunction(() => window.__game?.scene.getScene('game').state === 'menu' && document.querySelector('#shop-skin-list').children.length === 3 && document.querySelector('#loading').classList.contains('hidden'));
+const ready = page => page.waitForFunction(() => window.__game?.scene.getScene('game').state === 'menu' && document.querySelector('[data-skin="corporate"]') && document.querySelector('#loading').classList.contains('hidden'));
 try {
   fs.mkdirSync(output, { recursive: true });
   const page = await browser.newPage();
@@ -29,8 +31,9 @@ try {
   await page.goto(url); await ready(page);
   const preserved = await page.evaluate(async skinId => {
     const { loadCartoonMotion } = await import('/tools/cartoon-motion.js');
-    const bodyImage = new Image(); bodyImage.src = skinId === 'teemo' ? '/assets/cartoon/teemo/parts-source-straps-v2.png' : '/assets/cartoon/ronaldo/parts-source-mask-v2.png'; await bodyImage.decode();
-    const rig = skinId === 'teemo' ? await (await fetch('/assets/cartoon/teemo/rig.json')).json() : {};
+    const sources = { corporate: '/assets/cartoon/corporate/parts-source-ivory-v3.png', teemo: '/assets/cartoon/teemo/parts-source-straps-v2.png', ronaldo: '/assets/cartoon/ronaldo/parts-source-mask-v2.png' };
+    const bodyImage = new Image(); bodyImage.src = sources[skinId]; await bodyImage.decode();
+    const rig = skinId !== 'ronaldo' ? await (await fetch(`/assets/cartoon/${skinId}/rig.json`)).json() : {};
     const base = await loadCartoonMotion(), skin = await loadCartoonMotion({ bodyImage, ...rig });
     const equal = (a, b) => {
       if (a.width !== b.width || a.height !== b.height) return false;
@@ -61,16 +64,16 @@ try {
   assert.deepEqual(migrated.state.owned, ['classic', 'colosseum']);
   await page.click('#shop-open'); await page.click('[data-shop-category="skins"]');
   await page.click(`[data-skin="${skinId}"]`);
-  assert.equal(await page.$eval('#shop-map-name', el => el.textContent), skinId === 'teemo' ? '티모 문도' : '호날두 문도');
+  assert.equal(await page.$eval('#shop-map-name', el => el.textContent), { corporate: 'CEO 문도', teemo: '티모 문도', ronaldo: '호날두 문도' }[skinId]);
   await page.click('#shop-action');
   assert.ok((await page.$eval('#shop-status', el => el.textContent)).includes(`${skinPrice - 100} 코인이 더 필요`));
   assert.equal(await page.$eval('#shop-coins', el => el.textContent), '100');
-  await page.evaluate(async () => {
+  await page.evaluate(async winCount => {
     const shop = await import('/src/shop-state.js');
-    for (let i = 0; i < 7; i++) shop.awardMatch(`skin-win-${i}`, true);
-  });
+    for (let i = 0; i < winCount; i++) shop.awardMatch(`skin-win-${i}`, true);
+  }, winCount);
   await page.click('#shop-action');
-  assert.equal(await page.$eval('#shop-coins', el => el.textContent), String(800 - skinPrice));
+  assert.equal(await page.$eval('#shop-coins', el => el.textContent), String(earnedCoins - skinPrice));
   assert.equal(await page.evaluate(async () => (await import('/src/shop-state.js')).getShopState().equippedSkin), 'classic');
   assert.equal(await page.evaluate(async skinId => (await import('/src/shop-state.js')).buySkin(skinId).ok, skinId), false);
   await page.click('#shop-action');
@@ -96,7 +99,7 @@ try {
   await page.click('#shop-close'); await page.reload(); await ready(page);
   const saved = await page.evaluate(async () => (await import('/src/shop-state.js')).getShopState());
   assert.equal(saved.equippedSkin, skinId); assert.equal(saved.equippedWeapon, 'soccer');
-  assert.equal(saved.equipped, 'colosseum'); assert.equal(saved.coins, 800 - skinPrice); assert.equal(saved.rewarded[0], 'old-match');
+  assert.equal(saved.equipped, 'colosseum'); assert.equal(saved.coins, earnedCoins - skinPrice); assert.equal(saved.rewarded[0], 'old-match');
 
   for (const weapon of ['cleaver', 'soccer']) {
     const result = await page.evaluate(async weapon => {

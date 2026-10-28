@@ -15,6 +15,7 @@ export const SKINS = [
   { id: 'classic', name: '기본 문도', subtitle: '문도, 원래 모습도 멋있다!', price: 0, image: 'assets/cartoon/shop-classic-v1.png', description: '보라색 근육과 익숙한 조끼. 언제든 돌아올 수 있는 문도의 기본 모습이에요.' },
   { id: 'ronaldo', name: '호날두 문도', subtitle: '문도, Siuuuu', price: 777, image: 'assets/cartoon/ronaldo/shop-v5.png', description: '빨간 7번 유니폼에 호날두 가면을 쓴 문도예요. 무기는 따로 선택할 수 있어요. 이동 속도와 공격 성능은 기본 문도와 같아요.' },
   { id: 'teemo', name: '티모 문도', subtitle: '문도, 정찰 준비 완료!', price: 600, image: 'assets/cartoon/teemo/shop-v1.png', description: '초록 정찰 모자와 빨간 고글, 스카프에 작은 배낭까지! 티모처럼 차려입은 보라색 문도예요. 무기는 따로 선택할 수 있고, 이동 속도와 공격 성능은 기본 문도와 같아요.' },
+  { id: 'corporate', name: 'CEO 문도', subtitle: '문도, 오늘도 실적 달성!', price: 1000, image: 'assets/cartoon/corporate/shop-v3.png', description: '짙은 줄무늬 정장에 파란 넥타이, 검정 선글라스! 멋을 낸 CEO 문도예요. 무기는 따로 선택할 수 있고, 이동 속도와 공격 성능은 기본 문도와 같아요.' },
 ];
 const fresh = () => ({ coins: COIN_REWARDS.firstVisit, owned: ['classic'], equipped: 'classic', ownedWeapons: ['cleaver'], equippedWeapon: 'cleaver', ownedSkins: ['classic'], equippedSkin: 'classic', rewarded: [] });
 // 공유 아이템(unlock: 'share')은 코인으로 살 수 없고, 친구가 공유 링크를 열면 받는다 (src/referral.js)
