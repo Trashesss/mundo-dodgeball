@@ -19,7 +19,7 @@ localhost 에서 열면 게임은 `ws://localhost:3000/ws` 에 붙는다. 배포
 
 메인 화면 모드 카드 바로 위 **상점**에서 경기장 이미지를 확인하고, 코인으로 구매한 뒤 적용한다. 기본 **바위 협곡**은 무료이며, **문도 콜로세움**은 1,500코인이다. 코인은 처음 100에서 시작해 승리 100·패배 30을 받는다. 콜로세움은 모래 바닥, 석조 관중석과 관객, 아치, 붉은 깃발, 화로로 구성된다.
 
-**문도 축구장**은 500코인이다. 사용자가 최종 선택한 원형 축구장 이미지를 `assets/cartoon/football-selected-v1.png`로 원본 그대로 사용한다. 단순한 초록 잔디와 중앙선·센터 서클, 양쪽 골대·철제 펜스·파란 좌석·조명탑이 있는 그림이며, 같은 이름의 JSON에 바닥 배치를 기록했다. 모든 맵이 같은 카메라 배율과 중심을 사용하므로 캐릭터와 이동 영역은 콜로세움과 같은 크기·위치로 표시된다. 이미지 비율과 이동·전투 규칙도 유지한다. 구매·적용·저장·축소·모바일 상점은 `npm run check:football`, 맵 사이 배율과 크기 일치는 `npm run check:arena-scale`로 검사한다. 선택 원본과 이전 생성 기록은 `assets/cartoon/FOOTBALL-GENERATION.md`에 있다.
+**문도 축구장**은 코인으로 살 수 없는 공유 전용 맵이다(이전에 500코인으로 산 기록은 그대로 보유). 상점의 **친구에게 공유하고 받기**로 링크를 보내고, 다른 브라우저의 친구가 그 링크를 열면 공유한 사람이 다음 접속이나 상점 열기 때 받는다. 자기 링크를 다시 열어서는 받을 수 없다. 사용자가 최종 선택한 원형 축구장 이미지를 `assets/cartoon/football-selected-v1.png`로 원본 그대로 사용한다. 단순한 초록 잔디와 중앙선·센터 서클, 양쪽 골대·철제 펜스·파란 좌석·조명탑이 있는 그림이며, 같은 이름의 JSON에 바닥 배치를 기록했다. 모든 맵이 같은 카메라 배율과 중심을 사용하므로 캐릭터와 이동 영역은 콜로세움과 같은 크기·위치로 표시된다. 이미지 비율과 이동·전투 규칙도 유지한다. 공유 해금·적용·저장·축소·모바일 상점은 `npm run check:football`, 맵 사이 배율과 크기 일치는 `npm run check:arena-scale`로 검사한다. 선택 원본과 이전 생성 기록은 `assets/cartoon/FOOTBALL-GENERATION.md`에 있다.
 
 - 첫 방문에 100코인을 지급한다. 정상 종료한 봇전·온라인 대전의 승리는 100코인, 패배는 30코인을 지급하며 상점에서 잔액을 확인할 수 있다. 동시 사망 재경기와 상대 연결 종료에는 별도 보상이 없다.
 - 구매와 적용은 별도 버튼 단계다. 이미 보유한 맵에는 중복 비용이 들지 않으며 기본 맵으로 언제든 돌아갈 수 있다.
@@ -32,6 +32,7 @@ localhost 에서 열면 게임은 `ws://localhost:3000/ws` 에 붙는다. 배포
 - 모든 맵은 같은 카메라 배율과 중심을 사용한다. 캐릭터 크기·위치와 이동 영역의 화면 크기가 맵을 바꿔도 같다. `npm run check:arena-scale`로 PC·모바일 가로·세로 화면에서 이 값들을 직접 비교하고 이미지 비율과 맵 전환 후 배율을 검사한다.
 - 맵 이미지는 가로·세로를 같은 배율로 확대해 원본 비율을 유지한다. 콜로세움의 실제 이동 경계는 모래 위 갈색 타원으로 별도 표시한다. 그림 속 돌 테두리까지 이동할 수 있다는 뜻은 아니다.
 - 레티나 화면에서도 픽셀아트 모드를 명시적으로 끄고 선형 보간을 사용한다. Phaser는 `scale.zoom !== 1`이면 기본적으로 픽셀아트 모드를 켜므로 `render.pixelArt: false`를 유지해야 한다. `npm run check:arena-quality`로 화면 배율 1·2·3에서 실제 GPU 필터와 캔버스 확대 방식을 검사한다.
+- 공유 해금(`src/referral.js`, `server/referrals.mjs`): 카탈로그 항목에 `unlock: 'share'`를 붙이면 코인 구매 대신 공유로 받는다. 공유 링크는 결과 공유와 같은 `share_id` 규약에 `utm_medium=shop`을 쓴다. 친구가 링크를 열면 게임 서버(`/ws`의 `referral` 메시지)에 `share_id`와 친구의 무작위 방문자 ID를 남기고, 공유자는 자기 `share_id` 목록(`mundo-referral-v1`, 최근 20개)을 물어 다른 방문자가 연 것이 있으면 받는다. 서버에는 무작위 UUID만 `referrals.json`(ghosts.json과 같은 위치)에 저장한다. 해금 판정에 PostHog는 쓰지 않는다. 시크릿 창으로 자기 링크를 열면 우회할 수 있지만 코인도 로컬이라 같은 수준으로 둔다.
 - 코인·구매 내역·선택은 `mundo-shop-v1` 브라우저 저장소에 남는다. 저장을 사용할 수 없으면 이번 방문 동안 유지하며 상점에 안내한다. 로그인·서버 인벤토리·현금 결제가 없는 로컬 MVP다.
 
 상점은 `src/shop.js`, 저장·구매·보상은 `src/shop-state.js`에서 관리한다. 현재 콜로세움은 사용자가 선택해 첨부한 `assets/cartoon/colosseum-selected-v1.png`(1283×1226)를 원본 그대로 사용하며, 투명 배경과 빈 관중석을 유지한다. 같은 이름의 JSON이 모래 바닥의 중심과 타원 반경을 기록하며, 바닥이 전체 이동 범위를 포함하는 균일 배율로 표시한다. 출처와 이전 생성 기록은 `assets/cartoon/COLOSSEUM-GENERATION.md`에 있다. `npm run bake:colosseum`은 이전 도형 기반 레이아웃 참고 이미지(`colosseum.png`)만 재생성하며 현재 맵을 덮어쓰지 않는다. `npm run check:shop`으로 구매·적용·저장·보상·모바일 레이아웃을 검사한다.
@@ -61,7 +62,7 @@ Scott Buckley의 **Path Through The Mountains**를 사용한다 ([원곡](https:
 - `replay_clicked`, `menu_returned`: 결과 화면에서 재도전 또는 난이도 선택. 직전 판 속성 포함
 - 빠른 대전: `quick_queue_started`, `quick_matched`(`room`, `opponent`: `human`/`bot`, `wait_ms`: 큐에 선 뒤 매칭까지), `quick_cancelled`(`wait_ms`), `quick_bot_clicked`(`wait_ms`: 문도봇과 플레이를 누를 때까지), `quick_room_left`(`room`: 준비 대기실에서 나가기), `quick_requeue_clicked`(결과 화면의 다시 플레이, 직전 판 속성). 대인전의 `game_started` / `game_finished`에는 `match_type`(`quick` / `invite`)과 `opponent`(`human` / `bot`)를 붙이고, 빠른 대전 첫 판의 `source`는 `quick`이다.
 - 친구와 대결: `online_room_created`(`room`), `online_room_joined`(`room`, `slot`), `online_invite_shared`, `online_rematch_clicked`, `online_opponent_left`. 대인전의 `game_started` / `game_finished`는 `difficulty: online`, `mode: online`, `room`, `source` (`online` / `rematch` / `resume`)를 갖는다. 적 수치(`enemy_*`)는 상대 사람의 기록이다.
-- 상점: `shop_opened`(`coins`: 열 때 잔액), `shop_item_purchased`(`item_type`: `map` / `weapon` / `skin`, `item_id`, `price`, `coins_after`: 구매 후 잔액). 장착과 코인 부족 실패는 보내지 않는다.
+- 상점: `shop_opened`(`coins`: 열 때 잔액), `shop_item_purchased`(`item_type`: `map` / `weapon` / `skin`, `item_id`, `price`, `coins_after`: 구매 후 잔액). 장착과 코인 부족 실패는 보내지 않는다. 공유 전용 아이템은 `share_clicked` / `share_completed` / `share_cancelled` / `share_failed`에 `kind: shop`, `item_type`, `item_id`, `share_id`를 붙여 보내고, 친구가 링크를 열어 받으면 `shop_item_unlocked`(`item_type`, `item_id`, `method: share`, `share_id`)를 보낸다. 친구 쪽 `invite_opened`·`referral_share_id`는 기존 규약대로 붙는다.
 
 공유 성장 지표:
 

@@ -5,6 +5,7 @@ import { WebSocketServer } from 'ws';
 import { NET, isRoomCode } from '../src/net-protocol.js';
 import { Room } from './room.mjs';
 import { GhostStore } from './ghosts.mjs';
+import { ReferralStore, UUID } from './referrals.mjs';
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -12,6 +13,7 @@ const MAX_ROOMS = 500;
 const IDLE_MS = 10 * 60 * 1000;
 const MAX_MSGS_PER_SEC = 120;
 const MAX_CONNS_PER_IP = 8;     // 한 사람이 방을 잔뜩 만들어 서버를 채우지 못하게
+const MAX_REFERRAL_IDS = 20;   // 상점 공유 확인 한 번에 물어볼 수 있는 share_id 수
 const MAX_FAILED_JOINS = 10;    // 방 코드 무작위 대입 방지 (연결당)
 // 빠른 대전: 이만큼 기다리면 '문도봇과 플레이'를 고를 수 있다. 기본은 바로 (검사용 서버만 바꿀 수 있음)
 const QUICK_WAIT_MS = (process.env.MUNDO_TEST === '1' && Number(process.env.QUICK_WAIT_MS)) || 0;
@@ -26,6 +28,7 @@ const ORIGINS = [
 const rooms = new Map();
 const connsByIp = new Map();
 const ghosts = new GhostStore();
+const referrals = new ReferralStore();
 const quickWaiting = []; // 한 사람이 상대를 기다리는 빠른 대전 방 (먼저 온 순)
 const presence = new Set(); // 사이트를 열어 둔 탭마다 하나씩 있는 동접자 연결 (게임용 연결은 세지 않는다)
 let presenceTimer = null;
@@ -64,7 +67,7 @@ const server = http.createServer((req, res) => {
   // 서버 안에서만 확인용 (nginx 는 /ws 만 넘기므로 외부에 노출되지 않음)
   if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ ok: true, rooms: rooms.size, online: presence.size, quickWaiting: quickWaiting.length, ghosts: ghosts.size }));
+    res.end(JSON.stringify({ ok: true, rooms: rooms.size, online: presence.size, quickWaiting: quickWaiting.length, ghosts: ghosts.size, referrals: referrals.size }));
     return;
   }
   res.writeHead(404).end();
@@ -83,6 +86,7 @@ wss.on('connection', (ws, req) => {
   if (conns > MAX_CONNS_PER_IP) { ws.close(4029, 'too many connections'); return; }
   connsByIp.set(ip, conns);
   let failedJoins = 0;
+  let referralOpened = false;
   ws.isAlive = true;
   ws.on('pong', () => { ws.isAlive = true; });
   let count = 0;
@@ -116,6 +120,17 @@ wss.on('connection', (ws, req) => {
     try { msg = JSON.parse(data); } catch { return; }
     if (!msg || typeof msg.type !== 'string') return;
 
+    // 상점 공유: 친구가 연 링크를 기록하고, 내 링크 중 남이 연 것을 알려준다 (src/referral.js)
+    if (msg.type === 'referral') {
+      if (typeof msg.visitor !== 'string' || !UUID.test(msg.visitor)) return;
+      if (typeof msg.opened === 'string' && UUID.test(msg.opened) && !referralOpened) {
+        referralOpened = true;
+        referrals.open(msg.opened.toLowerCase(), msg.visitor.toLowerCase());
+      }
+      const ids = Array.isArray(msg.ids) ? msg.ids.slice(0, MAX_REFERRAL_IDS).filter(id => typeof id === 'string' && UUID.test(id)) : [];
+      send({ type: 'referral', opened: referrals.opened(ids.map(id => id.toLowerCase()), msg.visitor.toLowerCase()) });
+      return;
+    }
     if (msg.type === 'create') {
       detach();
       if (rooms.size >= MAX_ROOMS) { send({ type: 'error', code: 'busy' }); return; }
@@ -195,6 +210,7 @@ for (const sig of ['SIGTERM', 'SIGINT']) {
   process.on(sig, () => {
     for (const room of [...rooms.values()]) room.close();
     ghosts.save();
+    referrals.save();
     server.close(() => process.exit(0));
     setTimeout(() => process.exit(0), 2000).unref();
   });

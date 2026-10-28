@@ -4,7 +4,7 @@ export const COIN_REWARDS = Object.freeze({ firstVisit: 100, win: 100, loss: 30 
 export const MAPS = [
   { id: 'classic', name: '바위 협곡', subtitle: '익숙한 곳에서, 가볍게 한 판.', price: 0, image: 'assets/cartoon/arena.png', tag: '기본 맵', description: '둥근 바위와 잔잔한 물결. 문도들의 첫 번째 경기장입니다.' },
   { id: 'colosseum', name: '문도 콜로세움', subtitle: '모래 위에서 실력을 증명해.', price: 1500, image: 'assets/cartoon/colosseum-selected-v1.png', tag: '새로운 경기장', description: '황금빛 모래, 겹겹이 둘러선 석조 관중석, 붉은 깃발. 오늘의 주인공은 문도입니다.' },
-  { id: 'football', name: '문도 축구장', subtitle: '문도, 잔디 위에서도 한 판!', price: 500, image: 'assets/cartoon/football-selected-v1.png', tag: '새로운 경기장', description: '초록 잔디와 양쪽 골대가 있는 원형 축구장! 깔끔한 필드와 파란 관중석, 조명탑 사이에서 신나게 던져보세요.' },
+  { id: 'football', name: '문도 축구장', subtitle: '문도, 잔디 위에서도 한 판!', unlock: 'share', image: 'assets/cartoon/football-selected-v1.png', tag: '새로운 경기장', description: '초록 잔디와 양쪽 골대가 있는 원형 축구장! 깔끔한 필드와 파란 관중석, 조명탑 사이에서 신나게 던져보세요.' },
 ];
 export const WEAPONS = [
   { id: 'cleaver', name: '문도의 식칼', subtitle: '익숙한 손맛, 묵직한 한 방.', price: 0, image: 'assets/cartoon/cleaver-icon.png', description: '문도와 함께해 온 기본 투척 무기. 언제든 다시 장착할 수 있어요.' },
@@ -17,6 +17,9 @@ export const SKINS = [
   { id: 'teemo', name: '티모 문도', subtitle: '문도, 정찰 준비 완료!', price: 600, image: 'assets/cartoon/teemo/shop-v1.png', description: '초록 정찰 모자와 빨간 고글, 스카프에 작은 배낭까지! 티모처럼 차려입은 보라색 문도예요. 무기는 따로 선택할 수 있고, 이동 속도와 공격 성능은 기본 문도와 같아요.' },
 ];
 const fresh = () => ({ coins: COIN_REWARDS.firstVisit, owned: ['classic'], equipped: 'classic', ownedWeapons: ['cleaver'], equippedWeapon: 'cleaver', ownedSkins: ['classic'], equippedSkin: 'classic', rewarded: [] });
+// 공유 아이템(unlock: 'share')은 코인으로 살 수 없고, 친구가 공유 링크를 열면 받는다 (src/referral.js)
+const isFree = item => !item.unlock && item.price === 0;
+const SHARE_ERROR = { ok: false, reason: '친구에게 공유하면 받을 수 있어요.' };
 let state = fresh();
 let persistent = true;
 
@@ -27,9 +30,9 @@ function read() {
     if (raw === null) return state;
     const data = JSON.parse(raw);
     if (!data || !Number.isSafeInteger(data.coins) || data.coins < 0) return state;
-    const owned = MAPS.filter(map => map.price === 0 || (Array.isArray(data.owned) && data.owned.includes(map.id))).map(map => map.id);
-    const ownedWeapons = WEAPONS.filter(item => item.price === 0 || (Array.isArray(data.ownedWeapons) && data.ownedWeapons.includes(item.id))).map(item => item.id);
-    const ownedSkins = SKINS.filter(item => item.price === 0 || (Array.isArray(data.ownedSkins) && data.ownedSkins.includes(item.id))).map(item => item.id);
+    const owned = MAPS.filter(map => isFree(map) || (Array.isArray(data.owned) && data.owned.includes(map.id))).map(map => map.id);
+    const ownedWeapons = WEAPONS.filter(item => isFree(item) || (Array.isArray(data.ownedWeapons) && data.ownedWeapons.includes(item.id))).map(item => item.id);
+    const ownedSkins = SKINS.filter(item => isFree(item) || (Array.isArray(data.ownedSkins) && data.ownedSkins.includes(item.id))).map(item => item.id);
     return {
       coins: Math.min(data.coins, 1_000_000_000), owned,
       equipped: owned.includes(data.equipped) ? data.equipped : 'classic',
@@ -55,6 +58,7 @@ export function buyMap(id) {
   const map = MAPS.find(map => map.id === id);
   if (!map) return { ok: false, reason: '없는 맵이에요.' };
   if (state.owned.includes(id)) return { ok: false, reason: '이미 보유한 맵이에요.' };
+  if (map.unlock) return SHARE_ERROR;
   if (state.coins < map.price) return { ok: false, reason: `${map.price - state.coins} 코인이 더 필요해요.` };
   state.coins -= map.price;
   state.owned.push(id);
@@ -73,6 +77,7 @@ export function buyWeapon(id) {
   const weapon = WEAPONS.find(item => item.id === id);
   if (!weapon) return { ok: false, reason: '없는 무기예요.' };
   if (state.ownedWeapons.includes(id)) return { ok: false, reason: '이미 보유한 무기예요.' };
+  if (weapon.unlock) return SHARE_ERROR;
   if (state.coins < weapon.price) return { ok: false, reason: `${weapon.price - state.coins} 코인이 더 필요해요.` };
   state.coins -= weapon.price;
   state.ownedWeapons.push(id);
@@ -91,6 +96,7 @@ export function buySkin(id) {
   const skin = SKINS.find(item => item.id === id);
   if (!skin) return { ok: false, reason: '없는 스킨이에요.' };
   if (state.ownedSkins.includes(id)) return { ok: false, reason: '이미 보유한 스킨이에요.' };
+  if (skin.unlock) return SHARE_ERROR;
   if (state.coins < skin.price) return { ok: false, reason: `${skin.price - state.coins} 코인이 더 필요해요.` };
   state.coins -= skin.price;
   state.ownedSkins.push(id);
@@ -103,6 +109,19 @@ export function equipSkin(id) {
   state.equippedSkin = id;
   save();
   return true;
+}
+// 미보유 공유 아이템을 모두 지급하고, 새로 받은 것을 [{ item, type }]로 돌려준다
+export function claimShareItems() {
+  state = read();
+  const gained = [];
+  for (const [items, inventory, type] of [[MAPS, 'owned', 'map'], [WEAPONS, 'ownedWeapons', 'weapon'], [SKINS, 'ownedSkins', 'skin']]) {
+    for (const item of items) if (item.unlock === 'share' && !state[inventory].includes(item.id)) {
+      state[inventory].push(item.id);
+      gained.push({ item, type });
+    }
+  }
+  if (gained.length) save();
+  return gained;
 }
 export function awardMatch(id, win) {
   state = read();

@@ -1,5 +1,6 @@
 import { MAPS, WEAPONS, SKINS, COIN_REWARDS, getShopState, buyMap, equipMap, buyWeapon, equipWeapon, buySkin, equipSkin } from './shop-state.js';
 import { track } from './analytics.js';
+import { checkReferrals, shareShopItem, takeUnlocked } from './referral.js';
 
 const $ = id => document.getElementById(id);
 const CATEGORIES = {
@@ -42,6 +43,11 @@ export function initShop(scene) {
     $('shop-status').removeAttribute('style');
   };
 
+  function announceUnlocked() {
+    const items = takeUnlocked();
+    if (items.length) snackbar(`친구가 링크를 열어서 ${items.map(item => item.name).join(', ')}을(를) 받았어요!`, 'success');
+  }
+
   function render() {
     const state = getShopState(), map = currentItem();
     const isMap = category === 'maps';
@@ -67,9 +73,9 @@ export function initShop(scene) {
     $('shop-map-description').textContent = map.description;
     $('shop-map-image').src = map.image;
     $('shop-map-image').alt = isMap ? `${map.name} 경기장 전경` : map.name;
-    $('shop-ownership').textContent = equipped ? (isMap ? '✓ 현재 적용 중' : '✓ 현재 장착 중') : owned ? `내가 보유한 ${noun}` : '한 번 구매하면 계속 사용할 수 있어요';
+    $('shop-ownership').textContent = equipped ? (isMap ? '✓ 현재 적용 중' : '✓ 현재 장착 중') : owned ? `내가 보유한 ${noun}` : map.unlock ? '친구가 링크를 열면 무료로 받아요' : '한 번 구매하면 계속 사용할 수 있어요';
     $('shop-action').disabled = equipped;
-    $('shop-action').textContent = equipped ? config.active : owned ? config.action : `${map.price.toLocaleString('ko-KR')} 코인으로 구매`;
+    $('shop-action').textContent = equipped ? config.active : owned ? config.action : map.unlock ? '친구에게 공유하고 받기' : `${map.price.toLocaleString('ko-KR')} 코인으로 구매`;
     $('shop-owned-count').textContent = `${inventory.length} / ${catalog().length} 보유`;
     $('shop-price-note').textContent = config.note ?? '';
     $('shop-price-note').hidden = !config.note;
@@ -77,9 +83,9 @@ export function initShop(scene) {
     for (const button of $(config.list).children) {
       const item = catalog().find(item => item.id === button.dataset[config.data]);
       button.setAttribute('aria-pressed', String(item.id === selected));
-      button.querySelector('small').textContent = equippedId === item.id ? (isMap ? '✓ 적용 중' : '✓ 장착 중') : inventory.includes(item.id) ? '보유 중' : `${item.price} 코인`;
+      button.querySelector('small').textContent = equippedId === item.id ? (isMap ? '✓ 적용 중' : '✓ 장착 중') : inventory.includes(item.id) ? '보유 중' : item.unlock ? '공유로 받기' : `${item.price} 코인`;
       button.querySelector('.shop-map-check').textContent = item.id === selected ? '◈' : '';
-      button.querySelector('.shop-card-badge').textContent = item.id === equippedId ? (isMap ? '적용 중' : '장착 중') : inventory.includes(item.id) ? '보유' : 'NEW';
+      button.querySelector('.shop-card-badge').textContent = item.id === equippedId ? (isMap ? '적용 중' : '장착 중') : inventory.includes(item.id) ? '보유' : item.unlock ? '공유' : 'NEW';
       button.dataset.owned = String(inventory.includes(item.id));
     }
     if (scene.state === 'menu') {
@@ -108,12 +114,24 @@ export function initShop(scene) {
     hideSnackbar();
     track('shop_opened', { coins: getShopState().coins });
     render(); dialog.showModal(); dialog.scrollTop = 0;
+    announceUnlocked();
+    checkReferrals();
   });
   $('shop-close').addEventListener('click', () => dialog.close());
   dialog.addEventListener('close', () => { hideSnackbar(); $('shop-open').focus({ preventScroll: true }); });
-  $('shop-action').addEventListener('click', () => {
+  const SHARE_MESSAGES = {
+    native: ['친구가 링크를 열면 받을 수 있어요.', 'success'],
+    clipboard: ['링크를 복사했어요! 친구가 열면 받을 수 있어요.', 'success'],
+    failed: ['복사하지 못했어요. 클립보드 권한을 확인해 주세요.', 'error'],
+  };
+  $('shop-action').addEventListener('click', async () => {
     const map = currentItem(), config = CATEGORIES[category];
     const state = getShopState();
+    if (map.unlock && !state[config.inventory].includes(map.id)) {
+      const message = SHARE_MESSAGES[await shareShopItem(map, config.data)];
+      if (message && dialog.open) snackbar(...message);
+      return;
+    }
     if (!state[config.inventory].includes(map.id)) {
       const result = config.buy(map.id);
       if (result.ok) track('shop_item_purchased', { item_type: config.data, item_id: map.id, price: map.price, coins_after: getShopState().coins });
@@ -124,5 +142,6 @@ export function initShop(scene) {
   // 스낵바 위치는 띄울 때의 배치로 계산하므로 창 크기가 바뀌면 닫는다
   window.addEventListener('resize', hideSnackbar);
   window.addEventListener('mundo-shop-change', render);
+  window.addEventListener('mundo-share-unlocked', () => { if (dialog.open) announceUnlocked(); });
   render();
 }
