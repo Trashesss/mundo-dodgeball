@@ -61,6 +61,7 @@ Scott Buckley의 **Path Through The Mountains**를 사용한다 ([원곡](https:
 - `replay_clicked`, `menu_returned`: 결과 화면에서 재도전 또는 난이도 선택. 직전 판 속성 포함
 - 빠른 대전: `quick_queue_started`, `quick_matched`(`room`, `opponent`: `human`/`bot`, `wait_ms`: 큐에 선 뒤 매칭까지), `quick_cancelled`(`wait_ms`), `quick_bot_clicked`(`wait_ms`: 문도봇과 플레이를 누를 때까지), `quick_room_left`(`room`: 준비 대기실에서 나가기), `quick_requeue_clicked`(결과 화면의 다시 플레이, 직전 판 속성). 대인전의 `game_started` / `game_finished`에는 `match_type`(`quick` / `invite`)과 `opponent`(`human` / `bot`)를 붙이고, 빠른 대전 첫 판의 `source`는 `quick`이다.
 - 친구와 대결: `online_room_created`(`room`), `online_room_joined`(`room`, `slot`), `online_invite_shared`, `online_rematch_clicked`, `online_opponent_left`. 대인전의 `game_started` / `game_finished`는 `difficulty: online`, `mode: online`, `room`, `source` (`online` / `rematch` / `resume`)를 갖는다. 적 수치(`enemy_*`)는 상대 사람의 기록이다.
+- 상점: `shop_opened`(`coins`: 열 때 잔액), `shop_item_purchased`(`item_type`: `map` / `weapon` / `skin`, `item_id`, `price`, `coins_after`: 구매 후 잔액). 장착과 코인 부족 실패는 보내지 않는다.
 
 공유 성장 지표:
 

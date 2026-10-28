@@ -1,4 +1,5 @@
 import { MAPS, WEAPONS, SKINS, COIN_REWARDS, getShopState, buyMap, equipMap, buyWeapon, equipWeapon, buySkin, equipSkin } from './shop-state.js';
+import { track } from './analytics.js';
 
 const $ = id => document.getElementById(id);
 const CATEGORIES = {
@@ -105,6 +106,7 @@ export function initShop(scene) {
   }
   $('shop-open').addEventListener('click', () => {
     hideSnackbar();
+    track('shop_opened', { coins: getShopState().coins });
     render(); dialog.showModal(); dialog.scrollTop = 0;
   });
   $('shop-close').addEventListener('click', () => dialog.close());
@@ -114,6 +116,7 @@ export function initShop(scene) {
     const state = getShopState();
     if (!state[config.inventory].includes(map.id)) {
       const result = config.buy(map.id);
+      if (result.ok) track('shop_item_purchased', { item_type: config.data, item_id: map.id, price: map.price, coins_after: getShopState().coins });
       snackbar(result.ok ? `${map.name} 구매 완료!` : result.reason, result.ok ? 'success' : 'error');
     } else config.equip(map.id);
     render();
