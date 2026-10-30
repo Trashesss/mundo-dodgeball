@@ -11,7 +11,9 @@ fs.mkdirSync('share', { recursive: true });
 function writeSharePage(path, title, description, image) {
   let head = rootHead.replace(/  <link[^\n]+\n/g, '').replace(/  <!--[^\n]*-->\n/g, '')
     .replace(/  <script[\s\S]*?<\/script>\n/g, '');
-  head = head.replace(/<title>.*?<\/title>/, `<title>${title}</title>`)
+  // Result pages only redirect into the game, so keep them out of search results; messenger crawlers ignore robots.
+  head = head.replace(/(  <meta name="viewport"[^\n]+\n)/, '$1  <meta name="robots" content="noindex" />\n')
+    .replace(/<title>.*?<\/title>/, `<title>${title}</title>`)
     .replace(/(<meta (?:name|property)="(?:og:title|twitter:title)" content=")[^"]*/g, `$1${title}`)
     .replace(/(<meta (?:name|property)="(?:description|og:description|twitter:description)" content=")[^"]*/g, `$1${description}`)
     .replace(/(<meta (?:name|property)="(?:og:image:alt|twitter:image:alt)" content=")[^"]*/g, `$1${title} · ${description}`)

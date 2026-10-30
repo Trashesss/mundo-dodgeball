@@ -87,6 +87,7 @@ try {
     for (const result of ['win', 'loss']) {
       const { title, description } = shareContent(difficulty, result === 'win');
       await crawler.goto(`http://localhost:${server.address().port}/share/${difficulty}-${result}.html`);
+      assert.equal(await crawler.$eval('meta[name="robots"]', el => el.content), 'noindex');
       assert.equal(await crawler.$eval('meta[property="og:title"]', el => el.content), title);
       assert.equal(await crawler.$eval('meta[name="twitter:title"]', el => el.content), title);
       assert.equal(await crawler.$eval('meta[property="og:description"]', el => el.content), description);
