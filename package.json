@@ -31,7 +31,8 @@
     "check:online": "node tools/check-online.mjs",
     "check:quick": "node tools/check-quick.mjs",
     "calibrate:ghost": "node tools/calibrate-ghost.mjs",
-    "check:touch": "node tools/check-touch.mjs",
+    "check:mobile": "node tools/check-mobile-gate.mjs",
+    "check:small-screen": "node tools/check-small-screen.mjs",
     "server": "node server/index.mjs"
   },
   "devDependencies": {

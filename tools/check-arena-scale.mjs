@@ -8,11 +8,11 @@ const server = await serve(0);
 const browser = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
 try {
   fs.mkdirSync('output/arena-scale', { recursive: true });
-  for (const [width, height, touch] of [[1440, 1000, false], [1280, 720, false], [390, 844, true], [844, 390, true]]) {
+  for (const [width, height] of [[1440, 1000], [1280, 720], [800, 560]]) {
     const page = await browser.newPage();
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
-    await page.setViewport({ width, height, hasTouch: touch, isMobile: touch });
+    await page.setViewport({ width, height });
     await skipConsent(page);
     await page.goto(`http://localhost:${server.address().port}/`);
     await page.waitForFunction(() => window.__game?.scene.getScene('game').state === 'menu');

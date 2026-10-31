@@ -31,6 +31,9 @@ try {
     localStorage.setItem('mundo-analytics-consent-v1', 'accepted');
     window.events = [];
     window.posthog = { init() {}, capture(name, properties) { window.events.push({ name, properties }); } };
+    // 마우스를 연결한 터치 기기: 공유 시트를 쓰지만 모바일 안내에는 막히지 않는다
+    const matchMedia = window.matchMedia.bind(window);
+    window.matchMedia = query => query === '(any-pointer: fine)' ? { ...matchMedia(query), matches: true } : matchMedia(query);
   });
   const baseUrl = `http://localhost:${server.address().port}/`;
   const incomingId = '12345678-1234-4123-8123-123456789abc';

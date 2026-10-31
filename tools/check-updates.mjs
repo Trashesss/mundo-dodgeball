@@ -80,8 +80,8 @@ try {
   await page.click('#menu-btn');
   assert.equal(await isOpen(page), false);
 
-  for (const [width, height, name] of [[390, 844, 'portrait'], [844, 390, 'landscape'], [320, 568, 'small']]) {
-    await page.setViewport({ width, height, hasTouch: true, isMobile: true });
+  for (const [width, height, name] of [[1280, 720, 'laptop'], [800, 560, 'small']]) {
+    await page.setViewport({ width, height });
     await page.reload(); await ready(page);
     await page.evaluate(() => document.fonts.ready);
     await page.screenshot({ path: `output/updates/menu-${name}.png` });

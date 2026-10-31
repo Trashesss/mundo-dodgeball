@@ -19,6 +19,7 @@ import { getShopState, awardMatch } from './shop-state.js';
 import { awardXp } from './profile-state.js';
 import { initProfile } from './profile.js';
 import { initUpdates } from './updates.js';
+import { isTouchOnly, fitsScreen, showMobileGate, guardPlay, initPlayGate } from './play-gate.js';
 import { armFrameName } from './character-frames.js';
 
 const { PPU, SIN, COS } = PROJ;
@@ -1640,13 +1641,24 @@ Online.hooks = {
 };
 
 initPresence();
+// 모바일(터치 전용 기기)은 플레이를 지원하지 않는다: 로딩 화면 위에 바로 PC 안내를 띄운다
+// PC 는 창이 작으면 메뉴 대신 창을 키우라는 안내로 덮는다
+const touchOnly = isTouchOnly();
+if (touchOnly) showMobileGate();
+else initPlayGate();
 
 // 초대 링크(?room=CODE)로 들어오면 메뉴 대신 바로 대기실로
 game.events.once('mundo-ready', () => {
+  if (touchOnly) return;
   initShop(scene());
   initProfile();
   initUpdates();
   const code = roomFromUrl();
-  if (code) Online.join(code);
-  else $('menu').classList.remove('hidden');
+  if (code && fitsScreen()) return Online.join(code);
+  $('menu').classList.remove('hidden');
+  // 창이 작으면 안내 뒤에서 기다렸다가, 창을 키우면 그때 대기실로 들어간다
+  if (code) guardPlay(() => {
+    $('menu').classList.add('hidden');
+    Online.join(code);
+  });
 });

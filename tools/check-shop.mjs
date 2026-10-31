@@ -122,7 +122,7 @@ try {
     return image.scaleX === 1 && image.scaleY === 1 && image.displayOriginY === 1036;
   }));
   await page.click('[data-map="colosseum"]');
-  for (const [width, height] of [[390, 844], [320, 568], [844, 390]]) {
+  for (const [width, height] of [[1280, 720], [800, 560]]) {
     await page.setViewport({ width, height });
     const bounds = await shopBounds();
     await page.$eval('[data-map="classic"]', el => el.click());
@@ -137,9 +137,9 @@ try {
       return close.top >= 0 && close.bottom <= innerHeight;
     });
     assert.ok(closeVisible, `close button must stay reachable while scrolling at ${width}px`);
-    if (width === 390) {
+    if (width === 800) {
       await page.$eval('.shop-body', el => { el.scrollTop = 0; });
-      await page.screenshot({ path: 'output/shop/shop-mobile.png' });
+      await page.screenshot({ path: 'output/shop/shop-small.png' });
     }
   }
   const context = await browser.createBrowserContext();
@@ -149,11 +149,11 @@ try {
   await poor.goto(url); await ready(poor);
   await poor.click('#shop-open'); await poor.click('#shop-action');
   assert.match(await poor.$eval('#shop-status', el => el.textContent), /1480 코인/);
-  await poor.setViewport({ width: 390, height: 844 });
+  await poor.setViewport({ width: 800, height: 560 });
   await poor.click('#shop-action');
   await poor.waitForFunction(() => getComputedStyle(document.getElementById('shop-status')).opacity === '1');
-  assert.ok(await snackbarInside(poor), 'mobile snackbar sits inside the shop, above the footer with spacing');
-  await poor.screenshot({ path: 'output/shop/shop-snackbar-mobile.png' });
+  assert.ok(await snackbarInside(poor), 'small-window snackbar sits inside the shop, above the footer with spacing');
+  await poor.screenshot({ path: 'output/shop/shop-snackbar-small.png' });
   assert.equal(await poor.$eval('#shop-coins', el => el.textContent), '20');
   await context.close();
   const blockedContext = await browser.createBrowserContext();

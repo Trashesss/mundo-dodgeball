@@ -67,9 +67,9 @@ try {
   assert.equal(await page.$eval('#profile-level', el => el.textContent), '1');
   await page.click('#profile-close');
 
-  // 모바일 세로·가로
-  for (const [width, height, name] of [[390, 844, 'portrait'], [844, 390, 'landscape'], [320, 568, 'small']]) {
-    await page.setViewport({ width, height, hasTouch: true, isMobile: true });
+  // 노트북·플레이 가능한 가장 작은 창
+  for (const [width, height, name] of [[1280, 720, 'laptop'], [800, 560, 'small']]) {
+    await page.setViewport({ width, height });
     await page.reload(); await ready(page);
     await page.evaluate(() => document.fonts.ready);
     assert.ok(await menuButtonsClear(page), `menu buttons clear on ${name}`);
