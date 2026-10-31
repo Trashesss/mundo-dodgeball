@@ -1,6 +1,6 @@
 /* 프로필 창: 상점과 같은 청록·크림 톤. */
 
-/* 모드 카드 위 한 줄의 작은 보조 버튼: 왼쪽에 숙련도와 상점(알약), 오른쪽 끝에 점멸 장난 버튼(알약)과 설정(동그라미).
+/* 모드 카드 위 한 줄의 작은 보조 버튼: 왼쪽에 숙련도와 상점(알약), 오른쪽 끝에 업데이트 공지(알약)와 설정(동그라미).
    얇고 흐린 테두리로 모드 카드보다 덜 눈에 띄게. shop.css·style.css 의 고정 위치 버튼 규칙보다 우선하도록 :is(#id) 로 쓴다. */
 .menu-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
 #menu.practice-view .menu-nav { display: none; }
@@ -14,13 +14,6 @@
 .menu-nav > :is(#profile-open, #shop-open, #analytics-settings):active { background: #1c2e36; box-shadow: none; }
 .menu-nav > :is(#profile-open, #shop-open, #analytics-settings):focus-visible { outline: 3px solid var(--entry-text); outline-offset: 3px; }
 .menu-nav #analytics-settings { justify-content: center; width: 44px; padding: 0; }
-/* 점멸 장난 버튼: style.css 의 메뉴 하단 버튼 규칙보다 우선하도록 #menu:not(.practice-view) 로 쓴다 */
-#menu:not(.practice-view) .menu-nav .flash-prank { margin: 0 0 0 auto; }
-#menu:not(.practice-view) .menu-nav #flash-swap-btn {
-  min-width: 0; height: 44px; padding: 0 16px; border: 2px solid #4f666e; border-radius: 999px; background: #22363fcc;
-  color: var(--entry-muted); font: 15px/1 'Jua', sans-serif; text-decoration: none; transition: background .15s, border-color .15s;
-}
-.menu-nav .flash-prank-reply { max-width: none; }
 .menu-nav #analytics-settings svg { width: 22px; height: 22px; }
 .menu-nav :is(.profile-nav-icon, .shop-keeper-icon) { width: 32px; height: 32px; border-radius: 50%; }
 .profile-nav-icon { display: block; flex: 0 0 auto; object-fit: cover; background: #152e38; }
@@ -28,9 +21,9 @@
 .profile-nav-level { color: #b9e39e; font-variant-numeric: tabular-nums; }
 .menu-nav .shop-nav-coins { font-size: 14px; line-height: 1; }
 @media (hover: hover) {
-  .menu-nav > :is(#profile-open, #shop-open, #analytics-settings):hover, #menu:not(.practice-view) .menu-nav #flash-swap-btn:hover { background: #2f4853; border-color: #88a9a5; color: var(--entry-text); }
+  .menu-nav > :is(#profile-open, #shop-open, #analytics-settings):hover { background: #2f4853; border-color: #88a9a5; color: var(--entry-text); }
 }
-/* 휴대폰: 알약 버튼은 그림을 빼고 "숙련도 · 상점 · 설정"을 한 줄에, 점멸 장난 버튼만 다음 줄 가운데에 작게.
+/* 휴대폰: 알약 버튼은 그림을 빼고 "숙련도 · 상점 · 설정"을 한 줄에, 업데이트 공지는 다음 줄 가운데에 둔다.
    shop.css 의 모바일 #shop-open 그림 크기 규칙보다 우선하도록 #id 를 함께 쓴다. */
 @media (max-width: 560px) {
   .menu-nav { flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
@@ -40,8 +33,6 @@
   .menu-nav .shop-nav-coins { font-size: 12px; }
   .menu-nav #analytics-settings { width: 38px; margin-left: auto; padding: 0; }
   .menu-nav #analytics-settings svg { width: 19px; height: 19px; }
-  #menu:not(.practice-view) .menu-nav .flash-prank { order: 1; flex-basis: 100%; margin: 0; }
-  #menu:not(.practice-view) .menu-nav #flash-swap-btn { height: 28px; padding: 0 12px; border-width: 1px; font-size: 12px; }
 }
 /* 아주 좁은 휴대폰(320px 등): "숙련도" 글자를 빼 한 줄에 맞춘다 */
 @media (max-width: 359px) {

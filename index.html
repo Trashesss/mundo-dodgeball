@@ -36,6 +36,7 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="shop.css" />
   <link rel="stylesheet" href="profile.css" />
+  <link rel="stylesheet" href="updates.css" />
   <script defer src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
 </head>
 <body>
@@ -145,12 +146,11 @@
           <img class="shop-keeper-icon" src="assets/cartoon/mundo-shop-icon-v1.png" alt="" width="256" height="256" />
           <span class="shop-nav-info"><span>상점</span><span class="shop-nav-coins"><span class="coin-icon" aria-hidden="true">C</span><span id="menu-coins">100</span></span></span>
         </button>
-        <div class="flash-prank" id="flash-prank">
-          <button id="flash-swap-btn" type="button">점멸을 F로 바꾸기</button>
-          <div class="flash-prank-reply" role="status" aria-live="polite" aria-atomic="true">
-            <span id="flash-swap-status"></span>
-            <img class="flash-prank-emote" src="assets/cartoon/mundo-thumbs-up-emote-v1.png" alt="따봉 날리는 문도" width="64" height="64" />
-          </div>
+        <div class="updates-entry">
+          <button id="updates-open" type="button" aria-haspopup="dialog" aria-controls="updates-dialog" aria-expanded="false">
+            <img class="updates-nav-icon" src="assets/cartoon/mundo-updates-icon-v1.png" alt="" width="256" height="256" />
+            <span>업데이트 공지</span><span id="updates-new" class="updates-new" hidden>NEW</span>
+          </button>
         </div>
         <button id="analytics-settings" type="button" aria-label="설정" title="설정" aria-haspopup="dialog" aria-expanded="false" aria-controls="settings-dialog">
           <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
@@ -354,6 +354,15 @@
     </div>
     -->
     <a class="game-guide-link" href="game-guide.html">게임 소개 · 조작법</a>
+  </dialog>
+  <dialog id="updates-dialog" aria-labelledby="updates-title">
+    <header class="updates-header">
+      <div><p class="updates-eyebrow">MUNDO NEWS</p><h2 id="updates-title" tabindex="-1" autofocus>업데이트 공지</h2></div>
+      <button id="updates-close" type="button" aria-label="업데이트 공지 닫기">×</button>
+    </header>
+    <div class="updates-body">
+      <ul id="updates-highlights" class="updates-highlights"></ul>
+    </div>
   </dialog>
   <dialog id="profile-dialog" aria-labelledby="profile-title">
     <header class="profile-header">

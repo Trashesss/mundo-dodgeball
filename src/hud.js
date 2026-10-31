@@ -8,17 +8,6 @@ const $ = (id) => document.getElementById(id);
 let shareData;
 let shareProperties;
 let resultVersion = 0;
-let flashReplyTimer;
-
-$('flash-swap-btn').addEventListener('click', () => {
-  clearTimeout(flashReplyTimer);
-  $('flash-swap-status').textContent = 'F는 Fail의 F다.';
-  $('flash-prank').classList.add('revealed');
-  flashReplyTimer = setTimeout(() => {
-    $('flash-prank').classList.remove('revealed');
-    $('flash-swap-status').textContent = '';
-  }, 1500);
-});
 
 $('share-btn').addEventListener('click', async () => {
   if (!shareData) return;

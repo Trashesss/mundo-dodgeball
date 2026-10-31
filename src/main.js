@@ -18,6 +18,7 @@ import { initShop } from './shop.js';
 import { getShopState, awardMatch } from './shop-state.js';
 import { awardXp } from './profile-state.js';
 import { initProfile } from './profile.js';
+import { initUpdates } from './updates.js';
 import { armFrameName } from './character-frames.js';
 
 const { PPU, SIN, COS } = PROJ;
@@ -1644,6 +1645,7 @@ initPresence();
 game.events.once('mundo-ready', () => {
   initShop(scene());
   initProfile();
+  initUpdates();
   const code = roomFromUrl();
   if (code) Online.join(code);
   else $('menu').classList.remove('hidden');
