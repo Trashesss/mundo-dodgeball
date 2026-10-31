@@ -115,20 +115,14 @@ try {
   assert.ok(await page.$eval('#shop-action', el => el.disabled));
   await waitMenuLook(page, skinId, 'soccer');
   await page.screenshot({ path: `${output}/shop-desktop.png` });
-  for (const [width, height] of [[390, 844], [320, 568], [844, 390]]) {
+  for (const [width, height] of [[1280, 720], [800, 560]]) {
     await page.setViewport({ width, height });
     for (const category of ['maps', 'weapons', 'skins']) {
       await page.$eval(`[data-shop-category="${category}"]`, el => el.click());
       if (category === 'skins') await page.$eval(`[data-skin="${skinId}"]`, el => el.click());
       assert.ok(await page.$eval('#shop-dialog', el => el.scrollWidth <= el.clientWidth && el.getBoundingClientRect().right <= innerWidth && el.getBoundingClientRect().bottom <= innerHeight), `shop fits ${width}x${height}`);
-      if (width <= 650) assert.ok(await page.evaluate(() => {
-        const catalog = document.querySelector('.shop-catalog').getBoundingClientRect();
-        const feature = document.querySelector('.shop-feature').getBoundingClientRect();
-        const cards = [...document.querySelectorAll('.shop-map-list:not([hidden]) .shop-map-card')];
-        return cards.every(card => card.getBoundingClientRect().bottom <= catalog.bottom) && catalog.bottom <= feature.top;
-      }), `all cards fit above the detail section at ${width}x${height}`);
     }
-    if (width === 390) await page.screenshot({ path: `${output}/shop-mobile.png` });
+    if (width === 800) await page.screenshot({ path: `${output}/shop-small.png` });
   }
   await page.setViewport({ width: 1440, height: 1000 });
   await page.click('#shop-close'); await page.reload(); await ready(page);
@@ -248,5 +242,5 @@ try {
     } finally { await context.close(); }
   }
   assert.deepEqual(errors, []);
-  console.log('Skins: complete unclipped atlases, save migration, locked/invalid/duplicate purchase, purchase/equip/reload, mobile categories, both weapon combinations, all eight directions/states, real hits, both online slots and default restore passed.');
+  console.log('Skins: complete unclipped atlases, save migration, locked/invalid/duplicate purchase, purchase/equip/reload, small-window categories, both weapon combinations, all eight directions/states, real hits, both online slots and default restore passed.');
 } finally { await browser.close(); server.close(); }

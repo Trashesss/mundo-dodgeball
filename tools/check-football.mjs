@@ -87,12 +87,12 @@ try {
   assert.ok(await page.$eval('#shop-action', el => el.disabled));
   await page.screenshot({ path: 'output/football/shop-desktop.png' });
 
-  for (const [width, height] of [[390, 844], [320, 568], [844, 390]]) {
+  for (const [width, height] of [[1280, 720], [800, 560]]) {
     await page.setViewport({ width, height });
     assert.ok(await page.$eval('#shop-dialog', el => el.scrollWidth <= el.clientWidth && el.getBoundingClientRect().bottom <= innerHeight));
     await page.$eval('[data-map="football"]', el => el.click());
     assert.equal(await page.$eval('#shop-map-name', el => el.textContent), '문도 축구장');
-    if (width === 390) await page.screenshot({ path: 'output/football/shop-mobile.png' });
+    if (width === 800) await page.screenshot({ path: 'output/football/shop-small.png' });
   }
   await page.setViewport({ width: 1440, height: 1000 });
   await page.click('#shop-close');

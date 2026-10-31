@@ -67,7 +67,7 @@ export function takeUnlocked() {
   return items;
 }
 
-// 상점 공유 링크 공유. 결과: 'native' | 'clipboard' | 'cancelled' | 'failed'
+// 상점 공유 링크 복사. 결과: 'clipboard' | 'failed'
 export async function shareShopItem(item, itemType) {
   const shareId = createTrackingId();
   data = load();
@@ -77,23 +77,10 @@ export async function shareShopItem(item, itemType) {
   url.searchParams.set('share_id', shareId);
   url.searchParams.set('utm_source', 'friend');
   url.searchParams.set('utm_medium', 'shop');
-  const text = `[문도 피구] 이 링크로 들어와서 같이 하자! 날아오는 식칼을 피하고, 상대 문도를 쓰러뜨리는 피구 게임`;
   const properties = { kind: 'shop', item_type: itemType, item_id: item.id, share_id: shareId };
   track('share_clicked', properties);
-  if (navigator.share && matchMedia('(pointer: coarse)').matches) {
-    try {
-      await navigator.share({ title: '문도 피구', text, url: url.href });
-      track('share_completed', { ...properties, method: 'native' });
-      return 'native';
-    } catch (error) {
-      if (error.name === 'AbortError') {
-        track('share_cancelled', { ...properties, method: 'native' });
-        return 'cancelled';
-      }
-    }
-  }
   try {
-    // 바로 붙여 넣어 쓸 수 있게 링크만 복사한다 (안내 문구는 네이티브 공유에만 붙인다)
+    // 바로 붙여 넣어 쓸 수 있게 링크만 복사한다
     await navigator.clipboard.writeText(url.href);
     track('share_completed', { ...properties, method: 'clipboard' });
     return 'clipboard';

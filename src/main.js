@@ -13,7 +13,6 @@ import * as Sim from './sim.js';
 import { NET, unpackChamp, unpackCleaver, cleanLook } from './net-protocol.js';
 import { Online, roomFromUrl } from './online.js';
 import { initPresence } from './presence.js';
-import { isTouchDevice, setupTouchControls } from './touch-controls.js';
 import { initShop } from './shop.js';
 import { getShopState, awardMatch } from './shop-state.js';
 import { awardXp } from './profile-state.js';
@@ -406,7 +405,6 @@ class GameScene extends Phaser.Scene {
     this.applyWeapon(getShopState().equippedWeapon);
     this.applySkin(getShopState().equippedSkin);
     this.setupInput();
-    if (this.touchMode) this.touch = setupTouchControls(this, { sx, sy, depth: DEPTH.ring + 1 });
     this.spawnMenuMundos();
     this.state = 'menu';
     // 꽉 찬 바가 한 번은 그려진 뒤에 로딩 화면을 닫는다
@@ -678,11 +676,9 @@ class GameScene extends Phaser.Scene {
   setupInput() {
     this.input.mouse.disableContextMenu();
     this.moveHeld = false;
-    // 터치 기기는 화면 탭 이동 대신 조이스틱으로 움직인다 (src/touch-controls.js)
-    this.touchMode = isTouchDevice();
     this.input.on('pointerdown', () => {
       Sound.unlock();
-      if (this.touchMode || !this.canControl()) return;
+      if (!this.canControl()) return;
       this.moveHeld = true;
       this.moveRepeatT = 0.1;
       const g = this.pointerGround();
@@ -1350,7 +1346,6 @@ class GameScene extends Phaser.Scene {
       HUD.update(p);
       HUD.updateFight(this.champs);
     }
-    this.touch?.update(dt);
     this.updateCamera(dt);
   }
 
@@ -1436,9 +1431,7 @@ class GameScene extends Phaser.Scene {
   updateCamera(dt = 0) {
     // All maps share this camera so character and movement-area sizes stay identical.
     const cam = this.cameras.main;
-    // 터치 가로 화면은 상단바·조이스틱·스킬이 양옆 구석에 있으니 위아래를 거의 비우지 않는다
-    const landscape = this.touchMode && cam.width > cam.height;
-    const padTop = (landscape ? 8 : 110) * DPR, padBot = (landscape ? 22 : 120) * DPR;
+    const padTop = 110 * DPR, padBot = 120 * DPR;
     const halfW = (ARENA.ROCK_R + 1) * PPU;
     const top = sy(-ARENA.ROCK_R, 3.2);
     const bot = sy(ARENA.ROCK_R) + 0.5 * PPU;

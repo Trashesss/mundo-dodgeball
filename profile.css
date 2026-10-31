@@ -23,27 +23,6 @@
 @media (hover: hover) {
   .menu-nav > :is(#profile-open, #shop-open, #analytics-settings):hover { background: #2f4853; border-color: #88a9a5; color: var(--entry-text); }
 }
-/* 휴대폰: 알약 버튼은 그림을 빼고 "숙련도 · 상점 · 설정"을 한 줄에, 업데이트 공지는 다음 줄 가운데에 둔다.
-   shop.css 의 모바일 #shop-open 그림 크기 규칙보다 우선하도록 #id 를 함께 쓴다. */
-@media (max-width: 560px) {
-  .menu-nav { flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-  .menu-nav > :is(#profile-open, #shop-open, #analytics-settings) { height: 38px; padding: 0 12px; font-size: 14px; }
-  .menu-nav :is(#profile-open .profile-nav-icon, #shop-open .shop-keeper-icon) { display: none; }
-  .menu-nav :is(.profile-nav-info, .shop-nav-info) { gap: 5px; }
-  .menu-nav .shop-nav-coins { font-size: 12px; }
-  .menu-nav #analytics-settings { width: 38px; margin-left: auto; padding: 0; }
-  .menu-nav #analytics-settings svg { width: 19px; height: 19px; }
-}
-/* 아주 좁은 휴대폰(320px 등): "숙련도" 글자를 빼 한 줄에 맞춘다 */
-@media (max-width: 359px) {
-  .menu-nav > :is(#profile-open, #shop-open) { padding: 0 10px; font-size: 13px; }
-  .profile-nav-label { display: none; }
-}
-/* 작은 휴대폰 세로: 버튼 줄만큼 초상화를 줄여 한 화면에 맞춘다 */
-@media (max-width: 430px) and (max-height: 600px) {
-  #menu:not(.practice-view) .setup-portrait { width: 52px; height: 52px; }
-  .menu-nav { margin-bottom: 8px; }
-}
 
 #profile-dialog {
   --profile-line: #9c855044; --profile-muted: #93acaf; --profile-gold: #d7bd80;
@@ -78,27 +57,6 @@
 
 @media (hover: hover) {
   .profile-close:hover { background: #2c474d; color: var(--entry-text); }
-}
-@media (max-width: 650px) {
-  #profile-dialog { width: calc(100% - 20px); max-height: calc(100dvh - 20px); border-radius: 10px; }
-  .profile-header { padding: 12px 14px; }
-  .profile-avatar { width: 38px; height: 38px; }
-  #profile-title { font-size: 21px; }
-  .profile-body { padding: 14px; }
-  .profile-footer { padding: 10px 14px; }
-}
-/* 휴대폰 가로처럼 낮은 화면: 머리말·레벨을 줄인다 */
-@media (max-height: 500px) {
-  #profile-dialog { max-height: calc(100dvh - 16px); }
-  .profile-header { padding: 8px 16px; }
-  .profile-avatar { width: 32px; height: 32px; border-radius: 7px; }
-  .profile-eyebrow { display: none; }
-  #profile-title { font-size: 19px; }
-  .profile-body { padding: 10px 16px 12px; }
-  .profile-level { padding: 8px 12px; }
-  .profile-level h2 strong { font-size: 20px; }
-  .profile-xp-bar { height: 8px; margin: 6px 0 5px; }
-  .profile-footer { padding: 7px 16px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .menu-nav > :is(#profile-open, #shop-open, #analytics-settings), #profile-xp-fill { transition: none; }

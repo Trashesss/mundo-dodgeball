@@ -38,25 +38,6 @@
   #updates-open:hover { border-color: #88a9a5; background: #2f4853; color: var(--entry-text); }
   #updates-close:hover { background: #2c474d; color: var(--entry-text); }
 }
-@media (max-width: 650px) {
-  .menu-nav { flex-wrap: wrap; }
-  .menu-nav #analytics-settings { margin-left: auto; }
-  .updates-entry { order: 1; flex-basis: 100%; margin: 0; }
-}
-@media (max-width: 560px) {
-  #updates-open { font-size: 15px; }
-  #updates-dialog { width: calc(100% - 20px); max-height: calc(100dvh - 20px); border-radius: 12px; }
-  .updates-header { padding: 14px 16px; }
-  #updates-title { font-size: 22px; }
-  .updates-body { padding: 16px 16px 4px; }
-  .updates-highlights li { gap: 10px; padding: 16px 0; }
-  .updates-tag { flex-basis: 44px; font-size: 10px; }
-}
-@media (max-height: 500px) {
-  .updates-header { padding: 8px 16px; }
-  .updates-eyebrow { display: none; }
-  #updates-title { font-size: 20px; }
-}
 @media (prefers-reduced-motion: reduce) {
   #updates-open { transition: none; }
 }

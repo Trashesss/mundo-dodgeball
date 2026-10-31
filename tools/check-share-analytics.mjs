@@ -10,7 +10,7 @@ const browser = await puppeteer.launch({
 });
 try {
   const page = await browser.newPage();
-  await page.setViewport({ width: 1100, height: 900, hasTouch: true });
+  await page.setViewport({ width: 1100, height: 900 });
   const errors = [];
   const posthogRequests = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -31,9 +31,6 @@ try {
     localStorage.setItem('mundo-analytics-consent-v1', 'accepted');
     window.events = [];
     window.posthog = { init() {}, capture(name, properties) { window.events.push({ name, properties }); } };
-    // 마우스를 연결한 터치 기기: 공유 시트를 쓰지만 모바일 안내에는 막히지 않는다
-    const matchMedia = window.matchMedia.bind(window);
-    window.matchMedia = query => query === '(any-pointer: fine)' ? { ...matchMedia(query), matches: true } : matchMedia(query);
   });
   const baseUrl = `http://localhost:${server.address().port}/`;
   const incomingId = '12345678-1234-4123-8123-123456789abc';
@@ -46,7 +43,7 @@ try {
     scene.score = [1, 0];
     scene.endMatch();
     document.getElementById('menu').classList.add('hidden');
-    Object.defineProperty(navigator, 'share', { configurable: true, value: async data => { window.shared = data; } });
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async text => { window.copied = text; } } });
   });
   await page.click('#share-btn');
   await page.waitForFunction(() => !document.getElementById('share-btn').disabled);
@@ -58,7 +55,7 @@ try {
     assert.equal(event.properties.referral_share_id, incomingId);
     assert.equal(event.properties.entry_source, 'share');
   }
-  const url = new URL(await page.evaluate(() => window.shared.url));
+  const url = new URL((await page.evaluate(() => window.copied)).split('\n')[1]);
   const firstId = url.searchParams.get('share_id');
   assert.notEqual(firstId, incomingId);
   assert.equal(url.searchParams.has('private'), false);
@@ -67,34 +64,19 @@ try {
   assert.equal(url.searchParams.get('utm_medium'), 'share');
   assert.equal(events[3].properties.share_id, firstId);
   assert.equal(events[4].properties.share_id, firstId);
-  assert.equal(events[4].properties.method, 'native');
+  assert.equal(events[4].properties.method, 'clipboard');
   assert.equal(events[3].properties.match_id, events[2].properties.match_id);
   assert.equal(events[3].properties.difficulty, 'twins');
   assert.equal(events[3].properties.result, 'win');
 
-  await page.evaluate(() => {
-    Object.defineProperty(navigator, 'share', { configurable: true, value: async () => { throw new DOMException('Canceled', 'AbortError'); } });
-    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => { throw Error('Must not copy on cancellation'); } } });
-  });
-  await page.click('#share-btn');
-  await page.waitForFunction(() => !document.getElementById('share-btn').disabled);
-  events = await page.evaluate(() => window.events);
-  assert.deepEqual(events.slice(-2).map(event => event.name), ['share_clicked', 'share_cancelled']);
-  assert.notEqual(events.at(-1).properties.share_id, firstId);
-
-  await page.evaluate(() => {
-    Object.defineProperty(navigator, 'share', { configurable: true, value: async () => { throw Error('Unsupported target'); } });
-    navigator.clipboard.writeText = async text => { window.copied = text; };
-  });
   await page.click('#share-btn');
   await page.waitForFunction(() => !document.getElementById('share-btn').disabled);
   events = await page.evaluate(() => window.events);
   assert.deepEqual(events.slice(-2).map(event => event.name), ['share_clicked', 'share_completed']);
-  assert.equal(events.at(-1).properties.method, 'clipboard');
+  assert.notEqual(events.at(-1).properties.share_id, firstId);
   assert.ok((await page.evaluate(() => window.copied)).includes(events.at(-1).properties.share_id));
 
   await page.evaluate(() => {
-    Object.defineProperty(navigator, 'share', { configurable: true, value: undefined });
     navigator.clipboard.writeText = async () => { throw Error('Permission denied'); };
   });
   await page.click('#share-btn');
@@ -103,7 +85,7 @@ try {
   assert.deepEqual(events.slice(-2).map(event => event.name), ['share_clicked', 'share_failed']);
   assert.equal(events.at(-1).properties.method, 'clipboard');
   const shareIds = events.filter(event => event.name === 'share_clicked').map(event => event.properties.share_id);
-  assert.equal(new Set(shareIds).size, 4);
+  assert.equal(new Set(shareIds).size, 3);
 
   await page.click('#again-btn');
   const replay = await page.evaluate(() => window.events.at(-1));
@@ -122,7 +104,7 @@ try {
   }
   assert.deepEqual(errors, []);
   assert.deepEqual(posthogRequests, []);
-  console.log('Share analytics: attribution, match linkage, unique share IDs, native/clipboard success, cancellation, manual fallback, replay and direct visits passed. No real events sent.');
+  console.log('Share analytics: attribution, match linkage, unique share IDs, clipboard success, manual fallback, replay and direct visits passed. No real events sent.');
 } finally {
   await browser.close();
   server.close();

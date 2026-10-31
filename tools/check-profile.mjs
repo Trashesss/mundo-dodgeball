@@ -1,4 +1,4 @@
-// 숙련도 창: 레벨·경험치, 저장값 복구, 경기 경험치, PC·모바일 배치
+// 숙련도 창: 레벨·경험치, 저장값 복구, 경기 경험치, 창 크기별 배치
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import puppeteer from 'puppeteer-core';

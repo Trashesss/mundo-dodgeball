@@ -24,19 +24,6 @@ $('share-btn').addEventListener('click', async () => {
   $('share-btn').disabled = true;
   $('share-status').textContent = '';
   try {
-    if (navigator.share && matchMedia('(pointer: coarse)').matches) {
-      try {
-        await navigator.share(data);
-        track('share_completed', { ...properties, method: 'native' });
-        return;
-      } catch (error) {
-        if (error.name === 'AbortError') {
-          track('share_cancelled', { ...properties, method: 'native' });
-          return;
-        }
-        if (!isCurrent()) return;
-      }
-    }
     try {
       await navigator.clipboard.writeText(`${data.text}\n${data.url}`);
       track('share_completed', { ...properties, method: 'clipboard' });
@@ -57,7 +44,7 @@ $('share-btn').addEventListener('click', async () => {
 export const HUD = {
   // online: { mySlot, bot } 이면 대인전 이름표 (왼쪽 0번이 방장, bot 이면 상대는 문도봇)
   show(on, twins = false, online = null) {
-    for (const id of ['topbar', 'hud', 'joy-zone']) $(id).classList.toggle('hidden', !on);
+    for (const id of ['topbar', 'hud']) $(id).classList.toggle('hidden', !on);
     $('topbar').classList.toggle('twins', twins);
     if (online) {
       const mine = (slot) => slot === online.mySlot;

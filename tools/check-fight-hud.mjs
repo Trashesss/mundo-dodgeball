@@ -71,8 +71,8 @@ try {
   assert.equal(checks.hp, 121);
   fs.mkdirSync('output', { recursive: true });
   await page.screenshot({ path: 'output/fight-hud-desktop.png' });
-  for (const width of [700, 390, 320]) {
-    await page.setViewport({ width, height: 844 });
+  for (const [width, height] of [[1280, 720], [800, 560]]) {
+    await page.setViewport({ width, height });
     await page.evaluate(() => {
       window.__game.scale.refresh();
       window.__game.scene.getScene('game').updateCamera();
@@ -86,7 +86,7 @@ try {
       });
     });
     assert.ok(fits, `HUD should fit at ${width}px`);
-    if (width === 390) await page.screenshot({ path: 'output/fight-hud-mobile.png' });
+    if (width === 800) await page.screenshot({ path: 'output/fight-hud-small.png' });
   }
   assert.deepEqual(errors, []);
   console.log('Fight HUD: immediate start without announcement overlays, no time limit, knockout win/loss/draw, rematch, frozen result, low HP and responsive layout passed.');

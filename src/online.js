@@ -495,9 +495,6 @@ export const Online = {
     const url = $('lobby-link').value;
     if (!url) return;
     const data = { title: '문도 피구 1대1 초대', text: '[문도 피구] 1대1 게임에 초대합니다.', url };
-    if (navigator.share && matchMedia('(pointer: coarse)').matches) {
-      try { await navigator.share(data); return; } catch (error) { if (error.name === 'AbortError') return; }
-    }
     try {
       await navigator.clipboard.writeText(`${data.text}\n${url}`);
       clearTimeout(this.snackbarTimer);

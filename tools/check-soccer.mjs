@@ -40,13 +40,13 @@ try {
   await page.click('#shop-action');
   assert.ok(await page.$eval('#shop-action', el => el.disabled));
   await waitMenuLook(page, 'classic', 'soccer');
-  for (const [width, height] of [[390, 844], [320, 568], [844, 390]]) {
+  for (const [width, height] of [[1280, 720], [800, 560]]) {
     await page.setViewport({ width, height });
     for (const category of ['maps', 'weapons']) {
       await page.$eval(`[data-shop-category="${category}"]`, el => el.click());
       assert.ok(await page.$eval('#shop-dialog', el => el.scrollWidth <= el.clientWidth && el.getBoundingClientRect().right <= innerWidth && el.getBoundingClientRect().bottom <= innerHeight), `shop must fit ${width}x${height}`);
     }
-    if (width === 390) await page.screenshot({ path: 'output/soccer/shop-mobile.png' });
+    if (width === 800) await page.screenshot({ path: 'output/soccer/shop-small.png' });
   }
   await page.setViewport({ width: 1440, height: 1000 });
   await page.click('#shop-close'); await page.reload(); await ready(page);
@@ -99,5 +99,5 @@ try {
   await waitMenuLook(page, 'classic', 'cleaver');
   assert.equal(await page.$eval('#sk-q', el => el.getAttribute('aria-label')), 'Q 식칼 투척');
   assert.deepEqual(errors, []);
-  console.log('Soccer: atlas completeness, save migration, purchase/equip/reload, duplicate prevention, mobile layouts, held ball, actual throw/movement/hit, both online slots and cleaver restore passed.');
+  console.log('Soccer: atlas completeness, save migration, purchase/equip/reload, duplicate prevention, small-window layouts, held ball, actual throw/movement/hit, both online slots and cleaver restore passed.');
 } finally { await browser.close(); server.close(); }

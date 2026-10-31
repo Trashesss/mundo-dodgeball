@@ -120,7 +120,6 @@ export function initShop(scene) {
   $('shop-close').addEventListener('click', () => dialog.close());
   dialog.addEventListener('close', () => { hideSnackbar(); $('shop-open').focus({ preventScroll: true }); });
   const SHARE_MESSAGES = {
-    native: ['친구가 링크를 열면 받을 수 있어요.', 'success'],
     clipboard: ['링크를 복사했어요! 친구가 열면 받을 수 있어요.', 'success'],
     failed: ['복사하지 못했어요. 클립보드 권한을 확인해 주세요.', 'error'],
   };

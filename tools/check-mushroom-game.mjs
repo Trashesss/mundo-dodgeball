@@ -53,15 +53,10 @@ try {
   assert.equal(await page.$eval('#sk-q', el => el.getAttribute('aria-label')), 'Q 버섯 투척');
   assert.ok((await page.$eval('.q-icon', el => getComputedStyle(el).backgroundImage)).includes('teemo-mushroom-throw-icon-v1.png'));
   await page.screenshot({ path: 'output/mushroom/shop-desktop.png' });
-  for (const [width, height] of [[390, 844], [320, 568], [844, 390]]) {
+  for (const [width, height] of [[1280, 720], [800, 560]]) {
     await page.setViewport({ width, height });
     assert.ok(await page.$eval('#shop-dialog', el => el.scrollWidth <= el.clientWidth && el.getBoundingClientRect().right <= innerWidth && el.getBoundingClientRect().bottom <= innerHeight), `shop fits ${width}x${height}`);
-    if (width <= 650) assert.ok(await page.evaluate(() => {
-      const catalog = document.querySelector('.shop-catalog').getBoundingClientRect();
-      const feature = document.querySelector('.shop-feature').getBoundingClientRect();
-      return [...document.querySelectorAll('#shop-weapon-list .shop-map-card')].every(card => card.getBoundingClientRect().bottom <= catalog.bottom) && catalog.bottom <= feature.top;
-    }), 'all three weapons fit before the detail section');
-    if (width === 390) await page.screenshot({ path: 'output/mushroom/shop-mobile.png' });
+    if (width === 800) await page.screenshot({ path: 'output/mushroom/shop-small.png' });
   }
   await page.setViewport({ width: 1440, height: 1000 });
   await page.click('#shop-close'); await page.reload(); await ready(page);
@@ -118,7 +113,7 @@ try {
     assert.equal(await page.$eval('.q-icon', el => el.classList.contains('mushroom-icon')), weapon === 'mushroom');
   }
   assert.deepEqual(errors, []);
-  console.log('Mushroom gameplay: purchase/equip/save migration, mobile shop, three skins × five states × eight directions, projectile speed/damage/cooldown, remote rendering in both slots and cleaver restore passed.');
+  console.log('Mushroom gameplay: purchase/equip/save migration, small-window shop, three skins × five states × eight directions, projectile speed/damage/cooldown, remote rendering in both slots and cleaver restore passed.');
 } finally {
   await browser.close(); web.close();
 }

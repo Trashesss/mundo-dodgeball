@@ -111,39 +111,3 @@
   .shop-card-info strong { font-size: 13px; }
   .shop-feature { padding-inline: 16px; }
 }
-@media (max-width: 650px) {
-  #shop-open { top: max(12px, env(safe-area-inset-top)); left: max(12px, env(safe-area-inset-left)); height: 56px; gap: 8px; padding: 4px 11px 4px 4px; font-size: 16px; }
-  #shop-open .shop-keeper-icon { width: 44px; height: 44px; border-radius: 8px; }
-  .shop-nav-info { gap: 4px; }
-  #shop-dialog { width: calc(100% - 20px); height: calc(100dvh - 20px); max-height: calc(100dvh - 20px); border-radius: 10px; }
-  .shop-header { padding: 13px 14px; gap: 10px; }
-  .shop-brand { gap: 9px; }
-  .shop-brand .shop-keeper-icon { width: 38px; height: 38px; border-radius: 7px; }
-  #shop-title { font-size: 21px; }
-  .shop-eyebrow { font-size: 7px; letter-spacing: 1.3px; }
-  .shop-header-actions { gap: 9px; }
-  .shop-wallet { gap: 5px; }
-  .shop-wallet strong { min-width: 23px; font-size: 18px; }
-  .shop-wallet > span:last-child { display: none; }
-  .shop-icon-button { width: 26px; }
-  .shop-body { grid-template-columns: 1fr; grid-template-rows: repeat(3, max-content); align-content: start; }
-  .shop-catalog { overflow: visible; }
-  .shop-category { flex-direction: row; flex-wrap: wrap; gap: 6px; padding: 10px 14px; border-right: 0; border-bottom: 1px solid var(--shop-line); }
-  .shop-category-button { flex-direction: row; width: auto; min-height: 38px; padding: 7px 10px; gap: 6px; }
-  .shop-category-icon { width: 28px; height: 28px; }
-  .shop-catalog-content { padding: 16px 18px 18px; }
-  .shop-section-label h2 { font-size: 17px; }
-  .shop-catalog-intro { margin: 6px 0 15px; font-size: 11px; }
-  .shop-map-list { --shop-gap: 12px; }
-  .shop-card-art { aspect-ratio: 1.4; }
-  .shop-map-card img { padding: 8px; }
-  .shop-card-info { padding-top: 9px; gap: 5px; }
-  .shop-card-info strong { font-size: 14px; }
-  .shop-card-info small { font-size: 11px; }
-  .shop-feature { overflow: visible; padding: 0 18px 18px; border-left: 0; border-top: 1px solid var(--shop-line); }
-  .shop-detail-label { min-height: 40px; }
-  .shop-art { height: 185px; margin-top: 12px; }
-  .shop-detail { padding-top: 16px; }
-  .shop-detail h2 { font-size: 24px; }
-  .shop-footer { padding: 13px 18px; gap: 8px; }
-}
