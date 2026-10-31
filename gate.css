@@ -7,8 +7,7 @@
 }
 .play-gate > * { flex-shrink: 0; }
 .mobile-gate-portrait {
-  display: block; width: clamp(120px, 26dvh, 200px); height: auto; margin-bottom: 8px;
-  mask-image: radial-gradient(ellipse, #000 48%, transparent 72%);
+  display: block; width: clamp(140px, 30dvh, 240px); max-width: 70vw; height: auto; margin-bottom: 8px;
 }
 .mobile-gate-brand { margin: 0 0 16px; font-size: 40px; line-height: 1.15; letter-spacing: -2px; text-shadow: 0 4px #08171f; }
 .mobile-gate-brand span { color: var(--entry-green); }
