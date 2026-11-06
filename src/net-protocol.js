@@ -41,3 +41,7 @@ export const cleanLook = (look) => ({
   skin: look?.skin === 'ronaldo' || look?.skin === 'teemo' || look?.skin === 'corporate' ? look.skin : 'classic',
   weapon: look?.weapon === 'soccer' || look?.weapon === 'mushroom' ? look.weapon : 'cleaver',
 });
+
+// 감정표현(1·2·3 키) 이모티콘 id. 상점 EMOTES(src/shop-state.js)와 같이 늘린다. 모르는 id는 null.
+export const EMOTE_IDS = ['thumbs'];
+export const cleanEmote = (id) => (EMOTE_IDS.includes(id) ? id : null);

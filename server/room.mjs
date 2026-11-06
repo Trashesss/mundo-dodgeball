@@ -2,7 +2,7 @@
 // 빠른 대전 방(quick)도 사람끼리는 둘 다 준비해야 시작한다. 만난 뒤 READY_MS 안에 준비하지 않으면 그 사람은 내보내고 남은 사람이 방을 이어받아 다시 기다린다. 혼자 일정 시간 기다리면 '문도봇과 플레이'로 문도봇(고스트)이 한 자리를 채운다. 재대결은 없다.
 import { randomUUID } from 'node:crypto';
 import { RULES } from '../src/rules.js';
-import { NET, packChamp, packCleaver, cleanLook } from '../src/net-protocol.js';
+import { NET, packChamp, packCleaver, cleanLook, cleanEmote } from '../src/net-protocol.js';
 import {
   createWorld, createChamp, resetChamp, constrain, castQ, castFlash, castGhost, stepWorld, roundWinner,
 } from '../src/sim.js';
@@ -13,6 +13,7 @@ import { GhostObserver } from './ghost-profile.mjs';
 const STEP = 1 / NET.TICK_HZ;
 const SNAP_EVERY = Math.round(NET.TICK_HZ / NET.SNAP_HZ);
 const LIMIT = RULES.arenaR * 3; // 입력 좌표 허용 범위
+const EMOTE_GAP_MS = 250; // 감정표현 연타 제한. 클라이언트(0.3초)보다 조금 느슨하게 둔다
 const num = (v) => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= LIMIT;
 
 export class Room {
@@ -162,6 +163,15 @@ export class Room {
         if (this.quick && this.phase === 'lobby' && !this.slots[1 - slot] && Date.now() - s.queuedAt >= this.quickWaitMs) this.onBot?.(this);
         return;
       case 'input': return this.input(slot, msg);
+      // 감정표현: 경기 중 살아 있는 쪽이 보낸 것만 상대에게 전한다 (연타는 EMOTE_GAP_MS 간격으로 거른다)
+      case 'emote': {
+        const id = cleanEmote(msg.id), now = Date.now();
+        if (!id || !this.world || !(this.phase === 'play' || this.phase === 'countdown')) return;
+        if (!this.world.champs[slot].alive || now - (s.emoteAt ?? 0) < EMOTE_GAP_MS) return;
+        s.emoteAt = now;
+        if (this.slots[1 - slot]) this.send(1 - slot, { type: 'emote', slot, id });
+        return;
+      }
       case 'rematch':
         if (this.quick || this.phase !== 'over' || !this.slots.every(Boolean)) return;
         s.rematch = true;

@@ -1,4 +1,4 @@
-import { MAPS, WEAPONS, SKINS, COIN_REWARDS, getShopState, buyMap, equipMap, buyWeapon, equipWeapon, buySkin, equipSkin } from './shop-state.js';
+import { MAPS, WEAPONS, SKINS, EMOTES, EMOTE_SLOTS, COIN_REWARDS, getShopState, buyMap, equipMap, buyWeapon, equipWeapon, buySkin, equipSkin, buyEmote, equipEmote } from './shop-state.js';
 import { track } from './analytics.js';
 import { checkReferrals, shareShopItem, takeUnlocked } from './referral.js';
 
@@ -7,6 +7,8 @@ const CATEGORIES = {
   maps: { items: MAPS, noun: '경기장', inventory: 'owned', equipped: 'equipped', list: 'shop-map-list', data: 'map', initial: 'colosseum', buy: buyMap, equip: equipMap, action: '이 맵 적용하기', active: '적용 중인 경기장', intro: '오늘은 어디서 한 판?', note: '온라인에서는 내 화면에만 적용돼요.' },
   weapons: { items: WEAPONS, noun: '투척 무기', inventory: 'ownedWeapons', equipped: 'equippedWeapon', list: 'shop-weapon-list', data: 'weapon', initial: 'soccer', buy: buyWeapon, equip: equipWeapon, action: '이 무기 장착하기', active: '장착 중인 무기', intro: '오늘은 뭘 던져볼까?' },
   skins: { items: SKINS, noun: '스킨', inventory: 'ownedSkins', equipped: 'equippedSkin', list: 'shop-skin-list', data: 'skin', initial: 'ronaldo', buy: buySkin, equip: equipSkin, action: '이 스킨 장착하기', active: '장착 중인 스킨', intro: '오늘은 어떤 문도로 뛰어볼까?' },
+  // 감정표현은 하나만 장착하는 대신 1·2·3 번호에 하나씩 넣는다 (emoteSlots)
+  emotes: { items: EMOTES, noun: '감정표현', inventory: 'ownedEmotes', slots: 'emoteSlots', list: 'shop-emote-list', data: 'emote', initial: 'thumbs', buy: buyEmote, intro: '경기 중에 마음을 전해 봐!', note: '경기 중 1·2·3 키로 써요.' },
 };
 
 export function initShop(scene) {
@@ -53,7 +55,9 @@ export function initShop(scene) {
     const isMap = category === 'maps';
     const config = CATEGORIES[category];
     const inventory = state[config.inventory];
-    const equippedId = state[config.equipped];
+    const slots = config.slots ? state[config.slots] : null;
+    const equippedId = slots ? null : state[config.equipped];
+    const slotLabel = id => { const i = slots?.indexOf(id) ?? -1; return i >= 0 ? `${i + 1}번` : ''; };
     const owned = inventory.includes(map.id), equipped = equippedId === map.id;
     const noun = config.noun;
     $('shop-catalog-title').textContent = noun;
@@ -73,7 +77,17 @@ export function initShop(scene) {
     $('shop-map-description').textContent = map.description;
     $('shop-map-image').src = map.image;
     $('shop-map-image').alt = isMap ? `${map.name} 경기장 전경` : map.name;
-    $('shop-ownership').textContent = equipped ? (isMap ? '✓ 현재 적용 중' : '✓ 현재 장착 중') : owned ? `내가 보유한 ${noun}` : map.unlock ? '친구가 링크를 열면 무료로 받아요' : '한 번 구매하면 계속 사용할 수 있어요';
+    $('shop-ownership').textContent = slots && owned ? '' : equipped ? (isMap ? '✓ 현재 적용 중' : '✓ 현재 장착 중') : owned ? `내가 보유한 ${noun}` : map.unlock ? '친구가 링크를 열면 무료로 받아요' : '한 번 구매하면 계속 사용할 수 있어요';
+    const slotPicker = !!slots && owned;
+    // 감정표현은 번호 버튼이 장착 상태를 보여 주므로 안내 줄을 숨긴다
+    $('shop-ownership').hidden = slotPicker;
+    $('shop-action').hidden = slotPicker;
+    $('shop-emote-slots').hidden = !slotPicker;
+    if (slotPicker) for (const button of $('shop-emote-slots').children) {
+      const i = Number(button.dataset.slot), current = slots[i];
+      button.setAttribute('aria-pressed', String(current === map.id));
+      button.querySelector('small').textContent = current === map.id ? '장착 중' : current ? `${catalog().find(item => item.id === current)?.name ?? ''} 대신` : '비어 있음';
+    }
     $('shop-action').disabled = equipped;
     $('shop-action').textContent = equipped ? config.active : owned ? config.action : map.unlock ? '친구에게 공유하고 받기' : `${map.price.toLocaleString('ko-KR')} 코인으로 구매`;
     $('shop-owned-count').textContent = `${inventory.length} / ${catalog().length} 보유`;
@@ -83,6 +97,14 @@ export function initShop(scene) {
     for (const button of $(config.list).children) {
       const item = catalog().find(item => item.id === button.dataset[config.data]);
       button.setAttribute('aria-pressed', String(item.id === selected));
+      if (slots) {
+        const own = inventory.includes(item.id);
+        button.querySelector('small').textContent = slotLabel(item.id) ? `✓ ${slotLabel(item.id)} 장착` : own ? '보유 중' : item.unlock ? '공유로 받기' : `${item.price} 코인`;
+        button.querySelector('.shop-map-check').textContent = item.id === selected ? '◈' : '';
+        button.querySelector('.shop-card-badge').textContent = slotLabel(item.id) || (own ? '보유' : item.unlock ? '공유' : 'NEW');
+        button.dataset.owned = String(own);
+        continue;
+      }
       button.querySelector('small').textContent = equippedId === item.id ? (isMap ? '✓ 적용 중' : '✓ 장착 중') : inventory.includes(item.id) ? '보유 중' : item.unlock ? '공유로 받기' : `${item.price} 코인`;
       button.querySelector('.shop-map-check').textContent = item.id === selected ? '◈' : '';
       button.querySelector('.shop-card-badge').textContent = item.id === equippedId ? (isMap ? '적용 중' : '장착 중') : inventory.includes(item.id) ? '보유' : item.unlock ? '공유' : 'NEW';
@@ -102,6 +124,16 @@ export function initShop(scene) {
     button.innerHTML = `<span class="shop-card-art"><img src="${map.image}" alt="" width="180" height="160"><span class="shop-card-badge"></span><span class="shop-map-check" aria-hidden="true"></span></span><span class="shop-card-info"><strong>${map.name}</strong><small></small></span>`;
     button.addEventListener('click', () => { selected = map.id; render(); });
     $(config.list).append(button);
+  }
+  for (let i = 0; i < EMOTE_SLOTS; i++) {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'shop-emote-slot'; button.dataset.slot = String(i);
+    button.innerHTML = `<kbd>${i + 1}</kbd><span>${i + 1}번에 장착</span><small></small>`;
+    button.addEventListener('click', () => {
+      if (equipEmote(selected, i)) track('shop_emote_equipped', { item_id: selected, slot: i + 1 });
+      render();
+    });
+    $('shop-emote-slots').append(button);
   }
   for (const button of document.querySelectorAll('[data-shop-category]')) {
     button.addEventListener('click', () => {
@@ -135,7 +167,7 @@ export function initShop(scene) {
       const result = config.buy(map.id);
       if (result.ok) track('shop_item_purchased', { item_type: config.data, item_id: map.id, price: map.price, coins_after: getShopState().coins });
       snackbar(result.ok ? `${map.name} 구매 완료!` : result.reason, result.ok ? 'success' : 'error');
-    } else config.equip(map.id);
+    } else config.equip?.(map.id);
     render();
   });
   // 스낵바 위치는 띄울 때의 배치로 계산하므로 창 크기가 바뀌면 닫는다

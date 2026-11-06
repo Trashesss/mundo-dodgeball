@@ -147,6 +147,16 @@ try {
   await waitScene(host, 'Math.hypot(s.enemy.x - 9, s.enemy.z - 4) < 0.3', 6000);
   await waitScene(guest, 'Math.hypot(s.player.x - 9, s.player.z - 4) < 0.3');
 
+  // 감정표현: 친구가 1을 누르면 양쪽 화면의 친구 문도 위에 뜬다. 모르는 id 는 서버가 버린다.
+  step('감정표현: 친구가 1 → 방장 화면에도 표시, 모르는 id 무시');
+  await guest.keyboard.press('1');
+  await waitScene(guest, 's.champs[1].emote.visible && s.champs[1].emote.texture.key === "emote:thumbs"', 2000);
+  await waitScene(host, 's.champs[1].emote.visible && s.champs[1].emote.texture.key === "emote:thumbs"', 2000);
+  await waitScene(host, '!s.champs[1].emote.visible', 3000);
+  await guest.evaluate(() => window.__mundoOnline.send({ type: 'emote', id: 'nope' }));
+  await new Promise((r) => setTimeout(r, 400));
+  assert.ok(await evalScene(host, 'return !s.champs[1].emote.visible;'), 'unknown emote id must be ignored');
+
   // 서버 판정 적중: 방장이 친구에게 Q → 양쪽 모두 체력 감소, 방장 문도에 따봉
   step('서버 판정 적중: 방장이 친구에게 Q → 양쪽 모두 체력 감소, 방장 문도에 따봉');
   await evalScene(host, 's.player.qCd = 0; s.lastCastSeq = 0; if (s.castQ(s.player, s.enemy.x, s.enemy.z)) s.sendInput({ cast: "q", tx: s.enemy.x, tz: s.enemy.z });');

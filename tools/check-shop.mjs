@@ -142,6 +142,35 @@ try {
       await page.screenshot({ path: 'output/shop/shop-small.png' });
     }
   }
+  // 감정표현: 따봉이 기본으로 1번에 있고, 번호를 고르면 그 번호로 옮겨진다 (같은 이모티콘은 한 번호에만)
+  for (const [width, height] of [[1280, 720], [800, 560]]) {
+    await page.setViewport({ width, height });
+    await page.$eval('[data-shop-category="emotes"]', el => el.click());
+    const emoteUi = await page.evaluate(() => {
+      const visible = el => el && !el.hidden && el.getClientRects().length > 0;
+      const cats = [...document.querySelectorAll('[data-shop-category]')].map(el => el.getBoundingClientRect());
+      const aside = document.querySelector('.shop-category').getBoundingClientRect();
+      return {
+        action: visible(document.querySelector('#shop-action')),
+        slots: [...document.querySelectorAll('.shop-emote-slot')].map(el => [visible(el), el.getAttribute('aria-pressed')]),
+        badge: document.querySelector('[data-emote="thumbs"] .shop-card-badge').textContent,
+        catsFit: cats.every(r => r.bottom <= aside.bottom + 1 && r.bottom <= innerHeight),
+      };
+    });
+    assert.equal(emoteUi.action, false, 'owned emote shows slot buttons instead of the action button');
+    assert.deepEqual(emoteUi.slots, [[true, 'true'], [true, 'false'], [true, 'false']]);
+    assert.equal(emoteUi.badge, '1번');
+    assert.ok(emoteUi.catsFit, `all four shop categories fit at ${width}x${height}`);
+    assert.ok(await page.$eval('#shop-dialog', el => el.getBoundingClientRect().bottom <= innerHeight), `emote shop fits ${width}x${height}`);
+    await page.$eval('.shop-emote-slot[data-slot="2"]', el => el.click());
+    assert.deepEqual(await page.evaluate(async () => (await import('/src/shop-state.js')).getShopState().emoteSlots), [null, null, 'thumbs']);
+    assert.equal(await page.$eval('[data-emote="thumbs"] .shop-card-badge', el => el.textContent), '3번');
+    await page.screenshot({ path: `output/shop/shop-emotes-${width}.png` });
+    await page.$eval('.shop-emote-slot[data-slot="0"]', el => el.click());
+    assert.deepEqual(await page.evaluate(async () => (await import('/src/shop-state.js')).getShopState().emoteSlots), ['thumbs', null, null]);
+    await page.$eval('[data-shop-category="maps"]', el => el.click());
+    assert.equal(await page.$eval('#shop-action', el => !el.hidden), true, 'action button returns for other categories');
+  }
   const context = await browser.createBrowserContext();
   const poor = await context.newPage();
   await skipConsent(poor);
@@ -178,5 +207,5 @@ try {
   assert.equal(await blocked.evaluate(() => window.__game.scene.getScene('game').arenaId), 'colosseum');
   await blockedContext.close();
   assert.deepEqual(errors, []);
-  console.log('Shop: fixed window bounds, purchase, duplicate prevention, equip/reload, classic restore, colosseum shrink boundary, win/loss rewards, insufficient funds, blocked storage and responsive layouts passed.');
+  console.log('Shop: fixed window bounds, purchase, duplicate prevention, equip/reload, classic restore, colosseum shrink boundary, win/loss rewards, insufficient funds, blocked storage, emote slots and responsive layouts passed.');
 } finally { await browser.close(); server.close(); }

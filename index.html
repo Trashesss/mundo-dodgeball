@@ -141,6 +141,7 @@
           <li><kbd>Q</kbd> 커서 방향으로 장착 무기 투척</li>
           <li><kbd>D</kbd> 점멸</li>
           <li><kbd>F</kbd> 유체화</li>
+          <li><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 감정표현</li>
         </ul>
         <h1 id="select-title">게임 모드 선택</h1>
         <p class="setup-subtitle" id="difficulty-label">어떤 모드를 플레이할까요?</p>
@@ -420,6 +421,10 @@
           <img class="shop-category-icon" src="assets/cartoon/shop-icons/arena-v1.png" alt="" width="160" height="160" />
           <span>경기장</span>
         </button>
+        <button type="button" class="shop-category-button" data-shop-category="emotes" aria-pressed="false">
+          <img class="shop-category-icon" src="assets/cartoon/mundo-thumbs-up-emote-v1.png" alt="" width="160" height="160" />
+          <span>감정표현</span>
+        </button>
       </aside>
       <section class="shop-catalog" aria-labelledby="shop-catalog-title">
         <div class="shop-catalog-content">
@@ -428,6 +433,7 @@
           <div id="shop-map-list" class="shop-map-list" role="group" aria-label="경기장 선택"></div>
           <div id="shop-weapon-list" class="shop-map-list" role="group" aria-label="투척 무기 선택" hidden></div>
           <div id="shop-skin-list" class="shop-map-list" role="group" aria-label="스킨 선택" hidden></div>
+          <div id="shop-emote-list" class="shop-map-list" role="group" aria-label="감정표현 선택" hidden></div>
         </div>
       </section>
       <section class="shop-feature" aria-labelledby="shop-map-name">
@@ -439,7 +445,7 @@
           <h2 id="shop-map-name">문도 콜로세움</h2>
           <p id="shop-map-subtitle" class="shop-subtitle">모래 위에서 실력을 증명해.</p>
           <p id="shop-map-description" class="shop-description"></p>
-          <div class="shop-purchase"><p id="shop-ownership"></p><button id="shop-action" type="button"></button><p id="shop-price-note" class="shop-price-note">온라인에서는 내 화면에만 적용돼요.</p></div>
+          <div class="shop-purchase"><p id="shop-ownership"></p><button id="shop-action" type="button"></button><div id="shop-emote-slots" class="shop-emote-slots" role="group" aria-label="장착할 번호 키" hidden></div><p id="shop-price-note" class="shop-price-note">온라인에서는 내 화면에만 적용돼요.</p></div>
         </div>
       </section>
     </div>

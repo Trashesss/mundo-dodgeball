@@ -74,6 +74,14 @@
 .shop-purchase { width: 100%; margin-top: auto; padding-top: 15px; border-top: 1px solid var(--shop-line); }
 #shop-ownership { margin: 0 0 10px; color: #bfbb9e; font-size: 11px; }
 #shop-action { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; padding: 10px; border: 1px solid #e3c88c; border-radius: 6px; background: #d5bc83; color: #29322d; box-shadow: inset 0 1px #fff4ce80, 0 3px 0 #77653e; font-size: 17px; }
+#shop-action[hidden], .shop-emote-slots[hidden] { display: none; }
+.shop-emote-slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
+.shop-emote-slot { display: grid; justify-items: center; gap: 3px; min-height: 64px; padding: 7px 4px; border: 1px solid #5e7a7880; border-radius: 6px; background: #142d35; color: #d9d2b8; font-size: 13px; }
+.shop-emote-slot kbd { display: grid; place-items: center; width: 22px; height: 22px; border: 1px solid #ac915d; border-radius: 4px; background: #4c4230; color: #f5d78e; font: 700 12px/1 sans-serif; }
+.shop-emote-slot small { max-width: 100%; overflow: hidden; color: #9fb9af; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.shop-emote-slot[aria-pressed="true"] { border-color: #e3c68b; background: #274149; color: #e1ca95; }
+.shop-emote-slot:hover { border-color: #c0a264; }
+.shop-map-card[data-emote] img { padding: 18px; object-fit: contain; }
 #shop-action:disabled { cursor: default; border-color: #738c70; background: #2c473f; color: #bfd7ad; box-shadow: inset 0 1px #ffffff0d; }
 .shop-price-note { margin: 10px 0 0; text-align: center; color: #6f8e92; font-size: 10px; }
 /* 구매 결과 스낵바: 상점 창 안, 하단 안내줄 위에 띄운다 (bottom 은 shop.js 가 안내줄 높이에 맞춘다) */

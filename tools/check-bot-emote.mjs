@@ -27,7 +27,7 @@ try {
     scene.startMatch({ diff: 'twins' });
     const [bot, other] = scene.enemies;
     const player = scene.player;
-    const initiallyHidden = !bot.emote.visible && !other.emote.visible && !player.emote;
+    const initiallyHidden = !bot.emote.visible && !other.emote.visible && !player.emote.visible && !player.autoEmote;
     // Exercise the actual projectile collision path.
     bot.qCd = 0;
     scene.castQ(bot, player.x, player.z);
@@ -55,7 +55,7 @@ try {
     bot.sync();
     const refreshes = bot.emoteT === 1;
     scene.hit(other, { owner: player, paid: 0 });
-    const playerExcluded = !player.emote && !other.emote.visible;
+    const playerExcluded = !player.emote.visible && player.emoteDelayT === 0 && !other.emote.visible;
     scene.hit(player, { owner: other, paid: 0 });
     scene.updateChamp(other, 0.25);
     other.sync();
@@ -78,14 +78,37 @@ try {
     scene.enemy.showEmote();
     scene.enemy.emoteT = 1;
     scene.enemy.sync();
-    return { initiallyHidden, waitsAfterHit, stillWaiting, hitShows, follows, layered, refreshes, playerExcluded,
+    // 1·2·3 감정표현: 플레이어도 쓸 수 있고, 다시 누르면 이전 것을 지우고 처음부터 뜬다
+    const me = scene.player;
+    scene.state = 'play';
+    scene.lastEmoteAt = -Infinity;
+    scene.useEmote(0);
+    me.sync();
+    const manualShows = me.emote.visible && me.emoteT === 1 && me.emote.texture.key === 'emote:thumbs';
+    scene.updateChamp(me, 0.6);
+    scene.lastEmoteAt = -Infinity;
+    scene.useEmote(0);
+    me.sync();
+    const manualRestarts = me.emoteT === 1 && me.emote.alpha === 1;
+    scene.updateChamp(me, 0.1);
+    scene.useEmote(0);
+    const manualThrottled = me.emoteT < 1;
+    scene.lastEmoteAt = -Infinity;
+    me.emoteT = 0;
+    scene.useEmote(1);
+    scene.useEmote(2);
+    const emptySlotsIgnored = me.emoteT === 0;
+    scene.enemy.emoteDelayT = 0.2;
+    scene.enemy.playEmote('thumbs');
+    const manualCancelsPending = scene.enemy.emoteDelayT === 0 && scene.enemy.emoteT === 1;
+    return { manualShows, manualRestarts, manualThrottled, emptySlotsIgnored, manualCancelsPending, initiallyHidden, waitsAfterHit, stillWaiting, hitShows, follows, layered, refreshes, playerExcluded,
       independent, fades, expires, deathClears, resetClears, destroyed };
   });
   for (const [name, passed] of Object.entries(checks)) assert.ok(passed, name);
   fs.mkdirSync('output', { recursive: true });
   await page.screenshot({ path: 'output/bot-emote-desktop.png' });
   assert.deepEqual(errors, []);
-  console.log('Bot emote: collision, bot-only display, movement, layering, refresh, twins, fade, expiry, death, reset and cleanup passed.');
+  console.log('Bot emote: collision, bot-only display, movement, layering, refresh, twins, fade, expiry, death, reset and cleanup, plus 1·2·3 emote show, restart, throttle and empty slots passed.');
 } finally {
   await browser.close();
   server.close();

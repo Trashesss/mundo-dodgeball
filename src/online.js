@@ -310,6 +310,7 @@ export const Online = {
         return;
       case 'go': return h.onGo?.(msg);
       case 'ev': return h.onEvents?.(msg.list);
+      case 'emote': return h.onEmote?.(msg.slot, msg.id);
       case 'roundEnd': return h.onRoundEnd?.(msg.winner);
       // reason 'left': 경기 중 상대가 나가 바로 이김. 방은 끝났으니 재접속 토큰도 버린다
       case 'over':

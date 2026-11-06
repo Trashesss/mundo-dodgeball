@@ -10,11 +10,11 @@ import { THROW } from './throw-motion.js';
 import { createBaron } from './baron.js';
 import { track, createTrackingId, referralContext } from './analytics.js';
 import * as Sim from './sim.js';
-import { NET, unpackChamp, unpackCleaver, cleanLook } from './net-protocol.js';
+import { NET, unpackChamp, unpackCleaver, cleanLook, cleanEmote } from './net-protocol.js';
 import { Online, roomFromUrl } from './online.js';
 import { initPresence } from './presence.js';
 import { initShop } from './shop.js';
-import { getShopState, awardMatch } from './shop-state.js';
+import { getShopState, awardMatch, EMOTES } from './shop-state.js';
 import { awardXp } from './profile-state.js';
 import { initProfile } from './profile.js';
 import { initUpdates } from './updates.js';
@@ -29,6 +29,8 @@ const BAR_OFF = 154;
 const EMOTE_DELAY = 0.25;
 const EMOTE_DURATION = 1;
 const EMOTE_SIZE = 104;
+const EMOTE_COOLDOWN = 0.3; // 감정표현 키 연타 제한 (서버도 같은 간격으로 거른다)
+const emoteTexture = (id) => `emote:${id}`;
 // 캐릭터는 스킨별 몸통 레이어 위에 무기별 팔 레이어를 겹쳐 그린다. 조합마다 따로 굽지 않는다.
 const SKIN_IDS = ['classic', 'ronaldo', 'teemo', 'corporate'];
 const WEAPON_IDS = ['cleaver', 'soccer', 'mushroom'];
@@ -167,7 +169,7 @@ class Mundo {
 }
 
 class Champ {
-  // emote: 적중 시 따봉 표시 (봇전은 봇만, 대인전은 양쪽 모두)
+  // emote: 적중 시 자동 따봉 표시 (봇전은 봇만, 대인전은 양쪽 모두). 1·2·3 감정표현은 모두가 쓸 수 있다.
   // look: 온라인 상대의 외형. 없으면 내 캐릭터는 장착한 외형, 봇은 기본 외형
   constructor(scene, { team, isPlayer, emote = !isPlayer, look = null }) {
     Object.assign(this, Sim.createChamp(team)); // team, side, stats
@@ -188,10 +190,9 @@ class Champ {
     this.mundo = new Mundo(scene, 0, 0, this.skinId, this.weaponId);
     this.sprite = this.mundo.body;
     this.bar = scene.add.graphics().setDepth(DEPTH.ui);
-    if (emote) {
-      this.emote = scene.add.image(0, 0, 'mundo-emote')
-        .setDisplaySize(EMOTE_SIZE, EMOTE_SIZE).setDepth(DEPTH.ui + 2).setVisible(false);
-    }
+    this.autoEmote = emote;
+    this.emote = scene.add.image(0, 0, emoteTexture('thumbs'))
+      .setDisplaySize(EMOTE_SIZE, EMOTE_SIZE).setDepth(DEPTH.ui + 2).setVisible(false);
   }
 
   reset(x, z) {
@@ -223,9 +224,19 @@ class Champ {
   jitterX() { return this.hitStop > 0 ? this.jitter * this.kickX : 0; }
   jitterY() { return this.hitStop > 0 ? this.jitter * this.kickY : 0; }
 
+  // 적중 따봉: 잠깐 뒤에 뜬다
   showEmote() {
-    if (!this.emote || !this.alive) return;
+    if (!this.autoEmote || !this.alive) return;
     this.emoteDelayT = EMOTE_DELAY;
+  }
+
+  // 1·2·3 감정표현: 떠 있던 것(예약된 따봉 포함)은 바로 지우고 새 것을 처음부터 띄운다
+  playEmote(id) {
+    if (!this.alive || !id || !this.scene.textures.exists(emoteTexture(id))) return false;
+    this.emoteDelayT = 0;
+    this.emote.setTexture(emoteTexture(id));
+    this.emoteT = EMOTE_DURATION;
+    return true;
   }
 
   dirIndex() {
@@ -291,15 +302,13 @@ class Champ {
     this.shadow.setPosition(X, Y);
     this.ring.setPosition(X, Y);
     this.bar.setPosition(X, Y - BAR_OFF);
-    if (this.emote) {
-      const visible = this.alive && this.emoteT > 0;
-      this.emote.setVisible(visible);
-      if (visible) {
-        const enter = clamp((EMOTE_DURATION - this.emoteT) / 0.15, 0, 1);
-        const size = EMOTE_SIZE * (0.75 + 0.25 * enter);
-        this.emote.setPosition(X, Y - BAR_OFF - 60 - enter * 8)
-          .setDisplaySize(size, size).setAlpha(clamp(this.emoteT / 0.3, 0, 1));
-      }
+    const visible = this.alive && this.emoteT > 0;
+    this.emote.setVisible(visible);
+    if (visible) {
+      const enter = clamp((EMOTE_DURATION - this.emoteT) / 0.15, 0, 1);
+      const size = EMOTE_SIZE * (0.75 + 0.25 * enter);
+      this.emote.setPosition(X, Y - BAR_OFF - 60 - enter * 8)
+        .setDisplaySize(size, size).setAlpha(clamp(this.emoteT / 0.3, 0, 1));
     }
     const tint = this.hitFlash > 0 ? 'hit' : this.slowT > 0 ? 'slow' : '';
     if (tint !== this.tintState) {
@@ -312,7 +321,7 @@ class Champ {
   }
 
   destroy() {
-    this.emote?.destroy();
+    this.emote.destroy();
     for (const o of [this.mundo, this.shadow, this.ring, this.bar]) o.destroy();
   }
 }
@@ -390,7 +399,7 @@ class GameScene extends Phaser.Scene {
     this.load.image('football', 'assets/cartoon/football-selected-v1.png');
     this.load.json('footballMeta', 'assets/cartoon/football-selected-v1.json');
     this.load.image('baron-cute', 'assets/cartoon/baron-cute.png');
-    this.load.image('mundo-emote', 'assets/cartoon/mundo-thumbs-up-emote-v1.png');
+    for (const emote of EMOTES) this.load.image(emoteTexture(emote.id), emote.image);
   }
 
   create() {
@@ -696,6 +705,8 @@ class GameScene extends Phaser.Scene {
       if (e.code === 'KeyM') { Sound.toggleMute(); HUD.chat(Sound.muted ? '소리 끔' : '소리 켬'); return; }
       if (!this.canControl()) return;
       const g = this.pointerGround();
+      const emoteKey = /^(?:Digit|Numpad)([1-3])$/.exec(e.code);
+      if (emoteKey) { this.useEmote(Number(emoteKey[1]) - 1); return; }
       if (e.code === 'KeyQ') this.useSkill('q', g.x, g.z);
       else if (e.code === 'KeyD') this.useSkill('d', g.x, g.z);
       else if (e.code === 'KeyF') this.useSkill('f');
@@ -709,6 +720,16 @@ class GameScene extends Phaser.Scene {
     if (key === 'q') { if (this.castQ(p, tx, tz)) this.sendInput({ cast: 'q', tx, tz }); }
     else if (key === 'd') { if (this.castFlash(p, tx, tz)) this.sendInput({ cast: 'd', tx, tz }); }
     else if (key === 'f') { if (this.castGhost(p)) this.sendInput({ cast: 'f' }); }
+  }
+
+  // 1·2·3 키: 상점에서 그 번호에 장착한 감정표현을 띄우고, 대인전이면 상대에게도 보낸다
+  useEmote(slot) {
+    const id = cleanEmote(getShopState().emoteSlots[slot]);
+    const now = performance.now();
+    if (!id || now - (this.lastEmoteAt ?? -Infinity) < EMOTE_COOLDOWN * 1000) return;
+    if (!this.player.playEmote(id)) return;
+    this.lastEmoteAt = now;
+    if (this.mode === 'online') Online.send({ type: 'emote', id });
   }
 
   canControl() {
@@ -925,7 +946,7 @@ class GameScene extends Phaser.Scene {
   knockOut(v) {
     v.emoteT = 0;
     v.emoteDelayT = 0;
-    v.emote?.setVisible(false);
+    v.emote.setVisible(false);
     v.setAnim('death', true);
     v.ring.setVisible(false);
     v.bar.setVisible(false);
@@ -1359,7 +1380,7 @@ class GameScene extends Phaser.Scene {
     c.emoteT = Math.max(0, c.emoteT - dt);
     if (c.emoteDelayT > 0) {
       c.emoteDelayT = Math.max(0, c.emoteDelayT - dt);
-      if (c.emoteDelayT === 0 && c.alive) c.emoteT = EMOTE_DURATION;
+      if (c.emoteDelayT === 0 && c.alive) { c.emote.setTexture(emoteTexture('thumbs')); c.emoteT = EMOTE_DURATION; }
     }
     let moving;
     if (this.mode === 'online' && c !== this.player) {
@@ -1606,6 +1627,10 @@ Online.hooks = {
   onEvents: (list) => {
     const s = scene();
     if (s.mode === 'online' && s.champs.length) for (const e of list) s.showEvent(e, true);
+  },
+  onEmote: (slot, id) => {
+    const s = scene();
+    if (s.mode === 'online' && slot !== Online.slot) s.champs[slot]?.playEmote(cleanEmote(id));
   },
   onRoundEnd: (winner) => scene().onlineRoundEnd(winner),
   onOver: (winner, reason) => scene().onlineOver(winner, reason),
