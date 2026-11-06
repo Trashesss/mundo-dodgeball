@@ -17,10 +17,11 @@ const MAX_REFERRAL_IDS = 20;   // 상점 공유 확인 한 번에 물어볼 수 
 const MAX_FAILED_JOINS = 10;    // 방 코드 무작위 대입 방지 (연결당)
 // 빠른 대전: 이만큼 기다리면 '문도봇과 플레이'를 고를 수 있다. 기본은 바로 (검사용 서버만 바꿀 수 있음)
 const QUICK_WAIT_MS = (process.env.MUNDO_TEST === '1' && Number(process.env.QUICK_WAIT_MS)) || 0;
-// 배포 서버(NODE_ENV=production)는 게임 사이트만 허용한다. localhost 페이지는 로컬 개발 서버에서만 허용.
+// 배포 서버(NODE_ENV=production)는 게임 사이트(GitHub Pages, mundo-pigu.online)만 허용한다. localhost 페이지는 로컬 개발 서버에서만 허용.
 const PRODUCTION = process.env.NODE_ENV === 'production';
 const ORIGINS = [
   /^https:\/\/trashesss\.github\.io$/,
+  /^https:\/\/(www\.)?mundo-pigu\.online$/,
   ...(PRODUCTION ? [] : [/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/]),
   ...(process.env.EXTRA_ORIGINS || '').split(',').filter(Boolean).map(o => new RegExp(`^${o.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`)),
 ];
