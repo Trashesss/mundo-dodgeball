@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { DIFFICULTY_NAMES, GAME_DESCRIPTION, HUMILIATE_PATH, HUMILIATE_TITLE, shareContent } from '../src/share.js';
 
 // Static metadata lets messenger crawlers read the result without executing JavaScript.
-const site = 'https://trashesss.github.io/mundo-dodgeball/';
+const site = 'https://www.mundo-pigu.online/';
 const rootHead = fs.readFileSync('index.html', 'utf8').split('</head>')[0];
 fs.mkdirSync('share', { recursive: true });
 
